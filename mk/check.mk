@@ -46,6 +46,10 @@ contenttest: $(S)src/test/harness/contenttest/contenttest.rs servo
 	@$(call E, compile: $@)
 	$(Q)$(RUSTC) $(RFLAGS_servo) -o $@ $< -L .
 
+wptest: $(S)src/test/harness/contenttest/wptest.rs servo
+	@$(call E, compile: $@)
+	$(Q)$(RUSTC) $(RFLAGS_servo) -o $@ $< -L .
+
 
 DEPS_CHECK_TESTABLE = $(filter-out $(NO_TESTS),$(DEPS_CHECK_ALL))
 DEPS_CHECK_TARGETS_ALL = $(addprefix check-,$(DEPS_CHECK_TESTABLE))
@@ -85,9 +89,11 @@ check-ref: reftest
 	$(Q)./reftest $(S)src/test/ref/*.list
 
 .PHONY: check-content
-check-content: contenttest
-	@$(call E, check: contenttests)
-	$(Q)./contenttest --source-dir=$(S)src/test/html/content $(TESTNAME)
+check-content: contenttest wptest
+#	@$(call E, check: contenttests)
+#	$(Q)./contenttest --source-dir=$(S)src/test/html/content $(TESTNAME)
+	@$(call E, check: wptests)
+	$(Q)./wptest --source-dir=$(S)src/test/html/wpt $(TESTNAME)
 
 .PHONY: tidy
 tidy:
