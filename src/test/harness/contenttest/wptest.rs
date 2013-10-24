@@ -13,7 +13,7 @@ extern mod extra;
 use extra::json;
 use extra::json::{Json, List};
 use extra::test::{TestOpts, run_tests_console, TestDesc, TestDescAndFn, DynTestFn, DynTestName};
-use extra::getopts::{getopts, reqopt, opt_str, fail_str};
+use extra::getopts::{getopts, reqopt};
 use std::{os, run, io, str};
 use std::cell::Cell;
 use std::os::list_dir_path;
@@ -37,11 +37,11 @@ fn parse_config(args: ~[~str]) -> Config {
     let opts = ~[reqopt("source-dir")];
     let matches = match getopts(args, opts) {
       Ok(m) => m,
-      Err(f) => fail!(fail_str(f))
+      Err(f) => fail!(f.to_err_msg())
     };
 
     Config {
-        source_dir: opt_str(&matches, "source-dir"),
+        source_dir: matches.opt_str("source-dir").unwrap(),
         filter: if matches.free.is_empty() {
             None
         } else {
@@ -65,9 +65,10 @@ fn test_options(config: Config) -> TestOpts {
 }
 
 fn find_tests(config: Config) -> ~[TestDescAndFn] {
-    let mut files = list_dir_path(&Path(config.source_dir));
-    files.retain( |file| file.to_str().ends_with(".html") );
-    return files.map(|file| make_test((*file).to_str()) );
+    let mut files = list_dir_path(&Path::new(config.source_dir));
+    // FIXME (#1094): not the right way to transform a path
+    files.retain( |file| file.display().to_str().ends_with(".html") );
+    return files.map(|file| make_test(file.display().to_str()) );
 }
 
 fn make_test(file: ~str) -> TestDescAndFn {
@@ -102,9 +103,15 @@ fn interpret_json(json: Json) {
 
 fn run_test(file: ~str) {
     let result_prefix = "ALERT: RESULT: ";
-    let infile = ~"file://" + os::make_absolute(&Path(file)).to_str();
-    printfln!("BEFORE %s", infile);
-    let res = run::process_output("./servo", [~"-z", infile]);
+
+    let path = os::make_absolute(&Path::new(file));
+    // FIXME (#1094): not the right way to transform a path
+    let infile = ~"file://" + path.display().to_str();
+    println!("BEFORE {:s}", infile);
+    let res = run::process_output("./servo", [/*~"-z", */infile]);
+    if res.status != 0 {
+        fail!(format!("Finished with status {:d}", res.status));
+    }
     println("B");
     let out = str::from_utf8(res.output);
     //io::print(out);
