@@ -14,9 +14,11 @@ use extra::json;
 use extra::json::{Json, List};
 use extra::test::{TestOpts, run_tests_console, TestDesc, TestDescAndFn, DynTestFn, DynTestName};
 use extra::getopts::{getopts, reqopt};
-use std::{os, run, io, str};
+use std::{os, str};
 use std::cell::Cell;
 use std::os::list_dir_path;
+use std::rt::io::Reader;
+use std::rt::io::process::{Process, ProcessConfig, Ignored, CreatePipe};
 
 #[deriving(Clone)]
 struct Config {
@@ -108,12 +110,39 @@ fn run_test(file: ~str) {
     // FIXME (#1094): not the right way to transform a path
     let infile = ~"file://" + path.display().to_str();
     println!("BEFORE {:s}", infile);
-    let res = run::process_output("./servo", [/*~"-z", */infile]);
+
+    let create_pipe = CreatePipe(true, false); // rustc #10228
+
+    let config = ProcessConfig {
+        program: "./servo",
+        args: [~"-z", infile.clone()],
+        env: None,
+        cwd: None,
+        io: [Ignored, create_pipe, Ignored]
+    };
+
+    let mut prc = Process::new(config).unwrap();
+    let stdout = prc.io[1].get_mut_ref();
+    let mut output = ~[];
+    loop {
+        let byte = stdout.read_byte();
+        match byte {
+            Some(byte) => {
+                print!("{}", byte as char);
+                output.push(byte);
+            }
+            None => break
+        }
+    }
+
+    let out = str::from_utf8(output);
+/*
+    let res = run::process_output("./servo", [/~"-z", */ /*infile]);
     if res.status != 0 {
         fail!(format!("Finished with status {:d}", res.status));
     }
     println("B");
-    let out = str::from_utf8(res.output);
+    let out = str::from_utf8(res.output);*/
     //io::print(out);
     //io::print(str::from_utf8(res.error));
     let lines: ~[&str] = out.split_iter('\n').collect();
