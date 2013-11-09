@@ -4,6 +4,6 @@
  * You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-dictionary GrandparentDict {
-  double someNum;
-};
+//dictionary GrandparentDict {
+//  double someNum;
+//};

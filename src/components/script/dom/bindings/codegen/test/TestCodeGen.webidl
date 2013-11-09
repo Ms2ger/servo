@@ -13,10 +13,10 @@ interface TestExternalInterface;
 interface TestNonCastableInterface {
 };
 
-callback interface TestCallbackInterface {
-  readonly attribute long foo;
-  void doSomething();
-};
+//callback interface TestCallbackInterface {
+//  readonly attribute long foo;
+//  void doSomething();
+//};
 
 enum TestEnum {
   "a",
@@ -118,18 +118,18 @@ interface TestInterface {
   void passOptionalSelfWithDefault(optional TestInterface? arg = null);
 
   // Non-wrapper-cache interface types
-  [Creator]
-  TestNonWrapperCacheInterface receiveNonWrapperCacheInterface();
-  [Creator]
-  TestNonWrapperCacheInterface? receiveNullableNonWrapperCacheInterface();
-  [Creator]
-  sequence<TestNonWrapperCacheInterface> receiveNonWrapperCacheInterfaceSequence();
-  [Creator]
-  sequence<TestNonWrapperCacheInterface?> receiveNullableNonWrapperCacheInterfaceSequence();
-  [Creator]
-  sequence<TestNonWrapperCacheInterface>? receiveNonWrapperCacheInterfaceNullableSequence();
-  [Creator]
-  sequence<TestNonWrapperCacheInterface?>? receiveNullableNonWrapperCacheInterfaceNullableSequence();
+//  [Creator]
+//  TestNonWrapperCacheInterface receiveNonWrapperCacheInterface();
+//  [Creator]
+//  TestNonWrapperCacheInterface? receiveNullableNonWrapperCacheInterface();
+//  [Creator]
+//  sequence<TestNonWrapperCacheInterface> receiveNonWrapperCacheInterfaceSequence();
+//  [Creator]
+//  sequence<TestNonWrapperCacheInterface?> receiveNullableNonWrapperCacheInterfaceSequence();
+//  [Creator]
+//  sequence<TestNonWrapperCacheInterface>? receiveNonWrapperCacheInterfaceNullableSequence();
+//  [Creator]
+//  sequence<TestNonWrapperCacheInterface?>? receiveNullableNonWrapperCacheInterfaceNullableSequence();
 
   // Non-castable interface types
   TestNonCastableInterface receiveOther();
@@ -166,76 +166,76 @@ interface TestInterface {
   void passOptionalExternalWithDefault(optional TestExternalInterface? arg = null);
 
   // Callback interface types
-  TestCallbackInterface receiveCallbackInterface();
-  TestCallbackInterface? receiveNullableCallbackInterface();
-  TestCallbackInterface receiveWeakCallbackInterface();
-  TestCallbackInterface? receiveWeakNullableCallbackInterface();
+  //TestCallbackInterface receiveCallbackInterface();
+  //TestCallbackInterface? receiveNullableCallbackInterface();
+  //TestCallbackInterface receiveWeakCallbackInterface();
+  //TestCallbackInterface? receiveWeakNullableCallbackInterface();
   // A verstion to test for casting to TestCallbackInterface&
-  void passCallbackInterface(TestCallbackInterface arg);
+  //void passCallbackInterface(TestCallbackInterface arg);
   // A version we can use to test for the exact type passed in
-  void passCallbackInterface2(TestCallbackInterface arg);
-  void passNullableCallbackInterface(TestCallbackInterface? arg);
-  attribute TestCallbackInterface nonNullCallbackInterface;
-  attribute TestCallbackInterface? nullableCallbackInterface;
+  //void passCallbackInterface2(TestCallbackInterface arg);
+  //void passNullableCallbackInterface(TestCallbackInterface? arg);
+  //attribute TestCallbackInterface nonNullCallbackInterface;
+  //attribute TestCallbackInterface? nullableCallbackInterface;
   // Optional arguments
-  void passOptionalCallbackInterface(optional TestCallbackInterface? arg);
-  void passOptionalNonNullCallbackInterface(optional TestCallbackInterface arg);
-  void passOptionalCallbackInterfaceWithDefault(optional TestCallbackInterface? arg = null);
+  //void passOptionalCallbackInterface(optional TestCallbackInterface? arg);
+  //void passOptionalNonNullCallbackInterface(optional TestCallbackInterface arg);
+  //void passOptionalCallbackInterfaceWithDefault(optional TestCallbackInterface? arg = null);
 
   // Miscellaneous interface tests
   IndirectlyImplementedInterface receiveConsequentialInterface();
   void passConsequentialInterface(IndirectlyImplementedInterface arg);
 
   // Sequence types
-  sequence<long> receiveSequence();
-  sequence<long>? receiveNullableSequence();
-  sequence<long?> receiveSequenceOfNullableInts();
-  sequence<long?>? receiveNullableSequenceOfNullableInts();
-  void passSequence(sequence<long> arg);
-  void passNullableSequence(sequence<long>? arg);
-  void passSequenceOfNullableInts(sequence<long?> arg);
-  void passOptionalSequenceOfNullableInts(optional sequence<long?> arg);
-  void passOptionalNullableSequenceOfNullableInts(optional sequence<long?>? arg);
-  sequence<TestInterface> receiveCastableObjectSequence();
-  sequence<TestInterface?> receiveNullableCastableObjectSequence();
-  sequence<TestInterface>? receiveCastableObjectNullableSequence();
-  sequence<TestInterface?>? receiveNullableCastableObjectNullableSequence();
-  sequence<TestInterface> receiveWeakCastableObjectSequence();
-  sequence<TestInterface?> receiveWeakNullableCastableObjectSequence();
-  sequence<TestInterface>? receiveWeakCastableObjectNullableSequence();
-  sequence<TestInterface?>? receiveWeakNullableCastableObjectNullableSequence();
-  void passCastableObjectSequence(sequence<TestInterface> arg);
-  void passNullableCastableObjectSequence(sequence<TestInterface?> arg);
-  void passCastableObjectNullableSequence(sequence<TestInterface>? arg);
-  void passNullableCastableObjectNullableSequence(sequence<TestInterface?>? arg);
-  void passOptionalSequence(optional sequence<long> arg);
-  void passOptionalNullableSequence(optional sequence<long>? arg);
-  void passOptionalNullableSequenceWithDefaultValue(optional sequence<long>? arg = null);
-  void passOptionalObjectSequence(optional sequence<TestInterface> arg);
+//  sequence<long> receiveSequence();
+//  sequence<long>? receiveNullableSequence();
+//  sequence<long?> receiveSequenceOfNullableInts();
+//  sequence<long?>? receiveNullableSequenceOfNullableInts();
+//  void passSequence(sequence<long> arg);
+//  void passNullableSequence(sequence<long>? arg);
+//  void passSequenceOfNullableInts(sequence<long?> arg);
+//  void passOptionalSequenceOfNullableInts(optional sequence<long?> arg);
+//  void passOptionalNullableSequenceOfNullableInts(optional sequence<long?>? arg);
+//  sequence<TestInterface> receiveCastableObjectSequence();
+//  sequence<TestInterface?> receiveNullableCastableObjectSequence();
+//  sequence<TestInterface>? receiveCastableObjectNullableSequence();
+//  sequence<TestInterface?>? receiveNullableCastableObjectNullableSequence();
+//  sequence<TestInterface> receiveWeakCastableObjectSequence();
+//  sequence<TestInterface?> receiveWeakNullableCastableObjectSequence();
+//  sequence<TestInterface>? receiveWeakCastableObjectNullableSequence();
+//  sequence<TestInterface?>? receiveWeakNullableCastableObjectNullableSequence();
+//  void passCastableObjectSequence(sequence<TestInterface> arg);
+//  void passNullableCastableObjectSequence(sequence<TestInterface?> arg);
+//  void passCastableObjectNullableSequence(sequence<TestInterface>? arg);
+//  void passNullableCastableObjectNullableSequence(sequence<TestInterface?>? arg);
+//  void passOptionalSequence(optional sequence<long> arg);
+//  void passOptionalNullableSequence(optional sequence<long>? arg);
+//  void passOptionalNullableSequenceWithDefaultValue(optional sequence<long>? arg = null);
+//  void passOptionalObjectSequence(optional sequence<TestInterface> arg);
 
-  sequence<DOMString> receiveStringSequence();
-  void passStringSequence(sequence<DOMString> arg);
+//  sequence<DOMString> receiveStringSequence();
+//  void passStringSequence(sequence<DOMString> arg);
 
-  sequence<any> receiveAnySequence();
-  sequence<any>? receiveNullableAnySequence();
+//  sequence<any> receiveAnySequence();
+//  sequence<any>? receiveNullableAnySequence();
 
   // Typed array types
-  void passArrayBuffer(ArrayBuffer arg);
-  void passNullableArrayBuffer(ArrayBuffer? arg);
-  void passOptionalArrayBuffer(optional ArrayBuffer arg);
-  void passOptionalNullableArrayBuffer(optional ArrayBuffer? arg);
-  void passOptionalNullableArrayBufferWithDefaultValue(optional ArrayBuffer? arg= null);
-  void passArrayBufferView(ArrayBufferView arg);
-  void passInt8Array(Int8Array arg);
-  void passInt16Array(Int16Array arg);
-  void passInt32Array(Int32Array arg);
-  void passUint8Array(Uint8Array arg);
-  void passUint16Array(Uint16Array arg);
-  void passUint32Array(Uint32Array arg);
-  void passUint8ClampedArray(Uint8ClampedArray arg);
-  void passFloat32Array(Float32Array arg);
-  void passFloat64Array(Float64Array arg);
-  Uint8Array receiveUint8Array();
+//  void passArrayBuffer(ArrayBuffer arg);
+//  void passNullableArrayBuffer(ArrayBuffer? arg);
+//  void passOptionalArrayBuffer(optional ArrayBuffer arg);
+//  void passOptionalNullableArrayBuffer(optional ArrayBuffer? arg);
+//  void passOptionalNullableArrayBufferWithDefaultValue(optional ArrayBuffer? arg= null);
+//  void passArrayBufferView(ArrayBufferView arg);
+//  void passInt8Array(Int8Array arg);
+//  void passInt16Array(Int16Array arg);
+//  void passInt32Array(Int32Array arg);
+//  void passUint8Array(Uint8Array arg);
+//  void passUint16Array(Uint16Array arg);
+//  void passUint32Array(Uint32Array arg);
+//  void passUint8ClampedArray(Uint8ClampedArray arg);
+//  void passFloat32Array(Float32Array arg);
+//  void passFloat64Array(Float64Array arg);
+//  Uint8Array receiveUint8Array();
 
   // String types
   void passString(DOMString arg);
@@ -258,13 +258,13 @@ interface TestInterface {
   readonly attribute TestEnum readonlyEnumAttribute;
 
   // Callback types
-  void passCallback(TestCallback arg);
-  void passNullableCallback(TestCallback? arg);
-  void passOptionalCallback(optional TestCallback arg);
-  void passOptionalNullableCallback(optional TestCallback? arg);
-  void passOptionalNullableCallbackWithDefaultValue(optional TestCallback? arg = null);
-  TestCallback receiveCallback();
-  TestCallback? receiveNullableCallback();
+//  void passCallback(TestCallback arg);
+//  void passNullableCallback(TestCallback? arg);
+//  void passOptionalCallback(optional TestCallback arg);
+//  void passOptionalNullableCallback(optional TestCallback? arg);
+//  void passOptionalNullableCallbackWithDefaultValue(optional TestCallback? arg = null);
+//  TestCallback receiveCallback();
+//  TestCallback? receiveNullableCallback();
 
   // Any types
   void passAny(any arg);
@@ -273,29 +273,29 @@ interface TestInterface {
   any receiveAny();
 
   // object types
-  void passObject(object arg);
-  void passNullableObject(object? arg);
-  void passOptionalObject(optional object arg);
-  void passOptionalNullableObject(optional object? arg);
-  void passOptionalNullableObjectWithDefaultValue(optional object? arg = null);
+//  void passObject(object arg);
+//  void passNullableObject(object? arg);
+//  void passOptionalObject(optional object arg);
+//  void passOptionalNullableObject(optional object? arg);
+//  void passOptionalNullableObjectWithDefaultValue(optional object? arg = null);
   object receiveObject();
   object? receiveNullableObject();
 
   // Union types
-  void passUnion((object or long) arg);
-  void passUnionWithNullable((object? or long) arg);
-  void passNullableUnion((object or long)? arg);
-  void passOptionalUnion(optional (object or long) arg);
-  void passOptionalNullableUnion(optional (object or long)? arg);
-  void passOptionalNullableUnionWithDefaultValue(optional (object or long)? arg = null);
+//  void passUnion((object or long) arg);
+//  void passUnionWithNullable((object? or long) arg);
+//  void passNullableUnion((object or long)? arg);
+//  void passOptionalUnion(optional (object or long) arg);
+//  void passOptionalNullableUnion(optional (object or long)? arg);
+//  void passOptionalNullableUnionWithDefaultValue(optional (object or long)? arg = null);
   //void passUnionWithInterfaces((TestInterface or TestExternalInterface) arg);
   //void passUnionWithInterfacesAndNullable((TestInterface? or TestExternalInterface) arg);
   //void passUnionWithSequence((sequence<object> or long) arg);
-  void passUnionWithArrayBuffer((ArrayBuffer or long) arg);
-  void passUnionWithString((DOMString or object) arg);
+//  void passUnionWithArrayBuffer((ArrayBuffer or long) arg);
+//  void passUnionWithString((DOMString or object) arg);
   //void passUnionWithEnum((TestEnum or object) arg);
-  void passUnionWithCallback((TestCallback or long) arg);
-  void passUnionWithObject((object or long) arg);
+//  void passUnionWithCallback((TestCallback or long) arg);
+//  void passUnionWithObject((object or long) arg);
   //void passUnionWithDict((Dict or long) arg);
 
   // binaryNames tests
@@ -304,14 +304,14 @@ interface TestInterface {
   readonly attribute byte attributeGetterRenamedFrom;
   attribute byte attributeRenamedFrom;
 
-  void passDictionary(optional Dict x);
-  void passOtherDictionary(optional GrandparentDict x);
-  void passSequenceOfDictionaries(sequence<Dict> x);
-  void passDictionaryOrLong(optional Dict x);
+//  void passDictionary(optional Dict x);
+//  void passOtherDictionary(optional GrandparentDict x);
+//  void passSequenceOfDictionaries(sequence<Dict> x);
+//  void passDictionaryOrLong(optional Dict x);
   void passDictionaryOrLong(long x);
 
-  void passDictContainingDict(optional DictContainingDict arg);
-  void passDictContainingSequence(optional DictContainingSequence arg);
+//  void passDictContainingDict(optional DictContainingDict arg);
+//  void passDictContainingSequence(optional DictContainingSequence arg);
 
   // EnforceRange/Clamp tests
   void dontEnforceRangeOrClamp(byte arg);
@@ -328,8 +328,8 @@ interface TestInterface {
   [LenientThis] attribute long attrWithLenientThis;
 };
 
-interface TestNonWrapperCacheInterface {
-};
+//interface TestNonWrapperCacheInterface {
+//};
 
 interface ImplementedInterfaceParent {
   void implementedParentMethod();
@@ -373,32 +373,32 @@ TestInterface implements DiamondBranch2B;
 DiamondBranch1A implements DiamondImplements;
 DiamondBranch1B implements DiamondImplements;
 
-dictionary Dict : ParentDict {
-  TestEnum someEnum;
-  long x;
-  long a;
-  long b = 8;
-  long z = 9;
-  DOMString str;
-  DOMString empty = "";
-  TestEnum otherEnum = "b";
-  DOMString otherStr = "def";
-  DOMString? yetAnotherStr = null;
-};
+//dictionary Dict : ParentDict {
+//  TestEnum someEnum;
+//  long x;
+//  long a;
+//  long b = 8;
+//  long z = 9;
+//  DOMString str;
+//  DOMString empty = "";
+//  TestEnum otherEnum = "b";
+//  DOMString otherStr = "def";
+//  DOMString? yetAnotherStr = null;
+//};
 
-dictionary ParentDict : GrandparentDict {
-  long c = 5;
-  TestInterface someInterface;
-  TestExternalInterface someExternalInterface;
-};
+//dictionary ParentDict : GrandparentDict {
+//  long c = 5;
+//  TestInterface someInterface;
+//  TestExternalInterface someExternalInterface;
+//};
 
-dictionary DictContainingDict {
-  Dict memberDict;
-};
+//dictionary DictContainingDict {
+//  Dict memberDict;
+//};
 
-dictionary DictContainingSequence {
-  sequence<long> ourSequence;
-};
+//dictionary DictContainingSequence {
+//  sequence<long> ourSequence;
+//};
 
 interface TestIndexedGetterInterface {
   getter long item(unsigned long index);
@@ -435,8 +435,8 @@ interface TestIndexedAndNamedGetterAndSetterInterface : TestIndexedSetterInterfa
   getter DOMString namedItem(DOMString name);
   setter creator void (unsigned long index, long item);
   setter creator void (DOMString name, DOMString item);
-  [Infallible]
-  stringifier DOMString ();
+  //[Infallible]
+  //stringifier DOMString ();
   [Infallible]
   readonly attribute unsigned long length;
 };

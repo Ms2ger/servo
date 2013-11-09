@@ -83,8 +83,19 @@ def main():
     # Generate the type list.
     generate_file(config, 'InterfaceTypes', 'declare+define')
 
+    prefix = os.path.commonprefix(fileList)
+    def import_binding(path):
+        s = path.replace(prefix, "")
+        s = s.replace(".webidl", "")
+        parts = s.split("/")
+        ret = "pub mod %sBinding;" % parts[-1]
+        for mod in reversed(parts[:-1]):
+            ret = "pub mod %s { %s }" % (mod, ret)
+        return "%s\n" % ret
+
     # Generate the module declarations.
-    generate_file(config, 'BindingDeclarations', 'declare+define')
+    replaceFileIfChanged('BindingDeclarations.rs',
+                         "".join(import_binding(f) for f in fileList))
 
     #XXXjdm No union support yet
     #generate_file(config, 'UnionTypes', 'declare')
