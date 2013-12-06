@@ -7,10 +7,13 @@
 //typedef (CanvasRenderingContext2D or WebGLRenderingContext) RenderingContext;
 
 interface HTMLCanvasElement : HTMLElement {
-  //         attribute unsigned long width;
-  //         attribute unsigned long height;
+  [Pure]
+           attribute unsigned long width;
+  [Pure]
+           attribute unsigned long height;
 
-  //RenderingContext? getContext(DOMString contextId, any... arguments);
+  //RenderingContext? getContext(DOMString contextId);
+  CanvasRenderingContext2D? getContext(DOMString contextId, any... arguments);
   //boolean probablySupportsContext(DOMString contextId, any... arguments);
 
   //void setContext(RenderingContext context);
