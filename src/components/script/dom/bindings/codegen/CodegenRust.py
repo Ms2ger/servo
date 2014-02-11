@@ -1090,10 +1090,10 @@ for (uint32_t i = 0; i < length; ++i) {
                                      "%s.SetNull()" % varName)
             return handleDefault(
                 conversionCode,
-                ("static data: [u8, ..%s] = [ %s ];\n"
-                 "%s = str::from_utf8(data).to_owned()" %
+                ("static data: [u16, ..%s] = [ %s ];\n"
+                 "%s = DOMString(data.to_owned())" %
                  (len(defaultValue.value) + 1,
-                  ", ".join(["'" + char + "' as u8" for char in defaultValue.value] + ["0"]),
+                  ", ".join(["'" + char + "' as u16" for char in defaultValue.value] + ["0"]),
                   varName)))
 
         if isMember:
@@ -4877,7 +4877,7 @@ class CGDictionary(CGThing):
             elif ty in ["i32", "u32", "i16", "u16"]:
                 return "0"
             elif ty == "DOMString":
-                return '~""'
+                return 'DOMString::empty()'
             elif ty.startswith("Option"):
                 return "None"
             else:

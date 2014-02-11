@@ -61,7 +61,7 @@ impl HTMLIFrameElement {
 
 impl HTMLIFrameElement {
     pub fn Src(&self) -> DOMString {
-        ~""
+        DOMString::empty()
     }
 
     pub fn SetSrc(&mut self, _src: DOMString) -> ErrorResult {
@@ -69,7 +69,7 @@ impl HTMLIFrameElement {
     }
 
     pub fn Srcdoc(&self) -> DOMString {
-        ~""
+        DOMString::empty()
     }
 
     pub fn SetSrcdoc(&mut self, _srcdoc: DOMString) -> ErrorResult {
@@ -77,7 +77,7 @@ impl HTMLIFrameElement {
     }
 
     pub fn Name(&self) -> DOMString {
-        ~""
+        DOMString::empty()
     }
 
     pub fn SetName(&mut self, _name: DOMString) -> ErrorResult {
@@ -128,7 +128,7 @@ impl HTMLIFrameElement {
     }
 
     pub fn Width(&self) -> DOMString {
-        ~""
+        DOMString::empty()
     }
 
     pub fn SetWidth(&mut self, _width: DOMString) -> ErrorResult {
@@ -136,7 +136,7 @@ impl HTMLIFrameElement {
     }
 
     pub fn Height(&self) -> DOMString {
-        ~""
+        DOMString::empty()
     }
 
     pub fn SetHeight(&mut self, _height: DOMString) -> ErrorResult {
@@ -152,7 +152,7 @@ impl HTMLIFrameElement {
     }
 
     pub fn Align(&self) -> DOMString {
-        ~""
+        DOMString::empty()
     }
 
     pub fn SetAlign(&mut self, _align: DOMString) -> ErrorResult {
@@ -160,7 +160,7 @@ impl HTMLIFrameElement {
     }
 
     pub fn Scrolling(&self) -> DOMString {
-        ~""
+        DOMString::empty()
     }
 
     pub fn SetScrolling(&mut self, _scrolling: DOMString) -> ErrorResult {
@@ -168,7 +168,7 @@ impl HTMLIFrameElement {
     }
 
     pub fn FrameBorder(&self) -> DOMString {
-        ~""
+        DOMString::empty()
     }
 
     pub fn SetFrameBorder(&mut self, _frameborder: DOMString) -> ErrorResult {
@@ -176,7 +176,7 @@ impl HTMLIFrameElement {
     }
 
     pub fn LongDesc(&self) -> DOMString {
-        ~""
+        DOMString::empty()
     }
 
     pub fn SetLongDesc(&mut self, _longdesc: DOMString) -> ErrorResult {
@@ -184,7 +184,7 @@ impl HTMLIFrameElement {
     }
 
     pub fn MarginHeight(&self) -> DOMString {
-        ~""
+        DOMString::empty()
     }
 
     pub fn SetMarginHeight(&mut self, _marginheight: DOMString) -> ErrorResult {
@@ -192,7 +192,7 @@ impl HTMLIFrameElement {
     }
 
     pub fn MarginWidth(&self) -> DOMString {
-        ~""
+        DOMString::empty()
     }
 
     pub fn SetMarginWidth(&mut self, _marginwidth: DOMString) -> ErrorResult {

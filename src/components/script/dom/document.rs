@@ -140,9 +140,9 @@ impl Document {
                 Some(string) => string.clone(),
                 None => match doctype {
                     // http://dom.spec.whatwg.org/#dom-domimplementation-createhtmldocument
-                    HTML => ~"text/html",
+                    HTML => DOMString::from_string("text/html"),
                     // http://dom.spec.whatwg.org/#concept-document-content-type
-                    SVG | XML => ~"application/xml"
+                    SVG | XML => DOMString::from_string("application/xml"),
                 }
             },
             url: match url {
@@ -152,7 +152,7 @@ impl Document {
             // http://dom.spec.whatwg.org/#concept-document-quirks
             quirks_mode: NoQuirks,
             // http://dom.spec.whatwg.org/#concept-document-encoding
-            encoding_name: ~"utf-8",
+            encoding_name: DOMString::from_string("utf-8"),
         }
     }
 
@@ -200,7 +200,7 @@ impl Document {
 
     // http://dom.spec.whatwg.org/#dom-document-url
     pub fn URL(&self) -> DOMString {
-        self.url.to_str()
+        DOMString::from_string(self.url.to_str())
     }
 
     // http://dom.spec.whatwg.org/#dom-document-documenturi
@@ -211,8 +211,8 @@ impl Document {
     // http://dom.spec.whatwg.org/#dom-document-compatmode
     pub fn CompatMode(&self) -> DOMString {
         match self.quirks_mode {
-            NoQuirks => ~"CSS1Compat",
-            LimitedQuirks | FullQuirks => ~"BackCompat"
+            NoQuirks => DOMString::from_string("CSS1Compat"),
+            LimitedQuirks | FullQuirks => DOMString::from_string("BackCompat"),
         }
     }
 

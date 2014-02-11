@@ -48,11 +48,11 @@ impl Location {
     }
 
     pub fn Origin(&self) -> DOMString {
-        ~""
+        DOMString::empty()
     }
 
     pub fn Protocol(&self) -> DOMString {
-        ~""
+        DOMString::empty()
     }
 
     pub fn SetProtocol(&self, _protocol: DOMString) {
@@ -60,7 +60,7 @@ impl Location {
     }
 
     pub fn Username(&self) -> DOMString {
-        ~""
+        DOMString::empty()
     }
 
     pub fn SetUsername(&self, _username: DOMString) {
@@ -68,7 +68,7 @@ impl Location {
     }
 
     pub fn Password(&self) -> DOMString {
-        ~""
+        DOMString::empty()
     }
 
     pub fn SetPassword(&self, _password: DOMString) {
@@ -76,7 +76,7 @@ impl Location {
     }
 
     pub fn Host(&self) -> DOMString {
-        ~""
+        DOMString::empty()
     }
 
     pub fn SetHost(&self, _host: DOMString) {
@@ -84,7 +84,7 @@ impl Location {
     }
 
     pub fn Hostname(&self) -> DOMString {
-        ~""
+        DOMString::empty()
     }
 
     pub fn SetHostname(&self, _hostname: DOMString) {
@@ -92,7 +92,7 @@ impl Location {
     }
 
     pub fn Port(&self) -> DOMString {
-        ~""
+        DOMString::empty()
     }
 
     pub fn SetPort(&self, _port: DOMString) {
@@ -100,7 +100,7 @@ impl Location {
     }
 
     pub fn Pathname(&self) -> DOMString {
-        ~""
+        DOMString::empty()
     }
 
     pub fn SetPathname(&self, _pathname: DOMString) {
@@ -108,7 +108,7 @@ impl Location {
     }
 
     pub fn Search(&self) -> DOMString {
-        ~""
+        DOMString::empty()
     }
 
     pub fn SetSearch(&self, _search: DOMString) {
@@ -116,7 +116,7 @@ impl Location {
     }
 
     pub fn Hash(&self) -> DOMString {
-        ~""
+        DOMString::empty()
     }
 
     pub fn SetHash(&self, _hash: DOMString) {

@@ -29,7 +29,7 @@ impl HTMLBodyElement {
 
 impl HTMLBodyElement {
     pub fn Text(&self) -> DOMString {
-        ~""
+        DOMString::empty()
     }
 
     pub fn SetText(&mut self, _text: DOMString) -> ErrorResult {
@@ -37,7 +37,7 @@ impl HTMLBodyElement {
     }
 
     pub fn Link(&self) -> DOMString {
-        ~""
+        DOMString::empty()
     }
 
     pub fn SetLink(&self, _link: DOMString) -> ErrorResult {
@@ -45,7 +45,7 @@ impl HTMLBodyElement {
     }
 
     pub fn VLink(&self) -> DOMString {
-        ~""
+        DOMString::empty()
     }
 
     pub fn SetVLink(&self, _v_link: DOMString) -> ErrorResult {
@@ -53,7 +53,7 @@ impl HTMLBodyElement {
     }
 
     pub fn ALink(&self) -> DOMString {
-        ~""
+        DOMString::empty()
     }
 
     pub fn SetALink(&self, _a_link: DOMString) -> ErrorResult {
@@ -61,7 +61,7 @@ impl HTMLBodyElement {
     }
 
     pub fn BgColor(&self) -> DOMString {
-        ~""
+        DOMString::empty()
     }
 
     pub fn SetBgColor(&self, _bg_color: DOMString) -> ErrorResult {
@@ -69,7 +69,7 @@ impl HTMLBodyElement {
     }
 
     pub fn Background(&self) -> DOMString {
-        ~""
+        DOMString::empty()
     }
 
     pub fn SetBackground(&self, _background: DOMString) -> ErrorResult {

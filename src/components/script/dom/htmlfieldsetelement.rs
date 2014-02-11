@@ -43,7 +43,7 @@ impl HTMLFieldSetElement {
     }
 
     pub fn Name(&self) -> DOMString {
-        ~""
+        DOMString::empty()
     }
 
     pub fn SetName(&mut self, _name: DOMString) -> ErrorResult {
@@ -51,7 +51,7 @@ impl HTMLFieldSetElement {
     }
 
     pub fn Type(&self) -> DOMString {
-        ~""
+        DOMString::empty()
     }
 
     pub fn Elements(&self) -> @mut HTMLCollection {
@@ -69,7 +69,7 @@ impl HTMLFieldSetElement {
     }
 
     pub fn ValidationMessage(&self) -> DOMString {
-        ~""
+        DOMString::empty()
     }
 
     pub fn CheckValidity(&self) -> bool {

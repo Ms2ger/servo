@@ -22,7 +22,7 @@ impl HTMLMediaElement {
 
 impl HTMLMediaElement {
     pub fn Src(&self) -> DOMString {
-        ~""
+        DOMString::empty()
     }
 
     pub fn SetSrc(&mut self, _src: DOMString) -> ErrorResult {
@@ -30,11 +30,11 @@ impl HTMLMediaElement {
     }
 
     pub fn CurrentSrc(&self) -> DOMString {
-        ~""
+        DOMString::empty()
     }
 
     pub fn CrossOrigin(&self) -> DOMString {
-        ~""
+        DOMString::empty()
     }
 
     pub fn SetCrossOrigin(&mut self, _cross_origin: DOMString) -> ErrorResult {
@@ -42,7 +42,7 @@ impl HTMLMediaElement {
     }
 
     pub fn Preload(&self) -> DOMString {
-        ~""
+        DOMString::empty()
     }
 
     pub fn SetPreload(&mut self, _preload: DOMString) -> ErrorResult {
@@ -53,7 +53,7 @@ impl HTMLMediaElement {
     }
 
     pub fn CanPlayType(&self, _type: DOMString) -> DOMString {
-        ~""
+        DOMString::empty()
     }
 
     pub fn ReadyState(&self) -> u16 {

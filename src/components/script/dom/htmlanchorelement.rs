@@ -29,7 +29,7 @@ impl HTMLAnchorElement {
 
 impl HTMLAnchorElement {
     pub fn Href(&self) -> DOMString {
-        ~""
+        DOMString::empty()
     }
 
     pub fn SetHref(&mut self, _href: DOMString) -> ErrorResult {
@@ -37,7 +37,7 @@ impl HTMLAnchorElement {
     }
 
     pub fn Target(&self) -> DOMString {
-        ~""
+        DOMString::empty()
     }
 
     pub fn SetTarget(&self, _target: DOMString) -> ErrorResult {
@@ -45,7 +45,7 @@ impl HTMLAnchorElement {
     }
 
     pub fn Download(&self) -> DOMString {
-        ~""
+        DOMString::empty()
     }
 
     pub fn SetDownload(&self, _download: DOMString) -> ErrorResult {
@@ -53,7 +53,7 @@ impl HTMLAnchorElement {
     }
 
     pub fn Ping(&self) -> DOMString {
-        ~""
+        DOMString::empty()
     }
 
     pub fn SetPing(&self, _ping: DOMString) -> ErrorResult {
@@ -61,7 +61,7 @@ impl HTMLAnchorElement {
     }
 
     pub fn Rel(&self) -> DOMString {
-        ~""
+        DOMString::empty()
     }
 
     pub fn SetRel(&self, _rel: DOMString) -> ErrorResult {
@@ -69,7 +69,7 @@ impl HTMLAnchorElement {
     }
 
     pub fn Hreflang(&self) -> DOMString {
-        ~""
+        DOMString::empty()
     }
 
     pub fn SetHreflang(&self, _href_lang: DOMString) -> ErrorResult {
@@ -77,7 +77,7 @@ impl HTMLAnchorElement {
     }
 
     pub fn Type(&self) -> DOMString {
-        ~""
+        DOMString::empty()
     }
 
     pub fn SetType(&mut self, _type: DOMString) -> ErrorResult {
@@ -85,7 +85,7 @@ impl HTMLAnchorElement {
     }
 
     pub fn Text(&self) -> DOMString {
-        ~""
+        DOMString::empty()
     }
 
     pub fn SetText(&mut self, _text: DOMString) -> ErrorResult {
@@ -93,7 +93,7 @@ impl HTMLAnchorElement {
     }
 
     pub fn Coords(&self) -> DOMString {
-        ~""
+        DOMString::empty()
     }
 
     pub fn SetCoords(&mut self, _coords: DOMString) -> ErrorResult {
@@ -101,7 +101,7 @@ impl HTMLAnchorElement {
     }
 
     pub fn Charset(&self) -> DOMString {
-        ~""
+        DOMString::empty()
     }
 
     pub fn SetCharset(&mut self, _charset: DOMString) -> ErrorResult {
@@ -109,7 +109,7 @@ impl HTMLAnchorElement {
     }
 
     pub fn Name(&self) -> DOMString {
-        ~""
+        DOMString::empty()
     }
 
     pub fn SetName(&mut self, _name: DOMString) -> ErrorResult {
@@ -117,7 +117,7 @@ impl HTMLAnchorElement {
     }
 
     pub fn Rev(&self) -> DOMString {
-        ~""
+        DOMString::empty()
     }
 
     pub fn SetRev(&mut self, _rev: DOMString) -> ErrorResult {
@@ -125,7 +125,7 @@ impl HTMLAnchorElement {
     }
 
     pub fn Shape(&self) -> DOMString {
-        ~""
+        DOMString::empty()
     }
 
     pub fn SetShape(&mut self, _shape: DOMString) -> ErrorResult {

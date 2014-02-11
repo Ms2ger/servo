@@ -29,7 +29,7 @@ impl HTMLSourceElement {
 
 impl HTMLSourceElement {
     pub fn Src(&self) -> DOMString {
-        ~""
+        DOMString::empty()
     }
     
     pub fn SetSrc(&mut self, _src: DOMString) -> ErrorResult {
@@ -37,7 +37,7 @@ impl HTMLSourceElement {
     }
 
     pub fn Type(&self) -> DOMString {
-        ~""
+        DOMString::empty()
     }
     
     pub fn SetType(&mut self, _type: DOMString) -> ErrorResult {
@@ -45,7 +45,7 @@ impl HTMLSourceElement {
     }
 
     pub fn Media(&self) -> DOMString {
-        ~""
+        DOMString::empty()
     }
     
     pub fn SetMedia(&mut self, _media: DOMString) -> ErrorResult {

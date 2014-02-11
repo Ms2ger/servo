@@ -37,7 +37,7 @@ impl HTMLScriptElement {
     }
 
     pub fn Type(&self) -> DOMString {
-        ~""
+        DOMString::empty()
     }
 
     pub fn SetType(&mut self, _type: DOMString) -> ErrorResult {
@@ -45,7 +45,7 @@ impl HTMLScriptElement {
     }
 
     pub fn Charset(&self) -> DOMString {
-        ~""
+        DOMString::empty()
     }
 
     pub fn SetCharset(&mut self, _charset: DOMString) -> ErrorResult {
@@ -69,7 +69,7 @@ impl HTMLScriptElement {
     }
 
     pub fn CrossOrigin(&self) -> DOMString {
-        ~""
+        DOMString::empty()
     }
 
     pub fn SetCrossOrigin(&mut self, _cross_origin: DOMString) -> ErrorResult {
@@ -77,7 +77,7 @@ impl HTMLScriptElement {
     }
 
     pub fn Text(&self) -> DOMString {
-        ~""
+        DOMString::empty()
     }
 
     pub fn SetText(&mut self, _text: DOMString) -> ErrorResult {
@@ -85,7 +85,7 @@ impl HTMLScriptElement {
     }
 
     pub fn Event(&self) -> DOMString {
-        ~""
+        DOMString::empty()
     }
 
     pub fn SetEvent(&mut self, _event: DOMString) -> ErrorResult {
@@ -93,7 +93,7 @@ impl HTMLScriptElement {
     }
 
     pub fn HtmlFor(&self) -> DOMString {
-        ~""
+        DOMString::empty()
     }
 
     pub fn SetHtmlFor(&mut self, _html_for: DOMString) -> ErrorResult {

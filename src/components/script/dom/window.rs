@@ -103,7 +103,7 @@ pub struct TimerData {
 impl Window {
     pub fn Alert(&self, s: DOMString) {
         // Right now, just print to the console
-        println(format!("ALERT: {:s}", s));
+        println(format!("ALERT: {:s}", s.to_string()));
     }
 
     pub fn Close(&self) {
@@ -115,14 +115,14 @@ impl Window {
     }
 
     pub fn Name(&self) -> DOMString {
-        ~""
+        DOMString::empty()
     }
 
     pub fn SetName(&self, _name: DOMString) {
     }
 
     pub fn Status(&self) -> DOMString {
-        ~""
+        DOMString::empty()
     }
 
     pub fn SetStatus(&self, _status: DOMString) {

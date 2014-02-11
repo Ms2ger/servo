@@ -37,7 +37,7 @@ impl HTMLLIElement {
     }
 
     pub fn Type(&self) -> DOMString {
-        ~""
+        DOMString::empty()
     }
 
     pub fn SetType(&mut self, _type: DOMString) -> ErrorResult {

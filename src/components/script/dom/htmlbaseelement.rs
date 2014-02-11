@@ -29,7 +29,7 @@ impl HTMLBaseElement {
 
 impl HTMLBaseElement {
     pub fn Href(&self) -> DOMString {
-        ~""
+        DOMString::empty()
     }
 
     pub fn SetHref(&self, _href: DOMString) -> ErrorResult {
@@ -37,7 +37,7 @@ impl HTMLBaseElement {
     }
 
     pub fn Target(&self) -> DOMString {
-        ~""
+        DOMString::empty()
     }
 
     pub fn SetTarget(&self, _target: DOMString) -> ErrorResult {

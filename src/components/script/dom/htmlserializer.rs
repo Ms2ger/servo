@@ -4,18 +4,23 @@
 
 use servo_util::namespace;
 use dom::attr::Attr;
+use dom::bindings::utils::DOMString;
 use dom::node::NodeIterator;
 use dom::node::{DoctypeNodeTypeId, DocumentFragmentNodeTypeId, CommentNodeTypeId};
 use dom::node::{DocumentNodeTypeId, ElementNodeTypeId, ProcessingInstructionNodeTypeId};
 use dom::node::{TextNodeTypeId, AbstractNode};
 
-pub fn serialize(iterator: &mut NodeIterator) -> ~str {
-    let mut html = ~"";
-    let mut open_elements: ~[~str] = ~[];
+pub fn serialize(iterator: &mut NodeIterator) -> DOMString {
+    let mut html = DOMString::empty();
+    let mut open_elements: ~[DOMString] = ~[];
 
     for node in *iterator {
         while open_elements.len() > iterator.depth {
-            html.push_str(~"</" + open_elements.pop() + ">");
+            html.push_str(DOMString::from_strings([
+                DOMString::from_string("</"),
+                open_elements.pop(),
+                DOMString::from_string(">"),
+            ]));
         }
         html.push_str(
             match node.type_id() {
@@ -35,7 +40,7 @@ pub fn serialize(iterator: &mut NodeIterator) -> ~str {
                     serialize_processing_instruction(node)
                 }
                 DocumentFragmentNodeTypeId => {
-                    ~""
+                    DOMString::empty()
                 }
                 DocumentNodeTypeId(_) => {
                     fail!("It shouldn't be possible to serialize a document node")
@@ -44,18 +49,26 @@ pub fn serialize(iterator: &mut NodeIterator) -> ~str {
             );
     }
     while open_elements.len() > 0 {
-        html.push_str(~"</" + open_elements.pop() + ">");
+        html.push_str(DOMString::from_strings([
+            DOMString::from_string("</"),
+            open_elements.pop(),
+            DOMString::from_string(">"),
+        ]));
     }
     html
 }
 
-fn serialize_comment(node: AbstractNode) -> ~str {
+fn serialize_comment(node: AbstractNode) -> DOMString {
     node.with_imm_characterdata(|comment| {
-        ~"<!--" + comment.data + "-->"
+        DOMString::from_strings([
+            DOMString::from_string("<!--"),
+            comment.data,
+            DOMString::from_string("-->"),
+        ])
     })
 }
 
-fn serialize_text(node: AbstractNode) -> ~str {
+fn serialize_text(node: AbstractNode) -> DOMString {
     node.with_imm_characterdata(|text| {
         match node.parent_node() {
             Some(parent) if parent.is_element() => {
@@ -75,21 +88,34 @@ fn serialize_text(node: AbstractNode) -> ~str {
     })
 }
 
-fn serialize_processing_instruction(node: AbstractNode) -> ~str {
+fn serialize_processing_instruction(node: AbstractNode) -> DOMString {
     node.with_imm_processing_instruction(|processing_instruction| {
-        ~"<?" + processing_instruction.target + " " + processing_instruction.characterdata.data + "?>"
+        DOMString::from_strings([
+            DOMString::from_string("<?"),
+            processing_instruction.target,
+            DOMString::from_string(" "),
+            processing_instruction.characterdata.data,
+            DOMString::from_string("?>"),
+        ])
     })
 }
 
-fn serialize_doctype(node: AbstractNode) -> ~str {
+fn serialize_doctype(node: AbstractNode) -> DOMString {
     node.with_imm_doctype(|doctype| {
-        ~"<!DOCTYPE" + doctype.name + ">"
+        DOMString::from_strings([
+            DOMString::from_string("<!DOCTYPE"), // XXX space
+            doctype.name,
+            DOMString::from_string(">"),
+        ])
     })
 }
 
-fn serialize_elem(node: AbstractNode, open_elements: &mut ~[~str]) -> ~str {
+fn serialize_elem(node: AbstractNode, open_elements: &mut ~[DOMString]) -> DOMString {
     node.with_imm_element(|elem| {
-        let mut rv = ~"<" + elem.tag_name;
+        let mut rv = DOMString::from_strings([
+            DOMString::from_string("<"),
+            elem.tag_name
+        ]);
         for attr in elem.attrs.iter() {
             rv.push_str(serialize_attr(attr));
         };
@@ -117,7 +143,7 @@ fn serialize_elem(node: AbstractNode, open_elements: &mut ~[~str]) -> ~str {
     })
 }
 
-fn serialize_attr(attr: &@mut Attr) -> ~str {
+fn serialize_attr(attr: &@mut Attr) -> DOMString {
     let attr_name = if attr.namespace == namespace::XML {
         ~"xml:" + attr.local_name.clone()
     } else if attr.namespace == namespace::XMLNS &&
@@ -133,7 +159,7 @@ fn serialize_attr(attr: &@mut Attr) -> ~str {
     ~" " + attr_name + "=\"" + escape(attr.value, true) + "\""
 }
 
-fn escape(string: &str, attr_mode: bool) -> ~str {
+fn escape(string: &str, attr_mode: bool) -> DOMString {
     let replaced = string.replace("&", "&amp;").replace("\xA0", "&nbsp;");
     match attr_mode {
         true => {

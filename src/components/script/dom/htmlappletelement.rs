@@ -29,7 +29,7 @@ impl HTMLAppletElement {
 
 impl HTMLAppletElement {
     pub fn Align(&self) -> DOMString {
-        ~""
+        DOMString::empty()
     }
 
     pub fn SetAlign(&mut self, _align: DOMString) -> ErrorResult {
@@ -37,7 +37,7 @@ impl HTMLAppletElement {
     }
 
     pub fn Alt(&self) -> DOMString {
-        ~""
+        DOMString::empty()
     }
 
     pub fn SetAlt(&self, _alt: DOMString) -> ErrorResult {
@@ -45,7 +45,7 @@ impl HTMLAppletElement {
     }
 
     pub fn Archive(&self) -> DOMString {
-        ~""
+        DOMString::empty()
     }
 
     pub fn SetArchive(&self, _archive: DOMString) -> ErrorResult {
@@ -53,7 +53,7 @@ impl HTMLAppletElement {
     }
 
     pub fn Code(&self) -> DOMString {
-        ~""
+        DOMString::empty()
     }
 
     pub fn SetCode(&self, _code: DOMString) -> ErrorResult {
@@ -61,7 +61,7 @@ impl HTMLAppletElement {
     }
 
     pub fn CodeBase(&self) -> DOMString {
-        ~""
+        DOMString::empty()
     }
 
     pub fn SetCodeBase(&self, _code_base: DOMString) -> ErrorResult {
@@ -69,7 +69,7 @@ impl HTMLAppletElement {
     }
 
     pub fn Height(&self) -> DOMString {
-        ~""
+        DOMString::empty()
     }
 
     pub fn SetHeight(&self, _height: DOMString) -> ErrorResult {
@@ -85,7 +85,7 @@ impl HTMLAppletElement {
     }
 
     pub fn Name(&self) -> DOMString {
-        ~""
+        DOMString::empty()
     }
 
     pub fn SetName(&mut self, _name: DOMString) -> ErrorResult {
@@ -93,7 +93,7 @@ impl HTMLAppletElement {
     }
 
     pub fn Object(&self) -> DOMString {
-        ~""
+        DOMString::empty()
     }
 
     pub fn SetObject(&mut self, _object: DOMString) -> ErrorResult {
@@ -109,7 +109,7 @@ impl HTMLAppletElement {
     }
 
     pub fn Width(&self) -> DOMString {
-        ~""
+        DOMString::empty()
     }
 
     pub fn SetWidth(&mut self, _width: DOMString) -> ErrorResult {

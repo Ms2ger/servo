@@ -29,7 +29,7 @@ impl HTMLDataElement {
 
 impl HTMLDataElement {
     pub fn Value(&self) -> DOMString {
-        ~""
+        DOMString::empty()
     }
 
     pub fn SetValue(&mut self, _value: DOMString) -> ErrorResult {

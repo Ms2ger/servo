@@ -52,7 +52,7 @@ impl HTMLTableElement {
     }
 
     pub fn Align(&self) -> DOMString {
-        ~""
+        DOMString::empty()
     }
 
     pub fn SetAlign(&self, _align: DOMString) -> ErrorResult {
@@ -60,7 +60,7 @@ impl HTMLTableElement {
     }
 
     pub fn Border(&self) -> DOMString {
-        ~""
+        DOMString::empty()
     }
 
     pub fn SetBorder(&self, _border: DOMString) -> ErrorResult {
@@ -68,7 +68,7 @@ impl HTMLTableElement {
     }
 
     pub fn Frame(&self) -> DOMString {
-        ~""
+        DOMString::empty()
     }
 
     pub fn SetFrame(&self, _frame: DOMString) -> ErrorResult {
@@ -76,7 +76,7 @@ impl HTMLTableElement {
     }
 
     pub fn Rules(&self) -> DOMString {
-        ~""
+        DOMString::empty()
     }
 
     pub fn SetRules(&self, _rules: DOMString) -> ErrorResult {
@@ -84,7 +84,7 @@ impl HTMLTableElement {
     }
 
     pub fn Summary(&self) -> DOMString {
-        ~""
+        DOMString::empty()
     }
 
     pub fn SetSummary(&self, _summary: DOMString) -> ErrorResult {
@@ -92,7 +92,7 @@ impl HTMLTableElement {
     }
 
     pub fn Width(&self) -> DOMString {
-        ~""
+        DOMString::empty()
     }
 
     pub fn SetWidth(&self, _width: DOMString) -> ErrorResult {
@@ -100,7 +100,7 @@ impl HTMLTableElement {
     }
 
     pub fn BgColor(&self) -> DOMString {
-        ~""
+        DOMString::empty()
     }
 
     pub fn SetBgColor(&self, _bg_color: DOMString) -> ErrorResult {
@@ -108,7 +108,7 @@ impl HTMLTableElement {
     }
 
     pub fn CellPadding(&self) -> DOMString {
-        ~""
+        DOMString::empty()
     }
 
     pub fn SetCellPadding(&self, _cell_padding: DOMString) -> ErrorResult {
@@ -116,7 +116,7 @@ impl HTMLTableElement {
     }
 
     pub fn CellSpacing(&self) -> DOMString {
-        ~""
+        DOMString::empty()
     }
 
     pub fn SetCellSpacing(&self, _cell_spacing: DOMString) -> ErrorResult {

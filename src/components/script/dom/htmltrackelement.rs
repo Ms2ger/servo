@@ -29,7 +29,7 @@ impl HTMLTrackElement {
 
 impl HTMLTrackElement {
     pub fn Kind(&self) -> DOMString {
-        ~""
+        DOMString::empty()
     }
 
     pub fn SetKind(&mut self, _kind: DOMString) -> ErrorResult {
@@ -37,7 +37,7 @@ impl HTMLTrackElement {
     }
 
     pub fn Src(&self) -> DOMString {
-        ~""
+        DOMString::empty()
     }
 
     pub fn SetSrc(&mut self, _src: DOMString) -> ErrorResult {
@@ -45,7 +45,7 @@ impl HTMLTrackElement {
     }
 
     pub fn Srclang(&self) -> DOMString {
-        ~""
+        DOMString::empty()
     }
 
     pub fn SetSrclang(&mut self, _srclang: DOMString) -> ErrorResult {
@@ -53,7 +53,7 @@ impl HTMLTrackElement {
     }
 
     pub fn Label(&self) -> DOMString {
-        ~""
+        DOMString::empty()
     }
 
     pub fn SetLabel(&mut self, _label: DOMString) -> ErrorResult {

@@ -6,7 +6,7 @@ use dom::bindings::codegen::AttrBinding;
 use dom::bindings::utils::{Reflectable, Reflector, reflect_dom_object};
 use dom::window::Window;
 use servo_util::namespace::{Namespace, Null};
-use servo_util::str::DOMString;
+use servo_util::str::{DOMString, DOMSlice};
 
 use std::util;
 
@@ -66,7 +66,7 @@ impl Attr {
         value
     }
 
-    pub fn value_ref<'a>(&'a self) -> &'a str {
+    pub fn value_ref<'a>(&'a self) -> DOMSlice<'a> {
         self.value.as_slice()
     }
 }
@@ -91,7 +91,7 @@ impl Attr {
     pub fn GetNamespaceURI(&self) -> Option<DOMString> {
         match self.namespace.to_str() {
             "" => None,
-            url => Some(url.to_owned()),
+            url => Some(DOMString::from_string(url)),
         }
     }
 

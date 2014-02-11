@@ -53,7 +53,7 @@ impl HTMLVideoElement {
     }
 
     pub fn Poster(&self) -> DOMString {
-        ~""
+        DOMString::empty()
     }
 
     pub fn SetPoster(&mut self, _poster: DOMString) -> ErrorResult {

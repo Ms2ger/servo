@@ -29,7 +29,7 @@ impl HTMLQuoteElement {
 
 impl HTMLQuoteElement {
     pub fn Cite(&self) -> DOMString {
-        ~""
+        DOMString::empty()
     }
 
     pub fn SetCite(&self, _cite: DOMString) -> ErrorResult {

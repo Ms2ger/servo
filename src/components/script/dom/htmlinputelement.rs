@@ -29,7 +29,7 @@ impl HTMLInputElement {
 
 impl HTMLInputElement {
     pub fn Accept(&self) -> DOMString {
-        ~""
+        DOMString::empty()
     }
 
     pub fn SetAccept(&mut self, _accept: DOMString) -> ErrorResult {
@@ -37,7 +37,7 @@ impl HTMLInputElement {
     }
 
     pub fn Alt(&self) -> DOMString {
-        ~""
+        DOMString::empty()
     }
 
     pub fn SetAlt(&mut self, _alt: DOMString) -> ErrorResult {
@@ -45,7 +45,7 @@ impl HTMLInputElement {
     }
 
     pub fn Autocomplete(&self) -> DOMString {
-        ~""
+        DOMString::empty()
     }
 
     pub fn SetAutocomplete(&mut self, _autocomple: DOMString) -> ErrorResult {
@@ -84,7 +84,7 @@ impl HTMLInputElement {
     }
 
     pub fn FormAction(&self) -> DOMString {
-        ~""
+        DOMString::empty()
     }
 
     pub fn SetFormAction(&mut self, _form_action: DOMString) -> ErrorResult {
@@ -92,7 +92,7 @@ impl HTMLInputElement {
     }
 
     pub fn FormEnctype(&self) -> DOMString {
-        ~""
+        DOMString::empty()
     }
 
     pub fn SetFormEnctype(&mut self, _form_enctype: DOMString) -> ErrorResult {
@@ -100,7 +100,7 @@ impl HTMLInputElement {
     }
 
     pub fn FormMethod(&self) -> DOMString {
-        ~""
+        DOMString::empty()
     }
 
     pub fn SetFormMethod(&mut self, _form_method: DOMString) -> ErrorResult {
@@ -116,7 +116,7 @@ impl HTMLInputElement {
     }
 
     pub fn FormTarget(&self) -> DOMString {
-        ~""
+        DOMString::empty()
     }
 
     pub fn SetFormTarget(&mut self, _form_target: DOMString) -> ErrorResult {
@@ -139,7 +139,7 @@ impl HTMLInputElement {
     }
 
     pub fn InputMode(&self) -> DOMString {
-        ~""
+        DOMString::empty()
     }
 
     pub fn SetInputMode(&mut self, _input_mode: DOMString) -> ErrorResult {
@@ -147,7 +147,7 @@ impl HTMLInputElement {
     }
 
     pub fn Max(&self) -> DOMString {
-        ~""
+        DOMString::empty()
     }
 
     pub fn SetMax(&mut self, _max: DOMString) -> ErrorResult {
@@ -163,7 +163,7 @@ impl HTMLInputElement {
     }
 
     pub fn Min(&self) -> DOMString {
-        ~""
+        DOMString::empty()
     }
 
     pub fn SetMin(&mut self, _min: DOMString) -> ErrorResult {
@@ -179,7 +179,7 @@ impl HTMLInputElement {
     }
 
     pub fn Name(&self) -> DOMString {
-        ~""
+        DOMString::empty()
     }
 
     pub fn SetName(&mut self, _name: DOMString) -> ErrorResult {
@@ -187,7 +187,7 @@ impl HTMLInputElement {
     }
 
     pub fn Pattern(&self) -> DOMString {
-        ~""
+        DOMString::empty()
     }
 
     pub fn SetPattern(&mut self, _pattern: DOMString) -> ErrorResult {
@@ -195,7 +195,7 @@ impl HTMLInputElement {
     }
 
     pub fn Placeholder(&self) -> DOMString {
-        ~""
+        DOMString::empty()
     }
 
     pub fn SetPlaceholder(&mut self, _placeholder: DOMString) -> ErrorResult {
@@ -227,7 +227,7 @@ impl HTMLInputElement {
     }
 
     pub fn Src(&self) -> DOMString {
-        ~""
+        DOMString::empty()
     }
 
     pub fn SetSrc(&mut self, _src: DOMString) -> ErrorResult {
@@ -235,7 +235,7 @@ impl HTMLInputElement {
     }
 
     pub fn Step(&self) -> DOMString {
-        ~""
+        DOMString::empty()
     }
 
     pub fn SetStep(&mut self, _step: DOMString) -> ErrorResult {
@@ -243,7 +243,7 @@ impl HTMLInputElement {
     }
 
     pub fn Type(&self) -> DOMString {
-        ~""
+        DOMString::empty()
     }
 
     pub fn SetType(&mut self, _type: DOMString) -> ErrorResult {
@@ -251,7 +251,7 @@ impl HTMLInputElement {
     }
 
     pub fn DefaultValue(&self) -> DOMString {
-        ~""
+        DOMString::empty()
     }
 
     pub fn SetDefaultValue(&mut self, _default_value: DOMString) -> ErrorResult {
@@ -259,7 +259,7 @@ impl HTMLInputElement {
     }
 
     pub fn Value(&self) -> DOMString {
-        ~""
+        DOMString::empty()
     }
 
     pub fn SetValue(&mut self, _value: DOMString) -> ErrorResult {
@@ -281,7 +281,7 @@ impl HTMLInputElement {
     }
 
     pub fn GetValidationMessage(&self) -> Fallible<DOMString> {
-        Ok(~"")
+        Ok(DOMString::empty())
     }
 
     pub fn CheckValidity(&self) -> bool {
@@ -311,7 +311,7 @@ impl HTMLInputElement {
     }
 
     pub fn GetSelectionDirection(&self) -> Fallible<DOMString> {
-        Ok(~"")
+        Ok(DOMString::empty())
     }
 
     pub fn SetSelectionDirection(&mut self, _selection_direction: DOMString) -> ErrorResult {
@@ -319,7 +319,7 @@ impl HTMLInputElement {
     }
 
     pub fn Align(&self) -> DOMString {
-        ~""
+        DOMString::empty()
     }
 
     pub fn SetAlign(&mut self, _align: DOMString) -> ErrorResult {
@@ -327,7 +327,7 @@ impl HTMLInputElement {
     }
 
     pub fn UseMap(&self) -> DOMString {
-        ~""
+        DOMString::empty()
     }
 
     pub fn SetUseMap(&mut self, _align: DOMString) -> ErrorResult {

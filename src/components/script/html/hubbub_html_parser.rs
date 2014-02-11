@@ -37,7 +37,7 @@ macro_rules! handle_element(
      $ctor: ident
      $(, $arg:expr )*) => (
         if $string == $localName {
-            return $ctor::new($localName, $document $(, $arg)*);
+            return $ctor::new(DOMString::from_string($localName), $document $(, $arg)*);
         }
     )
 )
@@ -342,7 +342,7 @@ pub fn parse_html(cx: *JSContext,
                         match (element.get_attribute(Null, "rel"), element.get_attribute(Null, "href")) {
                             (Some(rel), Some(href)) => {
                                 if "stylesheet" == rel.value_ref() {
-                                    debug!("found CSS stylesheet: {:s}", href.value_ref());
+                                    debug!("found CSS stylesheet: {:s}", href.value_ref().to_str());
                                     let url = parse_url(href.value_ref(), Some(url2.clone()));
                                     css_chan2.send(CSSTaskNewFile(UrlProvenance(url)));
                                 }

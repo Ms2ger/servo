@@ -36,6 +36,6 @@ impl Text {
     }
 
     pub fn GetWholeText(&self) -> Fallible<DOMString> {
-        Ok(~"")
+        Ok(DOMString::empty())
     }
 }

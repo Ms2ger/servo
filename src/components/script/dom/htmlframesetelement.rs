@@ -29,7 +29,7 @@ impl HTMLFrameSetElement {
 
 impl HTMLFrameSetElement {
     pub fn Cols(&self) -> DOMString {
-        ~""
+        DOMString::empty()
     }
 
     pub fn SetCols(&mut self, _cols: DOMString) -> ErrorResult {
@@ -37,7 +37,7 @@ impl HTMLFrameSetElement {
     }
 
     pub fn Rows(&self) -> DOMString {
-        ~""
+        DOMString::empty()
     }
 
     pub fn SetRows(&mut self, _rows: DOMString) -> ErrorResult {

@@ -14,6 +14,7 @@ use std::libc;
 use std::ptr;
 use std::ptr::null;
 use std::str;
+use std::to_bytes::{IterBytes, Cb};
 use std::vec;
 use std::unstable::raw::Box;
 use js::glue::*;
@@ -109,7 +110,11 @@ extern fn InterfaceObjectToString(cx: *JSContext, _argc: c_uint, vp: *mut JSVal)
     let v = *GetFunctionNativeReserved(callee, TOSTRING_NAME_RESERVED_SLOT);
     assert!(jsval::is_string(v));
     let name = jsstring_to_str(cx, jsval::to_string(v));
-    let retval = ~"function " + name + "() {\n    [native code]\n}";
+    let retval = DOMString::from_strings([
+        DOMString::from_string("function "),
+        name,
+        DOMString::from_string("() {\n    [native code]\n}"),
+    ]);
     *vp = str_to_jsval(cx, retval);
     return 1;
   }
@@ -191,7 +196,7 @@ pub fn jsstring_to_str(cx: *JSContext, s: *JSString) -> DOMString {
         let length = 0;
         let chars = JS_GetStringCharsAndLength(cx, s, &length);
         vec::raw::buf_as_slice(chars, length as uint, |char_vec| {
-            str::from_utf16(char_vec)
+            DOMString(char_vec.to_owned())
         })
     }
 }
@@ -212,7 +217,7 @@ pub enum StringificationBehavior {
 pub fn jsval_to_str(cx: *JSContext, v: JSVal,
                     nullBehavior: StringificationBehavior) -> Result<DOMString, ()> {
     if jsval::is_null(v) && nullBehavior == Empty {
-        Ok(~"")
+        Ok(DOMString::empty())
     } else {
         let jsstr = unsafe { JS_ValueToString(cx, v) };
         if jsstr.is_null() {
@@ -239,8 +244,7 @@ pub fn jsval_to_domstring(cx: *JSContext, v: JSVal) -> Result<Option<DOMString>,
 }
 
 pub unsafe fn str_to_jsval(cx: *JSContext, string: DOMString) -> JSVal {
-    let string_utf16 = string.to_utf16();
-    let jsstr = JS_NewUCStringCopyN(cx, string_utf16.as_ptr(), string_utf16.len() as libc::size_t);
+    let jsstr = JS_NewUCStringCopyN(cx, string.as_ptr(), string.len() as libc::size_t);
     if jsstr.is_null() {
         // FIXME: is there something else we should do on failure?
         JSVAL_NULL

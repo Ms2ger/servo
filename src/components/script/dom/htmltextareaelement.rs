@@ -61,7 +61,7 @@ impl HTMLTextAreaElement {
     }
 
     pub fn Name(&self) -> DOMString {
-        ~""
+        DOMString::empty()
     }
 
     pub fn SetName(&mut self, _name: DOMString) -> ErrorResult {
@@ -69,7 +69,7 @@ impl HTMLTextAreaElement {
     }
 
     pub fn Placeholder(&self) -> DOMString {
-        ~""
+        DOMString::empty()
     }
 
     pub fn SetPlaceholder(&mut self, _placeholder: DOMString) -> ErrorResult {
@@ -101,7 +101,7 @@ impl HTMLTextAreaElement {
     }
 
     pub fn Wrap(&self) -> DOMString {
-        ~""
+        DOMString::empty()
     }
 
     pub fn SetWrap(&mut self, _wrap: DOMString) -> ErrorResult {
@@ -109,14 +109,14 @@ impl HTMLTextAreaElement {
     }
 
     pub fn Type(&self) -> DOMString {
-        ~""
+        DOMString::empty()
     }
 
     pub fn SetType(&mut self, _type: DOMString) {
     }
 
     pub fn DefaultValue(&self) -> DOMString {
-        ~""
+        DOMString::empty()
     }
 
     pub fn SetDefaultValue(&mut self, _default_value: DOMString) -> ErrorResult {
@@ -124,7 +124,7 @@ impl HTMLTextAreaElement {
     }
 
     pub fn Value(&self) -> DOMString {
-        ~""
+        DOMString::empty()
     }
 
     pub fn SetValue(&mut self, _value: DOMString) {
@@ -147,7 +147,7 @@ impl HTMLTextAreaElement {
     }
 
     pub fn ValidationMessage(&self) -> DOMString {
-        ~""
+        DOMString::empty()
     }
 
     pub fn CheckValidity(&self) -> bool {
@@ -177,7 +177,7 @@ impl HTMLTextAreaElement {
     }
 
     pub fn GetSelectionDirection(&self) -> Fallible<DOMString> {
-        Ok(~"")
+        Ok(DOMString::empty())
     }
 
     pub fn SetSelectionDirection(&self, _selection_direction: DOMString) -> ErrorResult {

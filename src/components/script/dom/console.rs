@@ -23,23 +23,23 @@ impl Console {
     }
 
     pub fn Log(&self, message: DOMString) {
-        println!("{:s}", message);
+        println!("{:s}", message.to_string());
     }
 
     pub fn Debug(&self, message: DOMString) {
-        println!("{:s}", message);
+        println!("{:s}", message.to_string());
     }
 
     pub fn Info(&self, message: DOMString) {
-        println!("{:s}", message);
+        println!("{:s}", message.to_string());
     }
 
     pub fn Warn(&self, message: DOMString) {
-        println!("{:s}", message);
+        println!("{:s}", message.to_string());
     }
 
     pub fn Error(&self, message: DOMString) {
-        println!("{:s}", message);
+        println!("{:s}", message.to_string());
     }
 }
 

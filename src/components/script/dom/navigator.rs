@@ -24,23 +24,23 @@ impl Navigator {
     }
 
     pub fn DoNotTrack(&self) -> DOMString {
-        ~"unspecified"
+        DOMString::from_string("unspecified")
     }
 
     pub fn Vendor(&self) -> DOMString {
-        ~"" // Like Gecko
+        DOMString::empty() // Like Gecko
     }
 
     pub fn VendorSub(&self) -> DOMString {
-        ~"" // Like Gecko
+        DOMString::empty() // Like Gecko
     }
 
     pub fn Product(&self) -> DOMString {
-        ~"Gecko"
+        DOMString::from_string("Gecko")
     }
 
     pub fn ProductSub(&self) -> DOMString {
-        ~""
+        DOMString::empty()
     }
 
     pub fn CookieEnabled(&self) -> bool {
@@ -48,7 +48,7 @@ impl Navigator {
     }
 
     pub fn GetBuildID(&self) -> Fallible<DOMString> {
-        Ok(~"")
+        Ok(DOMString::empty())
     }
 
     pub fn JavaEnabled(&self) -> Fallible<bool> {
@@ -60,23 +60,23 @@ impl Navigator {
     }
 
     pub fn AppName(&self) -> DOMString {
-        ~"Netscape" // Like Gecko/Webkit
+        DOMString::from_string("Netscape") // Like Gecko/Webkit
     }
 
     pub fn GetAppCodeName(&self) -> Fallible<DOMString> {
-        Ok(~"Mozilla") // Like Gecko/Webkit
+        Ok(DOMString::from_string("Mozilla")) // Like Gecko/Webkit
     }
 
     pub fn GetAppVersion(&self) -> Fallible<DOMString> {
-        Ok(~"")
+        Ok(DOMString::empty())
     }
 
     pub fn GetPlatform(&self) -> Fallible<DOMString> {
-        Ok(~"")
+        Ok(DOMString::empty())
     }
 
     pub fn GetUserAgent(&self) -> Fallible<DOMString> {
-        Ok(~"")
+        Ok(DOMString::empty())
     }
 
     pub fn GetLanguage(&self) -> Option<DOMString> {

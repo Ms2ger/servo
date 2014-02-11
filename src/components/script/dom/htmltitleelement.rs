@@ -29,7 +29,7 @@ impl HTMLTitleElement {
 
 impl HTMLTitleElement {
     pub fn Text(&self) -> DOMString {
-        ~""
+        DOMString::empty()
     }
 
     pub fn SetText(&mut self, _text: DOMString) -> ErrorResult {

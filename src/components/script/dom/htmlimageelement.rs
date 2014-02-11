@@ -79,7 +79,7 @@ impl HTMLImageElement {
     }
 
     pub fn Alt(&self) -> DOMString {
-        ~""
+        DOMString::empty()
     }
 
     pub fn SetAlt(&mut self, _alt: DOMString) -> ErrorResult {
@@ -87,7 +87,7 @@ impl HTMLImageElement {
     }
 
     pub fn Src(&self, _abstract_self: AbstractNode) -> DOMString {
-        ~""
+        DOMString::empty()
     }
 
     pub fn SetSrc(&mut self, abstract_self: AbstractNode, src: DOMString) -> ErrorResult {
@@ -97,7 +97,7 @@ impl HTMLImageElement {
     }
 
     pub fn CrossOrigin(&self) -> DOMString {
-        ~""
+        DOMString::empty()
     }
 
     pub fn SetCrossOrigin(&mut self, _cross_origin: DOMString) -> ErrorResult {
@@ -105,7 +105,7 @@ impl HTMLImageElement {
     }
 
     pub fn UseMap(&self) -> DOMString {
-        ~""
+        DOMString::empty()
     }
 
     pub fn SetUseMap(&mut self, _use_map: DOMString) -> ErrorResult {
@@ -167,7 +167,7 @@ impl HTMLImageElement {
     }
 
     pub fn Name(&self) -> DOMString {
-        ~""
+        DOMString::empty()
     }
 
     pub fn SetName(&mut self, _name: DOMString) -> ErrorResult {
@@ -175,7 +175,7 @@ impl HTMLImageElement {
     }
 
     pub fn Align(&self) -> DOMString {
-        ~""
+        DOMString::empty()
     }
 
     pub fn SetAlign(&mut self, _align: DOMString) -> ErrorResult {
@@ -199,7 +199,7 @@ impl HTMLImageElement {
     }
 
     pub fn LongDesc(&self) -> DOMString {
-        ~""
+        DOMString::empty()
     }
 
     pub fn SetLongDesc(&mut self, _longdesc: DOMString) -> ErrorResult {
@@ -207,7 +207,7 @@ impl HTMLImageElement {
     }
 
     pub fn Border(&self) -> DOMString {
-        ~""
+        DOMString::empty()
     }
 
     pub fn SetBorder(&mut self, _border: DOMString) -> ErrorResult {

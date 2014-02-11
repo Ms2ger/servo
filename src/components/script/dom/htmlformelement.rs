@@ -30,7 +30,7 @@ impl HTMLFormElement {
 
 impl HTMLFormElement {
     pub fn AcceptCharset(&self) -> DOMString {
-        ~""
+        DOMString::empty()
     }
 
     pub fn SetAcceptCharset(&mut self, _accept_charset: DOMString) -> ErrorResult {
@@ -38,7 +38,7 @@ impl HTMLFormElement {
     }
 
     pub fn Action(&self) -> DOMString {
-        ~""
+        DOMString::empty()
     }
 
     pub fn SetAction(&mut self, _action: DOMString) -> ErrorResult {
@@ -46,7 +46,7 @@ impl HTMLFormElement {
     }
 
     pub fn Autocomplete(&self) -> DOMString {
-        ~""
+        DOMString::empty()
     }
 
     pub fn SetAutocomplete(&mut self, _autocomplete: DOMString) -> ErrorResult {
@@ -54,7 +54,7 @@ impl HTMLFormElement {
     }
 
     pub fn Enctype(&self) -> DOMString {
-        ~""
+        DOMString::empty()
     }
 
     pub fn SetEnctype(&mut self, _enctype: DOMString) -> ErrorResult {
@@ -62,7 +62,7 @@ impl HTMLFormElement {
     }
 
     pub fn Encoding(&self) -> DOMString {
-        ~""
+        DOMString::empty()
     }
 
     pub fn SetEncoding(&mut self, _encoding: DOMString) -> ErrorResult {
@@ -70,7 +70,7 @@ impl HTMLFormElement {
     }
 
     pub fn Method(&self) -> DOMString {
-        ~""
+        DOMString::empty()
     }
 
     pub fn SetMethod(&mut self, _method: DOMString) -> ErrorResult {
@@ -78,7 +78,7 @@ impl HTMLFormElement {
     }
 
     pub fn Name(&self) -> DOMString {
-        ~""
+        DOMString::empty()
     }
 
     pub fn SetName(&mut self, _name: DOMString) -> ErrorResult {
@@ -94,7 +94,7 @@ impl HTMLFormElement {
     }
 
     pub fn Target(&self) -> DOMString {
-        ~""
+        DOMString::empty()
     }
 
     pub fn SetTarget(&mut self, _target: DOMString) -> ErrorResult {

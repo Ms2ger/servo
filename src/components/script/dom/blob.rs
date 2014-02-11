@@ -36,7 +36,7 @@ impl Blob {
     }
 
     pub fn Type(&self) -> DOMString {
-        ~""
+        fail!("DOMString::empty()")
     }
 
     pub fn Slice(&self, _start: i64, _end: i64, _contentType: Option<DOMString>) -> @mut Blob {

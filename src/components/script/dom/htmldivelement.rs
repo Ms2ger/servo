@@ -29,7 +29,7 @@ impl HTMLDivElement {
 
 impl HTMLDivElement {
     pub fn Align(&self) -> DOMString {
-        ~""
+        DOMString::empty()
     }
 
     pub fn SetAlign(&mut self, _align: DOMString) -> ErrorResult {

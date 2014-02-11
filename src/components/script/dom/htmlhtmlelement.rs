@@ -29,7 +29,7 @@ impl HTMLHtmlElement {
 
 impl HTMLHtmlElement {
     pub fn Version(&self) -> DOMString {
-        ~""
+        DOMString::empty()
     }
 
     pub fn SetVersion(&mut self, _version: DOMString) -> ErrorResult {

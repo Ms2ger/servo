@@ -29,7 +29,7 @@ impl HTMLTimeElement {
 
 impl HTMLTimeElement {
     pub fn DateTime(&self) -> DOMString {
-        ~""
+        DOMString::empty()
     }
     
     pub fn SetDateTime(&mut self, _dateTime: DOMString) -> ErrorResult {

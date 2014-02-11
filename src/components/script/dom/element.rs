@@ -126,7 +126,7 @@ pub enum ElementTypeId {
 
 
 impl Element {
-    pub fn new_inherited(type_id: ElementTypeId, tag_name: ~str, namespace: Namespace, document: AbstractDocument) -> Element {
+    pub fn new_inherited(type_id: ElementTypeId, tag_name: DOMString, namespace: Namespace, document: AbstractDocument) -> Element {
         Element {
             node: Node::new_inherited(ElementNodeTypeId(type_id), document),
             tag_name: tag_name,
@@ -596,7 +596,7 @@ impl Element {
     }
 }
 
-fn get_attribute_parts(name: DOMString) -> (Option<~str>, ~str) {
+fn get_attribute_parts(name: DOMString) -> (Option<DOMString>, DOMString) {
     //FIXME: Throw for XML-invalid names
     //FIXME: Throw for XMLNS-invalid names
     let (prefix, local_name) = if name.contains(":")  {

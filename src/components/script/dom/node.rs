@@ -962,20 +962,20 @@ impl Node {
                     element.TagName()
                 })
             }
-            TextNodeTypeId => ~"#text",
+            TextNodeTypeId => DOMString::from_string("#text"),
             ProcessingInstructionNodeTypeId => {
                 abstract_self.with_imm_processing_instruction(|processing_instruction| {
                     processing_instruction.Target()
                 })
             }
-            CommentNodeTypeId => ~"#comment",
+            CommentNodeTypeId => DOMString::from_string("#comment"),
             DoctypeNodeTypeId => {
                 abstract_self.with_imm_doctype(|doctype| {
                     doctype.name.clone()
                 })
             },
-            DocumentFragmentNodeTypeId => ~"#document-fragment",
-            DocumentNodeTypeId(_) => ~"#document"
+            DocumentFragmentNodeTypeId => DOMString::from_string("#document-fragment"),
+            DocumentNodeTypeId(_) => DOMString::from_string("#document"),
         }
     }
 
@@ -1060,7 +1060,7 @@ impl Node {
         match self.type_id {
             DocumentFragmentNodeTypeId |
             ElementNodeTypeId(..) => {
-                let mut content = ~"";
+                let mut content = DOMString::empty();
                 for node in abstract_self.traverse_preorder() {
                     if node.is_text() {
                         node.with_imm_text(|text| {
