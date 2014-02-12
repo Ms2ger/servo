@@ -45,7 +45,7 @@ impl HTMLImageElement {
         match src_opt {
             None => {}
             Some(src) => {
-                let img_url = parse_url(src, url);
+                let img_url = parse_url(src.to_string(), url);
                 self.image = Some(img_url.clone());
 
                 // inform the image cache to load this, but don't store a
@@ -59,7 +59,7 @@ impl HTMLImageElement {
     }
 
     pub fn AfterSetAttr(&mut self, name: DOMString, _value: DOMString) {
-        if "src" == name {
+        if name == DOMString::from_string("src") {
             let document = self.htmlelement.element.node.owner_doc();
             let window = document.document().window;
             let url = window.page.url.as_ref().map(|&(ref url, _)| url.clone());
@@ -71,7 +71,7 @@ impl HTMLImageElement {
         // FIXME (#1469):
         // This might not handle remove src attribute actually since
         // `self.update_image()` will see the missing src attribute and return early.
-        if "src" == name {
+        if name == DOMString::from_string("src") {
             let document = self.htmlelement.element.node.owner_doc();
             let window = document.document().window;
             self.update_image(window.image_cache_task.clone(), None);
@@ -92,7 +92,7 @@ impl HTMLImageElement {
 
     pub fn SetSrc(&mut self, abstract_self: AbstractNode, src: DOMString) -> ErrorResult {
         let node = &mut self.htmlelement.element;
-        node.set_attr(abstract_self, ~"src", src.clone());
+        node.set_attr(abstract_self, DOMString::from_string("src"), src.clone());
         Ok(())
     }
 
