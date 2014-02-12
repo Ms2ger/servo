@@ -40,7 +40,7 @@ impl Location {
     }
 
     pub fn Href(&self) -> DOMString {
-        self.page.url.get_ref().first().to_str()
+        DOMString::from_string(self.page.url.get_ref().first().to_str())
     }
 
     pub fn SetHref(&self, _href: DOMString) -> Fallible<()> {

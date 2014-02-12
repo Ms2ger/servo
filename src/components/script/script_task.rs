@@ -6,7 +6,7 @@
 //! and layout tasks.
 
 use dom::bindings::codegen::RegisterBindings;
-use dom::bindings::utils::{Reflectable, GlobalStaticData};
+use dom::bindings::utils::{Reflectable, GlobalStaticData, DOMString};
 use dom::document::AbstractDocument;
 use dom::element::Element;
 use dom::event::{Event_, ResizeEvent, ReflowEvent, ClickEvent, MouseDownEvent, MouseMoveEvent, MouseUpEvent};
@@ -776,7 +776,7 @@ impl ScriptTask {
         // "load" event as soon as we've finished executing all scripts parsed during
         // the initial load.
         let event = Event::new(window);
-        event.mut_event().InitEvent(~"load", false, false);
+        event.mut_event().InitEvent(DOMString::from_string("load"), false, false);
         let doctarget = AbstractEventTarget::from_document(document);
         let wintarget = AbstractEventTarget::from_window(window);
         window.eventtarget.dispatch_event_with_target(wintarget, Some(doctarget), event);
@@ -787,8 +787,9 @@ impl ScriptTask {
     }
 
     fn find_fragment_node(&self, page: &mut Page, fragid: ~str) -> Option<AbstractNode> {
+        let fragid = DOMString::from_string(fragid);
         let document = page.frame.expect("root frame is None").document; 
-        match document.document().GetElementById(fragid.to_owned()) {
+        match document.document().GetElementById(fragid.clone()) {
             Some(node) => Some(node),
             None => {
                 let doc_node = AbstractNode::from_document(document);
@@ -796,7 +797,7 @@ impl ScriptTask {
                 anchors.find(|node| {
                     node.with_imm_element(|elem| {
                         elem.get_attribute(Null, "name").map_default(false, |attr| {
-                            attr.value_ref() == fragid
+                            attr.value_ref() == fragid.as_slice()
                         })
                     })
                 })
@@ -877,7 +878,7 @@ impl ScriptTask {
 
                         if node.is_element() {
                             node.with_imm_element(|element| {
-                                if "a" == element.tag_name {
+                                if element.tag_name == DOMString::from_string("a") {
                                     self.load_url_from_element(page, element)
                                 }
                             })
@@ -964,13 +965,13 @@ impl ScriptTask {
         // if the node's element is "a," load url from href attr
         let attr = element.get_attribute(Null, "href");
         for href in attr.iter() {
-            debug!("ScriptTask: clicked on link to {:s}", href.Value());
-            let click_frag = href.value_ref().starts_with("#");
+            debug!("ScriptTask: clicked on link to {:s}", href.Value().to_string());
+            let click_frag = href.value_ref().to_string().starts_with("#");
             let base_url = page.url.as_ref().map(|&(ref url, _)| {
                 url.clone()
             });
             debug!("ScriptTask: current url is {:?}", base_url);
-            let url = parse_url(href.value_ref(), base_url);
+            let url = parse_url(href.value_ref().to_string(), base_url);
 
             if click_frag {
                 match self.find_fragment_node(page, url.fragment.unwrap()) {

@@ -239,7 +239,7 @@ pub fn build_element_from_tag(tag: DOMString, document: AbstractDocument) -> Abs
     handle_element!(document, tag, "ul",        HTMLUListElement);
     handle_element!(document, tag, "video",     HTMLVideoElement);
 
-    return HTMLUnknownElement::new(tag, document);
+    return HTMLUnknownElement::new(DOMString::from_string(tag), document);
 }
 
 pub fn parse_html(cx: *JSContext,
@@ -304,7 +304,7 @@ pub fn parse_html(cx: *JSContext,
     let tree_handler = hubbub::TreeHandler {
         create_comment: |data: ~str| {
             debug!("create comment");
-            let comment = Comment::new(data, document);
+            let comment = Comment::new(DOMString::from_string(data), document);
             unsafe { comment.to_hubbub_node() }
         },
         create_doctype: |doctype: ~hubbub::Doctype| {
@@ -329,8 +329,8 @@ pub fn parse_html(cx: *JSContext,
             node.as_mut_element(|element| {
                 for attr in tag.attributes.iter() {
                     element.set_attr(node,
-                                     attr.name.clone(),
-                                     attr.value.clone());
+                                     DOMString::from_string(attr.name),
+                                     DOMString::from_string(attr.value));
                 }
             });
 
@@ -341,9 +341,9 @@ pub fn parse_html(cx: *JSContext,
                     node.with_imm_element(|element| {
                         match (element.get_attribute(Null, "rel"), element.get_attribute(Null, "href")) {
                             (Some(rel), Some(href)) => {
-                                if "stylesheet" == rel.value_ref() {
-                                    debug!("found CSS stylesheet: {:s}", href.value_ref().to_str());
-                                    let url = parse_url(href.value_ref(), Some(url2.clone()));
+                                if "stylesheet" == rel.value_ref().to_string() {
+                                    debug!("found CSS stylesheet: {:s}", href.value_ref().to_string());
+                                    let url = parse_url(href.value_ref().to_string(), Some(url2.clone()));
                                     css_chan2.send(CSSTaskNewFile(UrlProvenance(url)));
                                 }
                             }
@@ -359,7 +359,7 @@ pub fn parse_html(cx: *JSContext,
                         let elem = &mut iframe_element.htmlelement.element;
                         let src_opt = elem.get_attribute(Null, "src").map(|x| x.Value());
                         for src in src_opt.iter() {
-                            let iframe_url = parse_url(*src, Some(url2.clone()));
+                            let iframe_url = parse_url(src.to_string(), Some(url2.clone()));
                             iframe_element.frame = Some(iframe_url.clone());
                             
                             // Subpage Id
@@ -398,7 +398,7 @@ pub fn parse_html(cx: *JSContext,
         },
         create_text: |data: ~str| {
             debug!("create text");
-            let text = Text::new(data, document);
+            let text = Text::new(DOMString::from_string(data), document);
             unsafe { text.to_hubbub_node() }
         },
         ref_node: |_| {},
@@ -449,7 +449,7 @@ pub fn parse_html(cx: *JSContext,
         },
         encoding_change: |encname| {
             debug!("encoding change");
-            document.mut_document().set_encoding_name(encname);
+            document.mut_document().set_encoding_name(DOMString::from_string(encname));
         },
         complete_script: |script| {
             unsafe {
@@ -457,8 +457,8 @@ pub fn parse_html(cx: *JSContext,
                 scriptnode.with_imm_element(|script| {
                     match script.get_attribute(Null, "src") {
                         Some(src) => {
-                            debug!("found script: {:s}", src.Value());
-                            let new_url = parse_url(src.value_ref(), Some(url3.clone()));
+                            debug!("found script: {:s}", src.Value().to_string());
+                            let new_url = parse_url(src.value_ref().to_string(), Some(url3.clone()));
                             js_chan2.send(JSTaskNewFile(new_url));
                         }
                         None => {

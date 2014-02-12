@@ -88,19 +88,35 @@ impl<'a> DOMSlice<'a> {
     pub fn to_str(&self) -> DOMString {
         DOMString((**self).to_owned())
     }
+
+    pub fn to_string(&self) -> ~str {
+        str::from_utf16(**self)
+    }
 //    pub fn from_string(s: &str) -> DOMString {
 //        s.to_utf16()
 //    }
 }
 
+impl<'a> Eq for DOMSlice<'a> {
+    fn eq(&self, other: &DOMSlice<'a>) -> bool {
+        (**self).eq(&**other)
+    }
+}
+
 impl Equiv<DOMString> for DOMString {
-    fn equiv(&self, other: DOMString) -> bool {
+    fn equiv(&self, other: &DOMString) -> bool {
         (**self).equiv(&**other)
     }
 }
 
-impl<'a> Equiv<DOMSlice<'a>> for DOMString {
+/*impl<'a> Equiv<DOMSlice<'a>> for DOMString {
     fn equiv(&self, other: &DOMSlice<'a>) -> bool {
+        (**self).equiv(&**other)
+    }
+}*/
+
+impl<'a> Equiv<DOMString> for DOMSlice<'a> {
+    fn equiv(&self, other: &DOMString) -> bool {
         (**self).equiv(&**other)
     }
 }

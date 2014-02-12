@@ -133,7 +133,7 @@ impl HTMLImageElement {
 
     pub fn SetWidth(&mut self, abstract_self: AbstractNode, width: u32) -> ErrorResult {
         let node = &mut self.htmlelement.element;
-        node.set_attr(abstract_self, ~"width", width.to_str());
+        node.set_attr(abstract_self, DOMString::from_string("width"), DOMString::from_string(width.to_str()));
         Ok(())
     }
 
@@ -150,7 +150,7 @@ impl HTMLImageElement {
 
     pub fn SetHeight(&mut self, abstract_self: AbstractNode, height: u32) -> ErrorResult {
         let node = &mut self.htmlelement.element;
-        node.set_attr(abstract_self, ~"height", height.to_str());
+        node.set_attr(abstract_self, DOMString::from_string("height"), DOMString::from_string(height.to_str()));
         Ok(())
     }
 

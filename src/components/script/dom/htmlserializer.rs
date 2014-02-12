@@ -73,17 +73,17 @@ fn serialize_text(node: AbstractNode) -> DOMString {
         match node.parent_node() {
             Some(parent) if parent.is_element() => {
                 parent.with_imm_element(|elem| {
-                    match elem.tag_name.as_slice() {
+                    match elem.tag_name.to_string().as_slice() {
                         "style" | "script" | "xmp" | "iframe" |
                         "noembed" | "noframes" | "plaintext" |
                         "noscript" if elem.namespace == namespace::HTML => {
                             text.data.clone()
                         },
-                        _ => escape(text.data, false)
+                        _ => escape(text.data.clone(), false)
                     }
                })
             },
-            _ => escape(text.data, false)
+            _ => escape(text.data.clone(), false)
         }
     })
 }
@@ -119,15 +119,15 @@ fn serialize_elem(node: AbstractNode, open_elements: &mut ~[DOMString]) -> DOMSt
         for attr in elem.attrs.iter() {
             rv.push_str(serialize_attr(attr));
         };
-        rv.push_str(">");
-        match elem.tag_name.as_slice() {
+        rv.push_str(DOMString::from_string(">"));
+        match elem.tag_name.to_string().as_slice() {
             "pre" | "listing" | "textarea" if
                 elem.namespace == namespace::HTML => {
                     match node.first_child() {
                         Some(child) if child.is_text() => {
                             child.with_imm_characterdata(|text| {
-                                if text.data[0] == 0x0A as u8 {
-                                    rv.push_str("\x0A");
+                                if text.data[0] == 0x0A as u16 {
+                                    rv.push_str(DOMString::from_string("\x0A"));
                                 }
                             })
                         },
@@ -145,22 +145,37 @@ fn serialize_elem(node: AbstractNode, open_elements: &mut ~[DOMString]) -> DOMSt
 
 fn serialize_attr(attr: &@mut Attr) -> DOMString {
     let attr_name = if attr.namespace == namespace::XML {
-        ~"xml:" + attr.local_name.clone()
+        DOMString::from_strings([
+            DOMString::from_string("xml:"),
+            attr.local_name.clone(),
+        ])
     } else if attr.namespace == namespace::XMLNS &&
-        attr.local_name.as_slice() == "xmlns" {
-        ~"xmlns"
+        attr.local_name == DOMString::from_string("xmlns") {
+          DOMString::from_string("xmlns")
     } else if attr.namespace == namespace::XMLNS {
-        ~"xmlns:" + attr.local_name.clone()
+        DOMString::from_strings([
+            DOMString::from_string("xmlns:"),
+            attr.local_name.clone(),
+        ])
     } else if attr.namespace == namespace::XLink {
-        ~"xlink:" + attr.local_name.clone()
+        DOMString::from_strings([
+            DOMString::from_string("xlink:"),
+            attr.local_name.clone(),
+        ])
     } else {
         attr.name.clone()
     };
-    ~" " + attr_name + "=\"" + escape(attr.value, true) + "\""
+    DOMString::from_strings([
+        DOMString::from_string(" "),
+        attr_name,
+        DOMString::from_string("=\""),
+        escape(attr.value.clone(), true),
+        DOMString::from_string("\""),
+    ])
 }
 
-fn escape(string: &str, attr_mode: bool) -> DOMString {
-    let replaced = string.replace("&", "&amp;").replace("\xA0", "&nbsp;");
+fn escape(string: DOMString, attr_mode: bool) -> DOMString {
+    /*let replaced = string.replace("&", "&amp;").replace("\xA0", "&nbsp;");
     match attr_mode {
         true => {
             replaced.replace("\"", "&quot;")
@@ -168,5 +183,6 @@ fn escape(string: &str, attr_mode: bool) -> DOMString {
         false => {
             replaced.replace("<", "&lt;").replace(">", "&gt;")
         }
-    }
+    }*/
+    fail!()
 }

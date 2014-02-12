@@ -3,6 +3,7 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 use dom::bindings::codegen::HTMLDocumentBinding;
+use dom::bindings::utils::DOMString;
 use dom::bindings::utils::{Reflectable, Reflector, Traceable};
 use dom::document::{AbstractDocument, Document, HTML};
 use dom::htmlcollection::HTMLCollection;
@@ -31,11 +32,11 @@ impl HTMLDocument {
 
 impl HTMLDocument {
     pub fn Images(&self) -> @mut HTMLCollection {
-        self.parent.createHTMLCollection(|elem| "img" == elem.tag_name)
+        self.parent.createHTMLCollection(|elem| elem.tag_name == DOMString::from_string("img"))
     }
 
     pub fn Embeds(&self) -> @mut HTMLCollection {
-        self.parent.createHTMLCollection(|elem| "embed" == elem.tag_name)
+        self.parent.createHTMLCollection(|elem| elem.tag_name == DOMString::from_string("embed"))
     }
 
     pub fn Plugins(&self) -> @mut HTMLCollection {
@@ -43,29 +44,29 @@ impl HTMLDocument {
     }
 
     pub fn Links(&self) -> @mut HTMLCollection {
-        self.parent.createHTMLCollection(|elem| {
-            ("a" == elem.tag_name || "area" == elem.tag_name) &&
-            elem.get_attribute(Null, "href").is_some()
-        })
+        self.parent.createHTMLCollection(|elem|
+            (elem.tag_name == DOMString::from_string("a") ||
+             elem.tag_name == DOMString::from_string("area")) &&
+            elem.get_attribute(Null, "href").is_some())
     }
 
     pub fn Forms(&self) -> @mut HTMLCollection {
-        self.parent.createHTMLCollection(|elem| "form" == elem.tag_name)
+        self.parent.createHTMLCollection(|elem| elem.tag_name == DOMString::from_string("form"))
     }
 
     pub fn Scripts(&self) -> @mut HTMLCollection {
-        self.parent.createHTMLCollection(|elem| "script" == elem.tag_name)
+        self.parent.createHTMLCollection(|elem| elem.tag_name == DOMString::from_string("script"))
     }
 
     pub fn Anchors(&self) -> @mut HTMLCollection {
         self.parent.createHTMLCollection(|elem| {
-            "a" == elem.tag_name && elem.get_attribute(Null, "name").is_some()
+            elem.tag_name == DOMString::from_string("a") && elem.get_attribute(Null, "name").is_some())
         })
     }
 
     pub fn Applets(&self) -> @mut HTMLCollection {
         // FIXME: This should be return OBJECT elements containing applets.
-        self.parent.createHTMLCollection(|elem| "applet" == elem.tag_name)
+        self.parent.createHTMLCollection(|elem| elem.tag_name == DOMString::from_string("applet"))
     }
 }
 
