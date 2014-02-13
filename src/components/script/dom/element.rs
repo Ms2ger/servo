@@ -22,7 +22,7 @@ use layout_interface::{MatchSelectorsDocumentDamage};
 use style;
 use servo_util::namespace;
 use servo_util::namespace::{Namespace, Null};
-use servo_util::str::{DOMString, null_str_as_empty_ref};
+use servo_util::str::{DOMString, DOMSlice, null_str_as_empty_ref};
 
 use std::ascii::StrAsciiExt;
 use std::cast;
@@ -146,20 +146,20 @@ impl Element {
 
     pub fn get_attribute(&self,
                          namespace: Namespace,
-                         name: &str) -> Option<@mut Attr> {
+                         name: DOMSlice) -> Option<@mut Attr> {
         self.attrs.iter().find(|attr| {
-            name == attr.local_name && attr.namespace == namespace
+            name == attr.local_name.as_slice() && attr.namespace == namespace
         }).map(|&x| x)
     }
 
     #[inline]
-    pub unsafe fn get_attr_val_for_layout(&self, namespace: &Namespace, name: &str)
-                                          -> Option<&'static str> {
+    pub unsafe fn get_attr_val_for_layout(&self, namespace: &Namespace, name: DOMSlice)
+                                          -> Option<DOMSlice<'static>> {
         self.attrs.iter().find(|attr: & &@mut Attr| {
             // unsafely avoid a borrow because this is accessed by many tasks
             // during parallel layout
             let attr: ***Box<Attr> = cast::transmute(attr);
-            name == (***attr).data.local_name && (***attr).data.namespace == *namespace
+            name == (***attr).data.local_name.as_slice() && (***attr).data.namespace == *namespace
        }).map(|attr| {
             let attr: **Box<Attr> = cast::transmute(attr);
             cast::transmute((**attr).data.value.as_slice())
@@ -180,8 +180,8 @@ impl Element {
         match prefix {
             Some(ref prefix_str) => {
                 if (namespace == namespace::Null ||
-                    ("xml" == prefix_str.as_slice() && namespace != namespace::XML) ||
-                    ("xmlns" == prefix_str.as_slice() && namespace != namespace::XMLNS)) {
+                    (prefix_str == &DOMString::from_string("xml") && namespace != namespace::XML) ||
+                    (prefix_str == &DOMString::from_string("xmlns") && namespace != namespace::XMLNS)) {
                     return Err(NamespaceError);
                 }
             },
@@ -219,9 +219,9 @@ impl Element {
                       value: DOMString,
                       old_value: Option<DOMString>) {
 
-        match local_name.as_slice() {
+        match local_name.to_string().as_slice() {
             "style" => {
-                self.style_attribute = Some(style::parse_style_attribute(value))
+                self.style_attribute = Some(style::parse_style_attribute(value.to_string()))
             }
             "id" => {
                 // XXX: this dual declaration are workaround to avoid the compile error:
@@ -283,7 +283,7 @@ impl Element {
                          abstract_self: AbstractNode,
                          local_name: DOMString,
                          old_value: Option<DOMString>) {
-        match local_name.as_slice() {
+        match local_name.to_string().as_slice() {
             "style" => {
                 self.style_attribute = None
             }
@@ -320,7 +320,7 @@ impl Element {
                                 abstract_self: AbstractNode,
                                 local_name: DOMString) {
         if abstract_self.is_in_doc() {
-            let damage = match local_name.as_slice() {
+            let damage = match local_name.to_string().as_slice() {
                 "style" | "id" | "class" => MatchSelectorsDocumentDamage,
                 _ => ContentChangedDocumentDamage
             };
@@ -333,7 +333,7 @@ impl Element {
         if self.namespace != namespace::HTML {
             return false
         }
-        match self.tag_name.as_slice() {
+        match self.tag_name.to_string().as_slice() {
             /* List of void elements from
             http://www.whatwg.org/specs/web-apps/current-work/multipage/the-end.html#html-fragment-serialization-algorithm */
             "area" | "base" | "basefont" | "bgsound" | "br" | "col" | "embed" |
@@ -356,15 +356,15 @@ impl Element {
     }
 
     pub fn get_string_attribute(&self, name: &str) -> DOMString {
-        match self.get_attribute(Null, name) {
+        match self.get_attribute(Null, DOMString::from_string(name).as_slice()) {
             Some(x) => x.Value(),
-            None => ~""
+            None => DOMString::empty(),
         }
     }
     pub fn set_string_attribute(&mut self, abstract_self: AbstractNode,
                                 name: &str, value: DOMString) {
         assert!(name == name.to_ascii_lower());
-        self.set_attribute(abstract_self, Null, name.to_owned(), value);
+        self.set_attribute(abstract_self, Null, DOMString::from_string(name), value);
     }
 }
 
@@ -399,12 +399,12 @@ impl Element {
         } else {
             name
         };
-        self.get_attribute(Null, name).map(|s| s.Value())
+        self.get_attribute(Null, name.as_slice()).map(|s| s.Value())
     }
 
     pub fn GetAttributeNS(&self, namespace: Option<DOMString>, local_name: DOMString) -> Option<DOMString> {
-        let namespace = Namespace::from_str(null_str_as_empty_ref(&namespace));
-        self.get_attribute(namespace, local_name)
+        let namespace = Namespace::from_str(null_str_as_empty_ref(&namespace).to_string());
+        self.get_attribute(namespace, local_name.as_slice())
             .map(|attr| attr.value.clone())
     }
 
@@ -431,7 +431,7 @@ impl Element {
             QName => {}
         }
 
-        let namespace = Namespace::from_str(null_str_as_empty_ref(&namespace_url));
+        let namespace = Namespace::from_str(null_str_as_empty_ref(&namespace_url).to_string());
         self.set_attribute(abstract_self, namespace, name, value)
     }
 
@@ -450,7 +450,7 @@ impl Element {
                              abstract_self: AbstractNode,
                              namespace: Option<DOMString>,
                              localname: DOMString) -> ErrorResult {
-        let namespace = Namespace::from_str(null_str_as_empty_ref(&namespace));
+        let namespace = Namespace::from_str(null_str_as_empty_ref(&namespace).to_string());
         self.remove_attribute(abstract_self, namespace, localname)
     }
 
@@ -599,9 +599,9 @@ impl Element {
 fn get_attribute_parts(name: DOMString) -> (Option<DOMString>, DOMString) {
     //FIXME: Throw for XML-invalid names
     //FIXME: Throw for XMLNS-invalid names
-    let (prefix, local_name) = if name.contains(":")  {
-        let parts: ~[&str] = name.splitn(':', 1).collect();
-        (Some(parts[0].to_owned()), parts[1].to_owned())
+    let (prefix, local_name) = if name.contains(&(':' as u16))  {
+        let parts: ~[&[u16]] = name.splitn(1, |&c| c == ':' as u16).collect();
+        (Some(DOMString(parts[0].to_owned())), DOMString(parts[1].to_owned()))
     } else {
         (None, name)
     };

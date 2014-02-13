@@ -35,7 +35,7 @@ pub fn dispatch_event(target: AbstractEventTarget,
 
     /* capturing */
     for &cur_target in chain.rev_iter() {
-        let stopped = match cur_target.eventtarget().get_listeners_for(type_, Capturing) {
+        let stopped = match cur_target.eventtarget().get_listeners_for(type_.as_slice(), Capturing) {
             Some(listeners) => {
                 event.mut_event().current_target = Some(cur_target);
                 for listener in listeners.iter() {
@@ -64,7 +64,7 @@ pub fn dispatch_event(target: AbstractEventTarget,
             event.current_target = Some(target);
         }
 
-        let opt_listeners = target.eventtarget().get_listeners(type_);
+        let opt_listeners = target.eventtarget().get_listeners(type_.as_slice());
         for listeners in opt_listeners.iter() {
             for listener in listeners.iter() {
                 listener.HandleEvent__(event, eReportExceptions);
@@ -80,7 +80,7 @@ pub fn dispatch_event(target: AbstractEventTarget,
         event.mut_event().phase = Phase_Bubbling;
 
         for &cur_target in chain.iter() {
-            let stopped = match cur_target.eventtarget().get_listeners_for(type_, Bubbling) {
+            let stopped = match cur_target.eventtarget().get_listeners_for(type_.as_slice(), Bubbling) {
                 Some(listeners) => {
                     event.mut_event().current_target = Some(cur_target);
                     for listener in listeners.iter() {

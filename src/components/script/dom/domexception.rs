@@ -73,33 +73,33 @@ impl DOMException {
 
     // http://dom.spec.whatwg.org/#error-names-0
     pub fn Name(&self) -> DOMString {
-        self.code.to_str()
+        DOMString::from_string(self.code.to_str())
     }
 
     // http://dom.spec.whatwg.org/#error-names-0
     pub fn Message(&self) -> DOMString {
         match self.code {
-            IndexSizeError => ~"The index is not in the allowed range.",
-            HierarchyRequestError => ~"The operation would yield an incorrect node tree.",
-            WrongDocumentError => ~"The object is in the wrong document.",
-            InvalidCharacterError => ~"The string contains invalid characters.",
-            NoModificationAllowedError => ~"The object can not be modified.",
-            NotFoundError => ~"The object can not be found here.",
-            NotSupportedError => ~"The operation is not supported.",
-            InvalidStateError => ~"The object is in an invalid state.",
-            SyntaxError => ~"The string did not match the expected pattern.",
-            InvalidModificationError => ~"The object can not be modified in this way.",
-            NamespaceError => ~"The operation is not allowed by Namespaces in XML.",
-            InvalidAccessError => ~"The object does not support the operation or argument.",
-            SecurityError => ~"The operation is insecure.",
-            NetworkError => ~"A network error occurred.",
-            AbortError => ~"The operation was aborted.",
-            URLMismatchError => ~"The given URL does not match another URL.",
-            QuotaExceededError => ~"The quota has been exceeded.",
-            TimeoutError => ~"The operation timed out.",
-            InvalidNodeTypeError => ~"The supplied node is incorrect or has an incorrect ancestor for this operation.",
-            DataCloneError => ~"The object can not be cloned.",
-            EncodingError => ~"The encoding operation (either encoded or decoding) failed."
+            IndexSizeError => DOMString::from_string("The index is not in the allowed range."),
+            HierarchyRequestError => DOMString::from_string("The operation would yield an incorrect node tree."),
+            WrongDocumentError => DOMString::from_string("The object is in the wrong document."),
+            InvalidCharacterError => DOMString::from_string("The string contains invalid characters."),
+            NoModificationAllowedError => DOMString::from_string("The object can not be modified."),
+            NotFoundError => DOMString::from_string("The object can not be found here."),
+            NotSupportedError => DOMString::from_string("The operation is not supported."),
+            InvalidStateError => DOMString::from_string("The object is in an invalid state."),
+            SyntaxError => DOMString::from_string("The string did not match the expected pattern."),
+            InvalidModificationError => DOMString::from_string("The object can not be modified in this way."),
+            NamespaceError => DOMString::from_string("The operation is not allowed by Namespaces in XML."),
+            InvalidAccessError => DOMString::from_string("The object does not support the operation or argument."),
+            SecurityError => DOMString::from_string("The operation is insecure."),
+            NetworkError => DOMString::from_string("A network error occurred."),
+            AbortError => DOMString::from_string("The operation was aborted."),
+            URLMismatchError => DOMString::from_string("The given URL does not match another URL."),
+            QuotaExceededError => DOMString::from_string("The quota has been exceeded."),
+            TimeoutError => DOMString::from_string("The operation timed out."),
+            InvalidNodeTypeError => DOMString::from_string("The supplied node is incorrect or has an incorrect ancestor for this operation."),
+            DataCloneError => DOMString::from_string("The object can not be cloned."),
+            EncodingError => DOMString::from_string("The encoding operation (either encoded or decoding) failed."),
         }
     }
 }

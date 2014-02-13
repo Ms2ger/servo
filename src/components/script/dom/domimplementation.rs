@@ -72,18 +72,18 @@ impl DOMImplementation {
 
         {
             // Step 3.
-            let doc_type = DocumentType::new(~"html", None, None, abstract_doc);
+            let doc_type = DocumentType::new(DOMString::from_string("html"), None, None, abstract_doc);
             abstract_node.AppendChild(doc_type);
         }
 
         {
             // Step 4.
-            let doc_html = HTMLHtmlElement::new(~"html", abstract_doc);
+            let doc_html = HTMLHtmlElement::new(DOMString::from_string("html"), abstract_doc);
             abstract_node.AppendChild(doc_html);
 
             {
                 // Step 5.
-                let doc_head = HTMLHeadElement::new(~"head", abstract_doc);
+                let doc_head = HTMLHeadElement::new(DOMString::from_string("head"), abstract_doc);
                 doc_html.AppendChild(doc_head);
 
                 // Step 6.
@@ -91,7 +91,7 @@ impl DOMImplementation {
                     None => (),
                     Some(title_str) => {
                         // Step 6.1.
-                        let doc_title = HTMLTitleElement::new(~"title", abstract_doc);
+                        let doc_title = HTMLTitleElement::new(DOMString::from_string("title"), abstract_doc);
                         doc_head.AppendChild(doc_title);
 
                         // Step 6.2.
@@ -102,7 +102,7 @@ impl DOMImplementation {
             }
 
             // Step 7.
-            let doc_body = HTMLBodyElement::new(~"body", abstract_doc);
+            let doc_body = HTMLBodyElement::new(DOMString::from_string("body"), abstract_doc);
             doc_html.AppendChild(doc_body);
         }
 

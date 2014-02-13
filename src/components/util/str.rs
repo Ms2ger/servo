@@ -40,25 +40,11 @@ impl DOMString {
     }
 
     pub fn to_ascii_lower(&self) -> DOMString {
-        let bytes = (**self).iter().map(|&b| {
-            if 'A' as u16 <= b && b <= 'Z' as u16 {
-                b + ('a' as u16 - 'A' as u16)
-            } else {
-                b
-            }
-        }).to_owned_vec();
-        DOMString(bytes)
+        self.as_slice().to_ascii_lower()
     }
 
     pub fn to_ascii_upper(&self) -> DOMString {
-        let bytes = (**self).iter().map(|&b| {
-            if 'a' as u16 <= b && b <= 'z' as u16 {
-                b - ('a' as u16 - 'A' as u16)
-            } else {
-                b
-            }
-        }).to_owned_vec();
-        DOMString(bytes)
+        self.as_slice().to_ascii_upper()
     }
 }
 
@@ -92,6 +78,29 @@ impl<'a> DOMSlice<'a> {
     pub fn to_string(&self) -> ~str {
         str::from_utf16(**self)
     }
+
+    pub fn to_ascii_lower(&self) -> DOMString {
+        let bytes = (**self).iter().map(|&b| {
+            if 'A' as u16 <= b && b <= 'Z' as u16 {
+                b + ('a' as u16 - 'A' as u16)
+            } else {
+                b
+            }
+        }).to_owned_vec();
+        DOMString(bytes)
+    }
+
+    pub fn to_ascii_upper(&self) -> DOMString {
+        let bytes = (**self).iter().map(|&b| {
+            if 'a' as u16 <= b && b <= 'z' as u16 {
+                b - ('a' as u16 - 'A' as u16)
+            } else {
+                b
+            }
+        }).to_owned_vec();
+        DOMString(bytes)
+    }
+
 //    pub fn from_string(s: &str) -> DOMString {
 //        s.to_utf16()
 //    }
@@ -100,6 +109,12 @@ impl<'a> DOMSlice<'a> {
 impl<'a> Eq for DOMSlice<'a> {
     fn eq(&self, other: &DOMSlice<'a>) -> bool {
         (**self).eq(&**other)
+    }
+}
+
+impl<'a> IterBytes for DOMSlice<'a> {
+    fn iter_bytes(&self, lsb0: bool, f: Cb) -> bool {
+        (**self).iter_bytes(lsb0, f)
     }
 }
 

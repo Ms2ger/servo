@@ -44,10 +44,11 @@ impl HTMLDocument {
     }
 
     pub fn Links(&self) -> @mut HTMLCollection {
-        self.parent.createHTMLCollection(|elem|
+        self.parent.createHTMLCollection(|elem| {
             (elem.tag_name == DOMString::from_string("a") ||
              elem.tag_name == DOMString::from_string("area")) &&
-            elem.get_attribute(Null, "href").is_some())
+            elem.get_attribute(Null, DOMString::from_string("href").as_slice()).is_some()
+        })
     }
 
     pub fn Forms(&self) -> @mut HTMLCollection {
@@ -60,7 +61,8 @@ impl HTMLDocument {
 
     pub fn Anchors(&self) -> @mut HTMLCollection {
         self.parent.createHTMLCollection(|elem| {
-            elem.tag_name == DOMString::from_string("a") && elem.get_attribute(Null, "name").is_some())
+            elem.tag_name == DOMString::from_string("a")
+            elem.get_attribute(Null, DOMString::from_string("name").as_slice()).is_some())
         })
     }
 

@@ -153,7 +153,7 @@ impl Event {
             current_target: None,
             target: None,
             phase: Phase_None,
-            type_: ~"",
+            type_: DOMString::empty(),
             default_prevented: false,
             cancelable: true,
             bubbles: true,

@@ -41,7 +41,7 @@ impl HTMLImageElement {
     /// prefetching the image. This method must be called after `src` is changed.
     pub fn update_image(&mut self, image_cache: ImageCacheTask, url: Option<Url>) {
         let elem = &mut self.htmlelement.element;
-        let src_opt = elem.get_attribute(Null, "src").map(|x| x.Value());
+        let src_opt = elem.get_attribute(Null, DOMString::from_string("src").as_slice()).map(|x| x.Value());
         match src_opt {
             None => {}
             Some(src) => {

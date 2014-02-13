@@ -36,8 +36,8 @@ macro_rules! handle_element(
      $string: expr,
      $ctor: ident
      $(, $arg:expr )*) => (
-        if $string == $localName {
-            return $ctor::new(DOMString::from_string($localName), $document $(, $arg)*);
+        if $localName == DOMString::from_string($string) {
+            return $ctor::new($localName, $document $(, $arg)*);
         }
     )
 )
@@ -239,7 +239,7 @@ pub fn build_element_from_tag(tag: DOMString, document: AbstractDocument) -> Abs
     handle_element!(document, tag, "ul",        HTMLUListElement);
     handle_element!(document, tag, "video",     HTMLVideoElement);
 
-    return HTMLUnknownElement::new(DOMString::from_string(tag), document);
+    return HTMLUnknownElement::new(tag, document);
 }
 
 pub fn parse_html(cx: *JSContext,
@@ -313,9 +313,9 @@ pub fn parse_html(cx: *JSContext,
                                 public_id: public_id,
                                 system_id: system_id,
                                 force_quirks: _ } = doctype;
-            let node = DocumentType::new(name,
-                                         public_id,
-                                         system_id,
+            let node = DocumentType::new(DOMString::from_string(name),
+                                         public_id.map(|s| DOMString::from_string(s)),
+                                         system_id.map(|s| DOMString::from_string(s)),
                                          document);
             unsafe {
                 node.to_hubbub_node()
@@ -323,7 +323,7 @@ pub fn parse_html(cx: *JSContext,
         },
         create_element: |tag: ~hubbub::Tag| {
             debug!("create element");
-            let node = build_element_from_tag(tag.name.clone(), document);
+            let node = build_element_from_tag(DOMString::from_string(tag.name), document);
 
             debug!("-- attach attrs");
             node.as_mut_element(|element| {
@@ -339,7 +339,8 @@ pub fn parse_html(cx: *JSContext,
                 // Handle CSS style sheets from <link> elements
                 ElementNodeTypeId(HTMLLinkElementTypeId) => {
                     node.with_imm_element(|element| {
-                        match (element.get_attribute(Null, "rel"), element.get_attribute(Null, "href")) {
+                        match (element.get_attribute(Null, DOMString::from_string("rel").as_slice()),
+                               element.get_attribute(Null, DOMString::from_string("href").as_slice())) {
                             (Some(rel), Some(href)) => {
                                 if "stylesheet" == rel.value_ref().to_string() {
                                     debug!("found CSS stylesheet: {:s}", href.value_ref().to_string());
@@ -357,7 +358,7 @@ pub fn parse_html(cx: *JSContext,
                     node.with_mut_iframe_element(|iframe_element| {
                         let sandboxed = iframe_element.is_sandboxed();
                         let elem = &mut iframe_element.htmlelement.element;
-                        let src_opt = elem.get_attribute(Null, "src").map(|x| x.Value());
+                        let src_opt = elem.get_attribute(Null, DOMString::from_string("src").as_slice()).map(|x| x.Value());
                         for src in src_opt.iter() {
                             let iframe_url = parse_url(src.to_string(), Some(url2.clone()));
                             iframe_element.frame = Some(iframe_url.clone());
@@ -455,7 +456,7 @@ pub fn parse_html(cx: *JSContext,
             unsafe {
                 let scriptnode: AbstractNode = NodeWrapping::from_hubbub_node(script);
                 scriptnode.with_imm_element(|script| {
-                    match script.get_attribute(Null, "src") {
+                    match script.get_attribute(Null, DOMString::from_string("src").as_slice()) {
                         Some(src) => {
                             debug!("found script: {:s}", src.Value().to_string());
                             let new_url = parse_url(src.value_ref().to_string(), Some(url3.clone()));

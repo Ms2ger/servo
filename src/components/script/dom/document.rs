@@ -305,9 +305,9 @@ impl Document {
         }
 
         // Step 2.
-        if data.contains("?>") {
+        /*XXX if data.contains("?>") {
             return Err(InvalidCharacter);
-        }
+        }*/
 
         // Step 3.
         Ok(ProcessingInstruction::new(target, data, abstract_self))
@@ -315,7 +315,7 @@ impl Document {
 
     // http://dom.spec.whatwg.org/#dom-document-createevent
     pub fn CreateEvent(&self, interface: DOMString) -> Fallible<AbstractEvent> {
-        match interface.as_slice() {
+        match interface.to_string().as_slice() {
             "UIEvents" => Ok(UIEvent::new(self.window)),
             "MouseEvents" => Ok(MouseEvent::new(self.window)),
             "HTMLEvents" => Ok(Event::new(self.window)),
@@ -325,7 +325,7 @@ impl Document {
 
     // http://www.whatwg.org/specs/web-apps/current-work/#document.title
     pub fn Title(&self, _: AbstractDocument) -> DOMString {
-        let mut title = ~"";
+        let mut title = DOMString::empty();
         match self.doctype {
             SVG => {
                 fail!("no SVG document yet")
@@ -351,9 +351,9 @@ impl Document {
                 }
             }
         }
-        let v: ~[&str] = title.words().collect();
+        /* XXXlet v: ~[&str] = title.words().collect();
         title = v.connect(" ");
-        title = title.trim().to_owned();
+        title = title.trim().to_owned();*/
         title
     }
 
@@ -384,7 +384,7 @@ impl Document {
                                 break;
                             }
                             if !has_title {
-                                let new_title = HTMLTitleElement::new(~"title", abstract_self);
+                                let new_title = HTMLTitleElement::new(DOMString::from_string("title"), abstract_self);
                                 new_title.AppendChild(self.CreateTextNode(abstract_self, title.clone()));
                                 node.AppendChild(new_title);
                             }
@@ -468,7 +468,7 @@ impl Document {
     pub fn GetElementsByName(&self, name: DOMString) -> @mut HTMLCollection {
         self.createHTMLCollection(|elem| {
             elem.get_attribute(Null, "name").map_default(false, |attr| {
-                attr.value_ref() == name
+                attr.value_ref() == name.as_slice()
             })
         })
     }
@@ -560,7 +560,7 @@ fn foreach_ided_elements(root: &AbstractNode, callback: |&DOMString, &AbstractNo
         }
 
         node.with_imm_element(|element| {
-            match element.get_attribute(Null, "id") {
+            match element.get_attribute(Null, DOMString::from_string("id").as_slice()) {
                 Some(id) => {
                     callback(&id.Value(), &node);
                 }

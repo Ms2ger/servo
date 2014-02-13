@@ -9,7 +9,7 @@ use dom::element::HTMLIframeElementTypeId;
 use dom::htmlelement::HTMLElement;
 use dom::node::{AbstractNode, Node};
 use dom::windowproxy::WindowProxy;
-use servo_util::str::DOMString;
+use servo_util::str::{DOMString, DOMSlice};
 
 use extra::url::Url;
 use servo_msg::constellation_msg::{PipelineId, SubpageId};
@@ -94,12 +94,12 @@ impl HTMLIFrameElement {
     }
 
     pub fn AfterSetAttr(&mut self, name: DOMString, value: DOMString) {
-        if "sandbox" == name {
+        if name == DOMString::from_string("sandbox") {
             let mut modes = AllowNothing as u8;
-            for word in value.split(' ') {
+            for word in value.split(|&c| c == ' ' as u16) {
                 // FIXME: Workaround for https://github.com/mozilla/rust/issues/10683
-                let word_lower = word.to_ascii_lower();
-                modes |= match word_lower.as_slice() {
+                let word_lower = DOMSlice(word).to_ascii_lower();
+                modes |= match word_lower.to_string().as_slice() {
                     "allow-same-origin" => AllowSameOrigin,
                     "allow-forms" => AllowForms,
                     "allow-pointer-lock" => AllowPointerLock,
@@ -114,7 +114,7 @@ impl HTMLIFrameElement {
     }
 
     pub fn AfterRemoveAttr(&mut self, name: DOMString) {
-        if "sandbox" == name {
+        if name == DOMString::from_string("sandbox") {
             self.sandbox = None;
         }
     }
