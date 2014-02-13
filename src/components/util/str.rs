@@ -23,7 +23,7 @@ impl DOMString {
         DOMString(bytes)
     }
 
-    pub fn push_str(&self, s: DOMString) {
+    pub fn push_str(&mut self, s: DOMString) {
         self.push_all(*s)
     }
 
