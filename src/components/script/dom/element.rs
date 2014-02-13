@@ -424,7 +424,7 @@ impl Element {
                           namespace_url: Option<DOMString>,
                           name: DOMString,
                           value: DOMString) -> ErrorResult {
-        let name_type = xml_name_type(name);
+        let name_type = xml_name_type(name.as_slice());
         match name_type {
             InvalidXMLName => return Err(InvalidCharacter),
             Name => return Err(NamespaceError),

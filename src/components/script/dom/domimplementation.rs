@@ -51,7 +51,7 @@ impl Reflectable for DOMImplementation {
 impl DOMImplementation {
     // http://dom.spec.whatwg.org/#dom-domimplementation-createdocumenttype
     pub fn CreateDocumentType(&self, qname: DOMString, pubid: DOMString, sysid: DOMString) -> Fallible<AbstractNode> {
-        match xml_name_type(qname) {
+        match xml_name_type(qname.as_slice()) {
             // Step 1.
             InvalidXMLName => Err(InvalidCharacter),
             // Step 2.

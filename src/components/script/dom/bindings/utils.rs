@@ -882,7 +882,7 @@ pub enum XMLName {
     InvalidXMLName
 }
 
-pub fn xml_name_type(name: DOMString) -> XMLName {
+pub fn xml_name_type(name: DOMSlice) -> XMLName {
     let name = name.to_string(); // XXX
     fn is_valid_start(c: char) -> bool {
         match c {

@@ -272,7 +272,7 @@ impl Document {
     // http://dom.spec.whatwg.org/#dom-document-createelement
     pub fn CreateElement(&self, abstract_self: AbstractDocument, local_name: DOMString)
                          -> Fallible<AbstractNode> {
-        if xml_name_type(local_name) == InvalidXMLName {
+        if xml_name_type(local_name.as_slice()) == InvalidXMLName {
             debug!("Not a valid element name");
             return Err(InvalidCharacter);
         }
@@ -300,7 +300,7 @@ impl Document {
     pub fn CreateProcessingInstruction(&self, abstract_self: AbstractDocument, target: DOMString,
                                        data: DOMString) -> Fallible<AbstractNode> {
         // Step 1.
-        if xml_name_type(target) == InvalidXMLName {
+        if xml_name_type(target.as_slice()) == InvalidXMLName {
             return Err(InvalidCharacter);
         }
 
