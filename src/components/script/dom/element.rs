@@ -356,7 +356,8 @@ impl Element {
     }
 
     pub fn get_string_attribute(&self, name: &str) -> DOMString {
-        match self.get_attribute(Null, DOMString::from_string(name).as_slice()) {
+        let name = DOMString::from_string(name);
+        match self.get_attribute(Null, name.as_slice()) {
             Some(x) => x.Value(),
             None => DOMString::empty(),
         }

@@ -47,7 +47,7 @@ impl HTMLDocument {
         self.parent.createHTMLCollection(|elem| {
             (elem.tag_name == DOMString::from_string("a") ||
              elem.tag_name == DOMString::from_string("area")) &&
-            elem.get_attribute(Null, DOMString::from_string("href").as_slice()).is_some()
+            elem.get_attribute(Null, href.as_slice()).is_some()
         })
     }
 
@@ -60,9 +60,10 @@ impl HTMLDocument {
     }
 
     pub fn Anchors(&self) -> @mut HTMLCollection {
+        let (a, name) = (DOMString::from_string("a"), DOMString::from_string("name"));
         self.parent.createHTMLCollection(|elem| {
-            elem.tag_name == DOMString::from_string("a")
-            elem.get_attribute(Null, DOMString::from_string("name").as_slice()).is_some())
+            elem.tag_name == a
+            elem.get_attribute(Null, name.as_slice()).is_some())
         })
     }
 

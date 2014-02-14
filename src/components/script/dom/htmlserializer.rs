@@ -62,7 +62,7 @@ fn serialize_comment(node: AbstractNode) -> DOMString {
     node.with_imm_characterdata(|comment| {
         DOMString::from_strings([
             DOMString::from_string("<!--"),
-            comment.data,
+            comment.data.clone(),
             DOMString::from_string("-->"),
         ])
     })
@@ -92,9 +92,9 @@ fn serialize_processing_instruction(node: AbstractNode) -> DOMString {
     node.with_imm_processing_instruction(|processing_instruction| {
         DOMString::from_strings([
             DOMString::from_string("<?"),
-            processing_instruction.target,
+            processing_instruction.target.clone(),
             DOMString::from_string(" "),
-            processing_instruction.characterdata.data,
+            processing_instruction.characterdata.data.clone(),
             DOMString::from_string("?>"),
         ])
     })
@@ -104,7 +104,7 @@ fn serialize_doctype(node: AbstractNode) -> DOMString {
     node.with_imm_doctype(|doctype| {
         DOMString::from_strings([
             DOMString::from_string("<!DOCTYPE"), // XXX space
-            doctype.name,
+            doctype.name.clone(),
             DOMString::from_string(">"),
         ])
     })
@@ -114,7 +114,7 @@ fn serialize_elem(node: AbstractNode, open_elements: &mut ~[DOMString]) -> DOMSt
     node.with_imm_element(|elem| {
         let mut rv = DOMString::from_strings([
             DOMString::from_string("<"),
-            elem.tag_name
+            elem.tag_name.clone()
         ]);
         for attr in elem.attrs.iter() {
             rv.push_str(serialize_attr(attr));
@@ -174,7 +174,7 @@ fn serialize_attr(attr: &@mut Attr) -> DOMString {
     ])
 }
 
-fn escape(string: DOMString, attr_mode: bool) -> DOMString {
+fn escape(_string: DOMString, _attr_mode: bool) -> DOMString {
     /*let replaced = string.replace("&", "&amp;").replace("\xA0", "&nbsp;");
     match attr_mode {
         true => {

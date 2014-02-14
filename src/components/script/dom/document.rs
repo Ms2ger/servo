@@ -466,8 +466,9 @@ impl Document {
 
     // http://www.whatwg.org/specs/web-apps/current-work/#dom-document-getelementsbyname
     pub fn GetElementsByName(&self, name: DOMString) -> @mut HTMLCollection {
+        let name_attr = DOMString::from_string("name");
         self.createHTMLCollection(|elem| {
-            elem.get_attribute(Null, "name").map_default(false, |attr| {
+            elem.get_attribute(Null, name_attr.as_slice()).map_default(false, |attr| {
                 attr.value_ref() == name.as_slice()
             })
         })
@@ -560,7 +561,8 @@ fn foreach_ided_elements(root: &AbstractNode, callback: |&DOMString, &AbstractNo
         }
 
         node.with_imm_element(|element| {
-            match element.get_attribute(Null, DOMString::from_string("id").as_slice()) {
+            let id = DOMString::from_string("id");
+            match element.get_attribute(Null, id.as_slice()) {
                 Some(id) => {
                     callback(&id.Value(), &node);
                 }

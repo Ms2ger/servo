@@ -339,8 +339,9 @@ pub fn parse_html(cx: *JSContext,
                 // Handle CSS style sheets from <link> elements
                 ElementNodeTypeId(HTMLLinkElementTypeId) => {
                     node.with_imm_element(|element| {
-                        match (element.get_attribute(Null, DOMString::from_string("rel").as_slice()),
-                               element.get_attribute(Null, DOMString::from_string("href").as_slice())) {
+                        let (rel, href) = (DOMString::from_string("rel"), DOMString::from_string("href"));
+                        match (element.get_attribute(Null, rel.as_slice()),
+                               element.get_attribute(Null, href.as_slice())) {
                             (Some(rel), Some(href)) => {
                                 if "stylesheet" == rel.value_ref().to_string() {
                                     debug!("found CSS stylesheet: {:s}", href.value_ref().to_string());
@@ -358,7 +359,8 @@ pub fn parse_html(cx: *JSContext,
                     node.with_mut_iframe_element(|iframe_element| {
                         let sandboxed = iframe_element.is_sandboxed();
                         let elem = &mut iframe_element.htmlelement.element;
-                        let src_opt = elem.get_attribute(Null, DOMString::from_string("src").as_slice()).map(|x| x.Value());
+                        let src = DOMString::from_string("src");
+                        let src_opt = elem.get_attribute(Null, src.as_slice()).map(|x| x.Value());
                         for src in src_opt.iter() {
                             let iframe_url = parse_url(src.to_string(), Some(url2.clone()));
                             iframe_element.frame = Some(iframe_url.clone());
@@ -456,7 +458,8 @@ pub fn parse_html(cx: *JSContext,
             unsafe {
                 let scriptnode: AbstractNode = NodeWrapping::from_hubbub_node(script);
                 scriptnode.with_imm_element(|script| {
-                    match script.get_attribute(Null, DOMString::from_string("src").as_slice()) {
+                    let src = DOMString::from_string("src");
+                    match script.get_attribute(Null, src.as_slice()) {
                         Some(src) => {
                             debug!("found script: {:s}", src.Value().to_string());
                             let new_url = parse_url(src.value_ref().to_string(), Some(url3.clone()));
