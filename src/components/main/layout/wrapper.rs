@@ -15,6 +15,7 @@
 //!     onto these objects and cause use-after-free.
 
 use extra::url::Url;
+use script::dom::bindings::utils::{DOMString, DOMSlice};
 use script::dom::element::{Element, HTMLAreaElementTypeId, HTMLAnchorElementTypeId};
 use script::dom::element::{HTMLLinkElementTypeId};
 use script::dom::htmliframeelement::HTMLIFrameElement;
@@ -239,9 +240,10 @@ impl<'ln> TNode<LayoutElement<'ln>> for LayoutNode<'ln> {
             } else {
                 attr.name.as_slice()
             };
+            let name = DOMString::from_string(name);
             match attr.namespace {
                 SpecificNamespace(ref ns) => {
-                    element.get_attr(ns, name)
+                    element.get_attr(ns, name.as_slice())
                            .map_default(false, |attr| test(attr))
                 },
                 // FIXME: https://github.com/mozilla/servo/issues/1558
@@ -321,7 +323,7 @@ impl<'le> LayoutElement<'le> {
 
 impl<'le> TElement for LayoutElement<'le> {
     #[inline]
-    fn get_local_name<'a>(&'a self) -> &'a str {
+    fn get_local_name<'a>(&'a self) -> DOMSlice<'a> {
         self.element.tag_name.as_slice()
     }
 
@@ -331,11 +333,11 @@ impl<'le> TElement for LayoutElement<'le> {
     }
 
     #[inline]
-    fn get_attr(&self, namespace: &Namespace, name: &str) -> Option<&'static str> {
+    fn get_attr(&self, namespace: &Namespace, name: DOMSlice) -> Option<DOMSlice<'static>> {
         unsafe { self.element.get_attr_val_for_layout(namespace, name) }
     }
 
-    fn get_link(&self) -> Option<&'static str> {
+    fn get_link(&self) -> Option<DOMSlice<'static>> {
         // FIXME: This is HTML only.
         match self.element.node.type_id {
             // http://www.whatwg.org/specs/web-apps/current-work/multipage/selectors.html#
@@ -343,7 +345,8 @@ impl<'le> TElement for LayoutElement<'le> {
             ElementNodeTypeId(HTMLAnchorElementTypeId) |
             ElementNodeTypeId(HTMLAreaElementTypeId) |
             ElementNodeTypeId(HTMLLinkElementTypeId) => {
-                unsafe { self.element.get_attr_val_for_layout(&namespace::Null, "href") }
+                let href = DOMString::from_string("href");
+                unsafe { self.element.get_attr_val_for_layout(&namespace::Null, href.as_slice()) }
             }
             _ => None,
         }
@@ -483,7 +486,7 @@ pub struct ThreadSafeLayoutElement<'le> {
 
 impl<'le> ThreadSafeLayoutElement<'le> {
     #[inline]
-    pub fn get_attr(&self, namespace: &Namespace, name: &str) -> Option<&'static str> {
+    pub fn get_attr(&self, namespace: &Namespace, name: DOMSlice) -> Option<DOMSlice<'static>> {
         unsafe { self.element.get_attr_val_for_layout(namespace, name) }
     }
 }

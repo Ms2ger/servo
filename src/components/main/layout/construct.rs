@@ -34,6 +34,7 @@ use layout::util::{LayoutDataAccess, OpaqueNode};
 use layout::wrapper::{PostorderNodeMutTraversal, TLayoutNode, ThreadSafeLayoutNode};
 
 use gfx::font_context::FontContext;
+use script::dom::bindings::utils::DOMSlice;
 use script::dom::element::{HTMLIframeElementTypeId, HTMLImageElementTypeId};
 use script::dom::node::{CommentNodeTypeId, DoctypeNodeTypeId, DocumentFragmentNodeTypeId};
 use script::dom::node::{DocumentNodeTypeId, ElementNodeTypeId, ProcessingInstructionNodeTypeId};
@@ -45,6 +46,7 @@ use extra::arc::Arc;
 use std::cell::RefCell;
 use std::util;
 use std::num::Zero;
+use std::str::{is_utf16, utf16_chars};
 
 /// The results of flow construction for a DOM node.
 pub enum ConstructionResult {
@@ -714,13 +716,22 @@ impl<'ln> NodeUtils for ThreadSafeLayoutNode<'ln> {
     }
 
     fn is_ignorable_whitespace(self) -> bool {
+        fn is_all_whitespace(text: DOMSlice) -> bool {
+            if !is_utf16(*text) {
+                return false;
+            }
+            let mut non_whitespace = false;
+            utf16_chars(*text, |c| {
+                if !c.is_whitespace() {
+                    non_whitespace = true;
+                }
+            });
+            non_whitespace
+        }
+
         match self.type_id() {
             TextNodeTypeId => {
-                unsafe {
-                    if !self.with_text(|text| text.characterdata
-                                                  .data
-                                                  .chars()
-                                                  .all(|c| c.is_whitespace())) {
+                    if !self.with_text(|text| is_all_whitespace(text.characterdata.data.as_slice())) {
                         return false
                     }
 
@@ -734,7 +745,7 @@ impl<'ln> NodeUtils for ThreadSafeLayoutNode<'ln> {
                         white_space::normal => true,
                         _ => false,
                     }
-                }
+                //}
             }
             _ => false
         }

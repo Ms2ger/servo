@@ -41,6 +41,7 @@ use layout::flow;
 use layout::model::{MaybeAuto, specified, Auto, Specified};
 use layout::util::OpaqueNode;
 use layout::wrapper::{TLayoutNode, ThreadSafeLayoutNode};
+use script::dom::bindings::utils::DOMString;
 
 /// Boxes (`struct Box`) are the leaves of the layout tree. They cannot position themselves. In
 /// general, boxes do not have a simple correspondence with CSS boxes in the specification:
@@ -128,9 +129,10 @@ impl ImageBoxInfo {
                local_image_cache: MutexArc<LocalImageCache>)
                -> ImageBoxInfo {
         fn convert_length(node: &ThreadSafeLayoutNode, name: &str) -> Option<Au> {
+            let name = DOMString::from_string(name);
             node.with_element(|element| {
-                element.get_attr(&namespace::Null, name).and_then(|string| {
-                    let n: Option<int> = FromStr::from_str(string);
+                element.get_attr(&namespace::Null, name.as_slice()).and_then(|string| {
+                    let n: Option<int> = FromStr::from_str(string.to_string());
                     n
                 }).and_then(|pixels| Some(Au::from_px(pixels)))
             })
@@ -140,8 +142,8 @@ impl ImageBoxInfo {
             image: RefCell::new(ImageHolder::new(image_url, local_image_cache)),
             computed_width: RefCell::new(None),
             computed_height: RefCell::new(None),
-            dom_width: convert_length(node,"width"),
-            dom_height: convert_length(node,"height"),
+            dom_width: convert_length(node, "width"),
+            dom_height: convert_length(node, "height"),
         }
     }
 
