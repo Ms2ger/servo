@@ -3,12 +3,12 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 use dom::bindings::codegen::HTMLDocumentBinding;
-use dom::bindings::utils::DOMString;
 use dom::bindings::utils::{Reflectable, Reflector, Traceable};
 use dom::document::{AbstractDocument, Document, HTML};
 use dom::htmlcollection::HTMLCollection;
 use dom::window::Window;
 use servo_util::namespace::Null;
+use servo_util::str::DOMString;
 
 use extra::url::Url;
 use js::jsapi::JSTracer;

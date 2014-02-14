@@ -5,7 +5,7 @@
 use dom::bindings::codegen::PrototypeList;
 use dom::bindings::codegen::PrototypeList::MAX_PROTO_CHAIN_LENGTH;
 use dom::window;
-use servo_util::str::DOMString;
+use servo_util::str::{DOMString, DOMSlice};
 
 use std::libc::c_uint;
 use std::cast;
@@ -13,8 +13,6 @@ use std::hashmap::HashMap;
 use std::libc;
 use std::ptr;
 use std::ptr::null;
-use std::str;
-use std::to_bytes::{IterBytes, Cb};
 use std::vec;
 use std::unstable::raw::Box;
 use js::glue::*;

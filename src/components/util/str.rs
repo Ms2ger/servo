@@ -2,6 +2,9 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
+use std::str;
+use std::to_bytes::{IterBytes, Cb};
+
 //#[deriving(Equiv)]
 pub struct DOMString(~[u16]);
 pub struct DOMSlice<'a>(&'a [u16]);
@@ -140,14 +143,14 @@ pub fn null_str_as_empty(s: &Option<DOMString>) -> DOMString {
     // We don't use map_default because it would allocate ~"" even for Some.
     match *s {
         Some(ref s) => s.clone(),
-        None => ~""
+        None => DOMString::empty(),
     }
 }
 
-pub fn null_str_as_empty_ref<'a>(s: &'a Option<DOMString>) -> &'a str {
+pub fn null_str_as_empty_ref<'a>(s: &'a Option<DOMString>) -> DOMSlice<'a> {
     match *s {
         Some(ref s) => s.as_slice(),
-        None => &'a ""
+        None => DOMSlice(&'a []),
     }
 }
 

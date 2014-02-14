@@ -4,11 +4,11 @@
 
 use servo_util::namespace;
 use dom::attr::Attr;
-use dom::bindings::utils::DOMString;
 use dom::node::NodeIterator;
 use dom::node::{DoctypeNodeTypeId, DocumentFragmentNodeTypeId, CommentNodeTypeId};
 use dom::node::{DocumentNodeTypeId, ElementNodeTypeId, ProcessingInstructionNodeTypeId};
 use dom::node::{TextNodeTypeId, AbstractNode};
+use servo_util::str::DOMString;
 
 pub fn serialize(iterator: &mut NodeIterator) -> DOMString {
     let mut html = DOMString::empty();

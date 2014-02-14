@@ -6,7 +6,7 @@
 //! and layout tasks.
 
 use dom::bindings::codegen::RegisterBindings;
-use dom::bindings::utils::{Reflectable, GlobalStaticData, DOMString};
+use dom::bindings::utils::{Reflectable, GlobalStaticData};
 use dom::document::AbstractDocument;
 use dom::element::Element;
 use dom::event::{Event_, ResizeEvent, ReflowEvent, ClickEvent, MouseDownEvent, MouseMoveEvent, MouseUpEvent};
@@ -44,11 +44,13 @@ use servo_msg::constellation_msg;
 use servo_net::image_cache_task::ImageCacheTask;
 use servo_net::resource_task::ResourceTask;
 use servo_util::geometry::to_frac_px;
-use servo_util::url::parse_url;
-use servo_util::task::send_on_failure;
 use servo_util::namespace::Null;
+use servo_util::str::DOMString;
+use servo_util::task::send_on_failure;
+use servo_util::url::parse_url;
 use std::comm::{Port, SharedChan};
 use std::ptr;
+use std::task;
 use std::util::replace;
 
 /// Messages used to control the script task.
