@@ -12,6 +12,14 @@ pub struct DOMChar(u16);
 pub struct DOMString(~[u16]);
 pub struct DOMSlice<'a>(&'a [u16]);
 
+static ASCII_WHITESPACE: &'static [u16] = &'static [
+    ' ' as u16,
+    '\t' as u16,
+    '\n' as u16,
+    '\r' as u16,
+    '\x0C' as u16,
+];
+
 impl DOMString {
     pub fn empty() -> DOMString {
         DOMString(~[])
@@ -121,6 +129,35 @@ impl<'a> DOMSlice<'a> {
 
     pub fn ends_with(&self, other: DOMSlice) -> bool {
         (**self).ends_with(*other)
+    }
+
+    pub fn compressed_whitespace(&self) -> DOMString {
+        fn is_whitespace(c: u16) -> bool {
+            ASCII_WHITESPACE.contains(&c)
+        }
+
+        let mut i = 0u;
+        while i < self.len() && is_whitespace(self[i]) {
+            i += 1;
+        }
+
+        let slice = self.slice_from(i);
+        let mut last_whitespace = false;
+        let mut buffer = ~[];
+        for &c in slice.iter() {
+            if is_whitespace(c) {
+                if !last_whitespace {
+                    last_whitespace = true;
+                    buffer.push(' ' as u16)
+                }
+            } else {
+                buffer.push(c)
+            }
+        }
+        if buffer.ends_with([' ' as u16]) {
+            buffer.pop();
+        }
+        DOMString(buffer)
     }
 
 /*    pub fn contains(&self, other: DOMSlice) -> bool {

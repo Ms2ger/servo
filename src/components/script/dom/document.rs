@@ -351,10 +351,7 @@ impl Document {
                 }
             }
         }
-        /* XXXlet v: ~[&str] = title.words().collect();
-        title = v.connect(" ");
-        title = title.trim().to_owned();*/
-        title
+        title.as_slice().compressed_whitespace()
     }
 
     // http://www.whatwg.org/specs/web-apps/current-work/#document.title
