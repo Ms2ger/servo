@@ -15,7 +15,6 @@
 //!     onto these objects and cause use-after-free.
 
 use extra::url::Url;
-use script::dom::bindings::utils::{DOMString, DOMSlice};
 use script::dom::element::{Element, HTMLAreaElementTypeId, HTMLAnchorElementTypeId};
 use script::dom::element::{HTMLLinkElementTypeId};
 use script::dom::htmliframeelement::HTMLIFrameElement;
@@ -26,6 +25,7 @@ use servo_msg::constellation_msg::{PipelineId, SubpageId};
 use servo_util::concurrentmap::{ConcurrentHashMap, ConcurrentHashMapIterator};
 use servo_util::namespace;
 use servo_util::namespace::Namespace;
+use servo_util::str::{DOMString, DOMSlice};
 use std::cast;
 use std::cell::{Ref, RefMut};
 use style::{PropertyDeclarationBlock, TElement, TNode,
@@ -233,7 +233,7 @@ impl<'ln> TNode<LayoutElement<'ln>> for LayoutNode<'ln> {
         self.node_is_document()
     }
 
-    fn match_attr(&self, attr: &AttrSelector, test: |&str| -> bool) -> bool {
+    fn match_attr(&self, attr: &AttrSelector, test: |DOMSlice| -> bool) -> bool {
         self.with_element(|element| {
             let name = if element.element.html_element_in_html_document() {
                 attr.lower_name.as_slice()

@@ -10,7 +10,7 @@ use std::to_bytes;
 use servo_util::namespace;
 use servo_util::smallvec::SmallVec;
 use servo_util::sort;
-use servo_util::str::DOMString;
+use servo_util::str::{DOMString, DOMSlice};
 
 use media_queries::{Device, Screen};
 use node::{TElement, TNode};
@@ -25,23 +25,37 @@ pub enum StylesheetOrigin {
 }
 
 /// The definition of whitespace per CSS Selectors Level 3 § 4.
-static SELECTOR_WHITESPACE: &'static [char] = &'static [' ', '\t', '\n', '\r', '\x0C'];
+static SELECTOR_WHITESPACE: &'static [u16] = &'static [
+    ' ' as u16,
+    '\t' as u16,
+    '\n' as u16,
+    '\r' as u16,
+    '\x0C' as u16,
+];
+/*static SELECTOR_WHITESPACE: &'static [Ascii] = &'static [
+    ' '.to_ascii(),
+    '\t'.to_ascii(),
+    '\n'.to_ascii(),
+    '\r'.to_ascii(),
+    '\x0C'.to_ascii(),
+];*/
 
 /// A newtype struct used to perform lowercase ASCII comparisons without allocating a whole new
 /// string.
-struct LowercaseAsciiString<'a>(&'a str);
+struct LowercaseAsciiString<'a>(DOMSlice<'a>);
 
 impl<'a> Equiv<DOMString> for LowercaseAsciiString<'a> {
     fn equiv(&self, other: &DOMString) -> bool {
-        let LowercaseAsciiString(this) = *self;
-        this.eq_ignore_ascii_case(*other)
+        /*XXX let LowercaseAsciiString(this) = *self;
+        this.eq_ignore_ascii_case(*other)*/
+        false
     }
 }
 
 impl<'a> IterBytes for LowercaseAsciiString<'a> {
     #[inline]
     fn iter_bytes(&self, _: bool, f: to_bytes::Cb) -> bool {
-        for b in self.bytes() {
+        /*XXX for b in self.bytes() {
             // FIXME(pcwalton): This is a nasty hack for performance. We temporarily violate the
             // `Ascii` type's invariants by using `to_ascii_nocheck`, but it's OK as we simply
             // convert to a byte afterward.
@@ -50,7 +64,7 @@ impl<'a> IterBytes for LowercaseAsciiString<'a> {
                     return false
                 }
             }
-        }
+        }*/
         // Terminate the string with a non-UTF-8 character, to match what the built-in string
         // `ToBytes` implementation does. (See `libstd/to_bytes.rs`.)
         f([ 0xff ])
@@ -117,7 +131,8 @@ impl SelectorMap {
         // At the end, we're going to sort the rules that we added, so remember where we began.
         let init_len = matching_rules_list.len();
         node.with_element(|element: &E| {
-            match element.get_attr(&namespace::Null, "id") {
+            let id = DOMString::from_string("id");
+            match element.get_attr(&namespace::Null, id.as_slice()) {
                 Some(id) => {
                     SelectorMap::get_matching_rules_from_hash(node,
                                                               &self.id_hash,
@@ -128,12 +143,14 @@ impl SelectorMap {
                 None => {}
             }
 
-            match element.get_attr(&namespace::Null, "class") {
+            let class = DOMString::from_string("class");
+            match element.get_attr(&namespace::Null, class.as_slice()) {
                 Some(ref class_attr) => {
-                    for class in class_attr.split(SELECTOR_WHITESPACE) {
+                    for class in class_attr.split(|c| SELECTOR_WHITESPACE.contains(c)) {
+                        let class = DOMString(class.to_owned()); // XXX compiler is dumb
                         SelectorMap::get_matching_rules_from_hash(node,
                                                                   &self.class_hash,
-                                                                  class,
+                                                                  class.as_slice(),
                                                                   matching_rules_list,
                                                                   shareable);
                     }
@@ -163,8 +180,8 @@ impl SelectorMap {
                                     N:TNode<E>,
                                     V:SmallVec<MatchedProperty>>(
                                     node: &N,
-                                    hash: &HashMap<DOMString,~[Rule]>,
-                                    key: &str,
+                                    hash: &HashMap<DOMString, ~[Rule]>,
+                                    key: DOMSlice,
                                     matching_rules: &mut V,
                                     shareable: &mut bool) {
         match hash.find_equiv(&key) {
@@ -179,8 +196,8 @@ impl SelectorMap {
                                                   N:TNode<E>,
                                                   V:SmallVec<MatchedProperty>>(
                                                   node: &N,
-                                                  hash: &HashMap<DOMString,~[Rule]>,
-                                                  key: &str,
+                                                  hash: &HashMap<DOMString, ~[Rule]>,
+                                                  key: DOMSlice,
                                                   matching_rules: &mut V,
                                                   shareable: &mut bool) {
         match hash.find_equiv(&LowercaseAsciiString(key)) {
@@ -214,6 +231,7 @@ impl SelectorMap {
 
         match SelectorMap::get_id_name(&rule) {
             Some(id_name) => {
+                let id_name = DOMString::from_string(id_name);
                 match self.id_hash.find_mut(&id_name) {
                     Some(rules) => {
                         rules.push(rule);
@@ -228,6 +246,7 @@ impl SelectorMap {
         }
         match SelectorMap::get_class_name(&rule) {
             Some(class_name) => {
+                let class_name = DOMString::from_string(class_name);
                 match self.class_hash.find_mut(&class_name) {
                     Some(rules) => {
                         rules.push(rule);
@@ -243,6 +262,7 @@ impl SelectorMap {
 
         match SelectorMap::get_element_name(&rule) {
             Some(element_name) => {
+                let element_name = DOMString::from_string(element_name);
                 match self.element_hash.find_mut(&element_name) {
                     Some(rules) => {
                         rules.push(rule);
@@ -580,6 +600,7 @@ fn matches_simple_selector<E:TElement,
         // TODO: intern element names
         LocalNameSelector(ref name) => {
             element.with_element(|element: &E| {
+                let name = DOMString::from_string(name.as_slice());
                 element.get_local_name().eq_ignore_ascii_case(name.as_slice())
             })
         }
@@ -594,8 +615,10 @@ fn matches_simple_selector<E:TElement,
         // TODO: cache and intern IDs on elements.
         IDSelector(ref id) => {
             *shareable = false;
+            let id = DOMString::from_string(id.as_slice());
             element.with_element(|element: &E| {
-                element.get_attr(&namespace::Null, "id")
+                let id_attr = DOMString::from_string("id");
+                element.get_attr(&namespace::Null, id_attr)
                        .map_default(false, |attr| {
                     attr == *id
                 })
@@ -603,11 +626,15 @@ fn matches_simple_selector<E:TElement,
         }
         // TODO: cache and intern class names on elements.
         ClassSelector(ref class) => {
+            let class = DOMString::from_string(class.as_slice());
             element.with_element(|element: &E| {
-                element.get_attr(&namespace::Null, "class")
+                let class_attr = DOMString::from_string("class");
+                element.get_attr(&namespace::Null, class_attr)
                        .map_default(false, |attr| {
                     // TODO: case-sensitivity depends on the document type and quirks mode
-                    attr.split(SELECTOR_WHITESPACE).any(|c| c == class.as_slice())
+                    attr.split(|c| SELECTOR_WHITESPACE.contains(c))
+                        .any(|c| DOMString(c.to_owned()) == class),
+                                 // XXX compiler is dumb
                 })
             })
         }
@@ -622,18 +649,23 @@ fn matches_simple_selector<E:TElement,
                 // here because the UA style otherwise disables all style sharing completely.
                 *shareable = false
             }
+            let value = DOMString::from_string(value.as_slice());
             element.match_attr(attr, |attr_value| {
                 attr_value == value.as_slice()
             })
         }
         AttrIncludes(ref attr, ref value) => {
             *shareable = false;
+            let value = DOMString::from_string(value.as_slice());
             element.match_attr(attr, |attr_value| {
-                attr_value.split(SELECTOR_WHITESPACE).any(|v| v == value.as_slice())
+                attr_value.split(|c| SELECTOR_WHITESPACE.contains(c))
+                          .any(|v| DOMString(v.to_owned()) == value)
             })
         }
         AttrDashMatch(ref attr, ref value, ref dashing_value) => {
             *shareable = false;
+            let value = DOMString::from_string(value.as_slice());
+            let dashing_value = DOMString::from_string(dashing_value.as_slice());
             element.match_attr(attr, |attr_value| {
                 attr_value == value.as_slice() ||
                 attr_value.starts_with(dashing_value.as_slice())
@@ -641,18 +673,21 @@ fn matches_simple_selector<E:TElement,
         }
         AttrPrefixMatch(ref attr, ref value) => {
             *shareable = false;
+            let value = DOMString::from_string(value.as_slice());
             element.match_attr(attr, |attr_value| {
                 attr_value.starts_with(value.as_slice())
             })
         }
-        AttrSubstringMatch(ref attr, ref value) => {
+        AttrSubstringMatch(ref _attr, ref _value) => {
             *shareable = false;
-            element.match_attr(attr, |attr_value| {
+            /*element.match_attr(attr, |attr_value| {
                 attr_value.contains(value.as_slice())
-            })
+            })*/
+            false
         }
         AttrSuffixMatch(ref attr, ref value) => {
             *shareable = false;
+            let value = DOMString::from_string(value.as_slice());
             element.match_attr(attr, |attr_value| {
                 attr_value.ends_with(value.as_slice())
             })
@@ -745,7 +780,7 @@ fn matches_simple_selector<E:TElement,
     }
 }
 
-fn url_is_visited(_url: &str) -> bool {
+fn url_is_visited(_url: DOMSlice) -> bool {
     // FIXME: implement this.
     // This function will probably need to take a "session"
     // or something containing browsing history as an additional parameter.

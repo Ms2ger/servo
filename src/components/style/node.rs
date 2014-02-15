@@ -7,7 +7,7 @@
 
 use selectors::AttrSelector;
 use servo_util::namespace::Namespace;
-
+use servo_util::str::DOMSlice;
 
 pub trait TNode<E:TElement> : Clone {
     fn parent_node(&self) -> Option<Self>;
@@ -19,13 +19,13 @@ pub trait TNode<E:TElement> : Clone {
     /// FIXME(pcwalton): This should not use the `with` pattern.
     fn with_element<'a, R>(&self, f: |&E| -> R) -> R;
 
-    fn match_attr(&self, attr: &AttrSelector, test: |&str| -> bool) -> bool;
+    fn match_attr(&self, attr: &AttrSelector, test: |DOMSlice| -> bool) -> bool;
 }
 
 pub trait TElement {
-    fn get_attr(&self, namespace: &Namespace, attr: &str) -> Option<&'static str>;
-    fn get_link(&self) -> Option<&'static str>;
-    fn get_local_name<'a>(&'a self) -> &'a str;
+    fn get_attr(&self, namespace: &Namespace, attr: DOMSlice) -> Option<DOMSlice<'static>>;
+    fn get_link(&self) -> Option<DOMSlice<'static>>;
+    fn get_local_name<'a>(&'a self) -> DOMSlice<'a>;
     fn get_namespace<'a>(&'a self) -> &'a Namespace;
     fn get_hover_state(&self) -> bool;
 }

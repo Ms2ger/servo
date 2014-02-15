@@ -9,7 +9,7 @@ use dom::element::HTMLIframeElementTypeId;
 use dom::htmlelement::HTMLElement;
 use dom::node::{AbstractNode, Node};
 use dom::windowproxy::WindowProxy;
-use servo_util::str::{DOMString, DOMSlice};
+use servo_util::str::DOMString;
 
 use extra::url::Url;
 use servo_msg::constellation_msg::{PipelineId, SubpageId};
@@ -98,7 +98,8 @@ impl HTMLIFrameElement {
             let mut modes = AllowNothing as u8;
             for word in value.split(|&c| c == ' ' as u16) {
                 // FIXME: Workaround for https://github.com/mozilla/rust/issues/10683
-                let word_lower = DOMSlice(word).to_ascii_lower();
+                /* XXX COMPILER BROKEN */
+                let word_lower = DOMString(word.to_owned()).to_ascii_lower();
                 modes |= match word_lower.to_string().as_slice() {
                     "allow-same-origin" => AllowSameOrigin,
                     "allow-forms" => AllowForms,

@@ -18,10 +18,11 @@ use gfx::text::text_run::TextRun;
 use servo_msg::constellation_msg::{FrameRectMsg, PipelineId, SubpageId};
 use servo_net::image::holder::ImageHolder;
 use servo_net::local_image_cache::LocalImageCache;
-use servo_util::geometry::Au;
 use servo_util::geometry;
-use servo_util::range::*;
+use servo_util::geometry::Au;
 use servo_util::namespace;
+use servo_util::range::*;
+use servo_util::str::DOMString;
 use std::cast;
 use std::cell::RefCell;
 use std::cmp::ApproxEq;
@@ -41,7 +42,6 @@ use layout::flow;
 use layout::model::{MaybeAuto, specified, Auto, Specified};
 use layout::util::OpaqueNode;
 use layout::wrapper::{TLayoutNode, ThreadSafeLayoutNode};
-use script::dom::bindings::utils::DOMString;
 
 /// Boxes (`struct Box`) are the leaves of the layout tree. They cannot position themselves. In
 /// general, boxes do not have a simple correspondence with CSS boxes in the specification:

@@ -34,11 +34,11 @@ use layout::util::{LayoutDataAccess, OpaqueNode};
 use layout::wrapper::{PostorderNodeMutTraversal, TLayoutNode, ThreadSafeLayoutNode};
 
 use gfx::font_context::FontContext;
-use script::dom::bindings::utils::DOMSlice;
 use script::dom::element::{HTMLIframeElementTypeId, HTMLImageElementTypeId};
 use script::dom::node::{CommentNodeTypeId, DoctypeNodeTypeId, DocumentFragmentNodeTypeId};
 use script::dom::node::{DocumentNodeTypeId, ElementNodeTypeId, ProcessingInstructionNodeTypeId};
 use script::dom::node::{TextNodeTypeId};
+use servo_util::str::DOMSlice;
 use style::computed_values::{display, position, float, white_space};
 use style::ComputedValues;
 
@@ -731,6 +731,7 @@ impl<'ln> NodeUtils for ThreadSafeLayoutNode<'ln> {
 
         match self.type_id() {
             TextNodeTypeId => {
+                unsafe {
                     if !self.with_text(|text| is_all_whitespace(text.characterdata.data.as_slice())) {
                         return false
                     }
@@ -745,7 +746,7 @@ impl<'ln> NodeUtils for ThreadSafeLayoutNode<'ln> {
                         white_space::normal => true,
                         _ => false,
                     }
-                //}
+                }
             }
             _ => false
         }
