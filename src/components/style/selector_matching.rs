@@ -46,9 +46,8 @@ struct LowercaseAsciiString<'a>(DOMSlice<'a>);
 
 impl<'a> Equiv<DOMString> for LowercaseAsciiString<'a> {
     fn equiv(&self, other: &DOMString) -> bool {
-        /*XXX let LowercaseAsciiString(this) = *self;
-        this.eq_ignore_ascii_case(*other)*/
-        false
+        let LowercaseAsciiString(this) = *self;
+        this.eq_ignore_ascii_case(other.as_slice())
     }
 }
 

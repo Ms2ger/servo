@@ -85,30 +85,42 @@ impl<'a> DOMSlice<'a> {
         str::from_utf16(**self)
     }
 
+    fn ascii_lower_char(b: u16) -> u16 {
+        if 'A' as u16 <= b && b <= 'Z' as u16 {
+            b + ('a' as u16 - 'A' as u16)
+        } else {
+            b
+        }
+    }
+
+    fn ascii_upper_char(b: u16) -> u16 {
+        if 'a' as u16 <= b && b <= 'z' as u16 {
+            b - ('a' as u16 - 'A' as u16)
+        } else {
+            b
+        }
+    }
+
     pub fn to_ascii_lower(&self) -> DOMString {
-        let bytes = (**self).iter().map(|&b| {
-            if 'A' as u16 <= b && b <= 'Z' as u16 {
-                b + ('a' as u16 - 'A' as u16)
-            } else {
-                b
-            }
-        }).to_owned_vec();
+        let bytes = (**self).iter()
+                            .map(|&b| DOMSlice::ascii_lower_char(b))
+                            .to_owned_vec();
         DOMString(bytes)
     }
 
     pub fn to_ascii_upper(&self) -> DOMString {
-        let bytes = (**self).iter().map(|&b| {
-            if 'a' as u16 <= b && b <= 'z' as u16 {
-                b - ('a' as u16 - 'A' as u16)
-            } else {
-                b
-            }
-        }).to_owned_vec();
+        let bytes = (**self).iter()
+                            .map(|&b| DOMSlice::ascii_upper_char(b))
+                            .to_owned_vec();
         DOMString(bytes)
     }
 
-    pub fn eq_ignore_ascii_case(&self, _other: DOMSlice) -> bool {
-        false
+    pub fn eq_ignore_ascii_case(&self, other: DOMSlice) -> bool {
+        self.len() == other.len() &&
+        self.iter().zip(other.iter()).all(|(&s, &o)| {
+            s == o ||
+            DOMSlice::ascii_lower_char(s) == DOMSlice::ascii_lower_char(o)
+        })
     }
 
     pub fn starts_with(&self, other: DOMSlice) -> bool {
