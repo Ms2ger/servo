@@ -16,13 +16,10 @@ pub fn serialize(iterator: &mut NodeIterator) -> DOMString {
 
     for node in *iterator {
         while open_elements.len() > iterator.depth {
-            html.push_str(DOMString::from_strings([
-                DOMString::from_string("</"),
-                open_elements.pop(),
-                DOMString::from_string(">"),
-            ]));
+            let end_tag = pop_end_tag(&mut open_elements);
+            html.push_str(end_tag.as_slice());
         }
-        html.push_str(
+        let contents =
             match node.type_id() {
                 ElementNodeTypeId(..) => {
                     serialize_elem(node, &mut open_elements)
@@ -45,26 +42,29 @@ pub fn serialize(iterator: &mut NodeIterator) -> DOMString {
                 DocumentNodeTypeId(_) => {
                     fail!("It shouldn't be possible to serialize a document node")
                 }
-            }
-            );
+            };
+        html.push_str(contents.as_slice());
     }
     while open_elements.len() > 0 {
-        html.push_str(DOMString::from_strings([
-            DOMString::from_string("</"),
-            open_elements.pop(),
-            DOMString::from_string(">"),
-        ]));
+        let end_tag = pop_end_tag(&mut open_elements);
+        html.push_str(end_tag.as_slice());
     }
     html
 }
 
+fn pop_end_tag(open_elements: &mut ~[DOMString]) -> DOMString {
+    let start = DOMString::from_string("</");
+    let middle = open_elements.pop();
+    let end = DOMString::from_string(">");
+    start + middle.as_slice() + end.as_slice()
+}
+
 fn serialize_comment(node: AbstractNode) -> DOMString {
     node.with_imm_characterdata(|comment| {
-        DOMString::from_strings([
-            DOMString::from_string("<!--"),
-            comment.data.clone(),
-            DOMString::from_string("-->"),
-        ])
+        let end = DOMString::from_string("-->");
+        DOMString::from_string("<!--") +
+        comment.data.as_slice() +
+        end.as_slice()
     })
 }
 
@@ -90,36 +90,37 @@ fn serialize_text(node: AbstractNode) -> DOMString {
 
 fn serialize_processing_instruction(node: AbstractNode) -> DOMString {
     node.with_imm_processing_instruction(|processing_instruction| {
-        DOMString::from_strings([
-            DOMString::from_string("<?"),
-            processing_instruction.target.clone(),
-            DOMString::from_string(" "),
-            processing_instruction.characterdata.data.clone(),
-            DOMString::from_string("?>"),
-        ])
+        let begin = DOMString::from_string("<?");
+        let middle = DOMString::from_string(" ");
+        let end = DOMString::from_string("?>");
+        begin +
+        processing_instruction.target.as_slice() +
+        middle.as_slice() +
+        processing_instruction.characterdata.data.as_slice() +
+        end.as_slice()
     })
 }
 
 fn serialize_doctype(node: AbstractNode) -> DOMString {
     node.with_imm_doctype(|doctype| {
-        DOMString::from_strings([
-            DOMString::from_string("<!DOCTYPE"), // XXX space
-            doctype.name.clone(),
-            DOMString::from_string(">"),
-        ])
+        let begin = DOMString::from_string("<!DOCTYPE"); // XXX space
+        let end = DOMString::from_string(">");
+        begin + doctype.name.as_slice() + end.as_slice()
     })
 }
 
 fn serialize_elem(node: AbstractNode, open_elements: &mut ~[DOMString]) -> DOMString {
     node.with_imm_element(|elem| {
-        let mut rv = DOMString::from_strings([
-            DOMString::from_string("<"),
-            elem.tag_name.clone()
-        ]);
+        let mut rv = DOMString::from_string("<") +
+                     elem.tag_name.as_slice();
         for attr in elem.attrs.iter() {
-            rv.push_str(serialize_attr(attr));
-        };
-        rv.push_str(DOMString::from_string(">"));
+            let attr = serialize_attr(attr);
+            rv.push_str(attr.as_slice());
+        }
+        {
+            let gt = DOMString::from_string(">");
+            rv.push_str(gt.as_slice());
+        }
         match elem.tag_name.to_string().as_slice() {
             "pre" | "listing" | "textarea" if
                 elem.namespace == namespace::HTML => {
@@ -127,7 +128,8 @@ fn serialize_elem(node: AbstractNode, open_elements: &mut ~[DOMString]) -> DOMSt
                         Some(child) if child.is_text() => {
                             child.with_imm_characterdata(|text| {
                                 if text.data[0] == 0x0A as u16 {
-                                    rv.push_str(DOMString::from_string("\x0A"));
+                                    let nl = DOMString::from_string("\x0A");
+                                    rv.push_str(nl.as_slice());
                                 }
                             })
                         },
@@ -145,33 +147,29 @@ fn serialize_elem(node: AbstractNode, open_elements: &mut ~[DOMString]) -> DOMSt
 
 fn serialize_attr(attr: &@mut Attr) -> DOMString {
     let attr_name = if attr.namespace == namespace::XML {
-        DOMString::from_strings([
-            DOMString::from_string("xml:"),
-            attr.local_name.clone(),
-        ])
+        let prefix = DOMString::from_string("xml:");
+        prefix + attr.local_name.as_slice()
     } else if attr.namespace == namespace::XMLNS &&
         attr.local_name == DOMString::from_string("xmlns") {
-          DOMString::from_string("xmlns")
+        DOMString::from_string("xmlns")
     } else if attr.namespace == namespace::XMLNS {
-        DOMString::from_strings([
-            DOMString::from_string("xmlns:"),
-            attr.local_name.clone(),
-        ])
+        let prefix = DOMString::from_string("xmlns:");
+        prefix + attr.local_name.as_slice()
     } else if attr.namespace == namespace::XLink {
-        DOMString::from_strings([
-            DOMString::from_string("xlink:"),
-            attr.local_name.clone(),
-        ])
+        let prefix = DOMString::from_string("xlink:");
+        prefix + attr.local_name.as_slice()
     } else {
         attr.name.clone()
     };
-    DOMString::from_strings([
-        DOMString::from_string(" "),
-        attr_name,
-        DOMString::from_string("=\""),
-        escape(attr.value.as_slice(), true),
-        DOMString::from_string("\""),
-    ])
+    let begin = DOMString::from_string(" ");
+    let middle = DOMString::from_string("=\"");
+    let end = DOMString::from_string("\"");
+    let escaped = escape(attr.value.as_slice(), true);
+    begin +
+    attr_name.as_slice() +
+    middle.as_slice() +
+    escaped.as_slice() +
+    end.as_slice()
 }
 
 fn escape(string: DOMSlice, attr_mode: bool) -> DOMString {

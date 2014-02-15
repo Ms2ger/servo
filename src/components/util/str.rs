@@ -21,15 +21,7 @@ impl DOMString {
         DOMString(s.to_utf16())
     }
 
-    pub fn from_strings(strings: &[DOMString]) -> DOMString {
-        let mut bytes = ~[];
-        for s in strings.iter() {
-            bytes.push_all(**s);
-        }
-        DOMString(bytes)
-    }
-
-    pub fn push_str(&mut self, s: DOMString) {
+    pub fn push_str(&mut self, s: DOMSlice) {
         self.push_all(*s)
     }
 
@@ -174,6 +166,14 @@ impl Equiv<DOMString> for DOMString {
 impl<'a> Equiv<DOMString> for DOMSlice<'a> {
     fn equiv(&self, other: &DOMString) -> bool {
         (**self).equiv(&**other)
+    }
+}
+
+impl<'a> Add<DOMSlice<'a>, DOMString> for DOMString {
+    fn add(&self, rhs: &DOMSlice<'a>) -> DOMString {
+        let mut result = self.clone();
+        result.push_str(*rhs);
+        result
     }
 }
 

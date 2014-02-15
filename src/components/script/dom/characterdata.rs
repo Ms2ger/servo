@@ -41,7 +41,7 @@ impl CharacterData {
     }
 
     pub fn AppendData(&mut self, arg: DOMString) -> ErrorResult {
-        self.data.push_str(arg);
+        self.data.push_str(arg.as_slice());
         Ok(())
     }
 
