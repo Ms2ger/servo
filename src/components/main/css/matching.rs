@@ -219,23 +219,26 @@ impl StyleSharingCandidate {
                 return None
             }
 
+            let class_attr = DOMString::from_string("class");
             Some(StyleSharingCandidate {
                 style: style.take_unwrap(),
                 parent_style: parent_style.take_unwrap(),
                 local_name: element.get_local_name().to_str(),
-                class: element.get_attr(&Null, "class")
+                class: element.get_attr(&Null, class_attr.as_slice())
                               .map(|string| string.to_str()),
             })
         })
     }
 
     fn can_share_style_with(&self, element: &LayoutElement) -> bool {
-        if element.get_local_name() != self.local_name {
+        if element.get_local_name() != self.local_name.as_slice() {
             return false
         }
-        match (&self.class, element.get_attr(&Null, "class")) {
+
+        let class_attr = DOMString::from_string("class");
+        match (&self.class, element.get_attr(&Null, class_attr.as_slice())) {
             (&None, Some(_)) | (&Some(_), None) => return false,
-            (&Some(ref this_class), Some(element_class)) if element_class != *this_class => {
+            (&Some(ref this_class), Some(element_class)) if element_class != this_class.as_slice() => {
                 return false
             }
             (&Some(_), Some(_)) | (&None, None) => {}
@@ -448,7 +451,8 @@ impl<'ln> MatchMethods for LayoutNode<'ln> {
             return CannotShare(false)
         }
         let ok = self.with_element(|element| {
-            element.style_attribute().is_none() && element.get_attr(&Null, "id").is_none()
+            let id = DOMString::from_string("id");
+            element.style_attribute().is_none() && element.get_attr(&Null, id.as_slice()).is_none()
         });
         if !ok {
             return CannotShare(false)
