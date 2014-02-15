@@ -8,7 +8,7 @@ use dom::node::NodeIterator;
 use dom::node::{DoctypeNodeTypeId, DocumentFragmentNodeTypeId, CommentNodeTypeId};
 use dom::node::{DocumentNodeTypeId, ElementNodeTypeId, ProcessingInstructionNodeTypeId};
 use dom::node::{TextNodeTypeId, AbstractNode};
-use servo_util::str::DOMString;
+use servo_util::str::{DOMString, DOMSlice};
 
 pub fn serialize(iterator: &mut NodeIterator) -> DOMString {
     let mut html = DOMString::empty();
@@ -79,11 +79,11 @@ fn serialize_text(node: AbstractNode) -> DOMString {
                         "noscript" if elem.namespace == namespace::HTML => {
                             text.data.clone()
                         },
-                        _ => escape(text.data.clone(), false)
+                        _ => escape(text.data.as_slice(), false)
                     }
                })
             },
-            _ => escape(text.data.clone(), false)
+            _ => escape(text.data.as_slice(), false)
         }
     })
 }
@@ -169,12 +169,12 @@ fn serialize_attr(attr: &@mut Attr) -> DOMString {
         DOMString::from_string(" "),
         attr_name,
         DOMString::from_string("=\""),
-        escape(attr.value.clone(), true),
+        escape(attr.value.as_slice(), true),
         DOMString::from_string("\""),
     ])
 }
 
-fn escape(_string: DOMString, _attr_mode: bool) -> DOMString {
+fn escape(_string: DOMSlice, _attr_mode: bool) -> DOMString {
     /*let replaced = string.replace("&", "&amp;").replace("\xA0", "&nbsp;");
     match attr_mode {
         true => {
