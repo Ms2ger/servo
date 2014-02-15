@@ -726,7 +726,7 @@ impl<'ln> NodeUtils for ThreadSafeLayoutNode<'ln> {
                     non_whitespace = true;
                 }
             });
-            non_whitespace
+            !non_whitespace
         }
 
         match self.type_id() {
