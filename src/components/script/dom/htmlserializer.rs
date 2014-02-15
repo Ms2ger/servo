@@ -174,15 +174,26 @@ fn serialize_attr(attr: &@mut Attr) -> DOMString {
     ])
 }
 
-fn escape(_string: DOMSlice, _attr_mode: bool) -> DOMString {
-    /*let replaced = string.replace("&", "&amp;").replace("\xA0", "&nbsp;");
-    match attr_mode {
-        true => {
-            replaced.replace("\"", "&quot;")
-        },
-        false => {
-            replaced.replace("<", "&lt;").replace(">", "&gt;")
+fn escape(string: DOMSlice, attr_mode: bool) -> DOMString {
+    let replaced = (*string).flat_map(if attr_mode {
+        |&c| {
+            match c {
+                0x26 => *DOMString::from_string("&amp;"),
+                0xA0 => *DOMString::from_string("&nbsp;"),
+                0x22 => *DOMString::from_string("&quot;"),
+                _    => ~[c],
+            }
         }
-    }*/
-    fail!()
+    } else {
+        |&c| {
+            match c {
+                0x26 => *DOMString::from_string("&amp;"),
+                0xA0 => *DOMString::from_string("&nbsp;"),
+                0x3C => *DOMString::from_string("&lt;"),
+                0x3E => *DOMString::from_string("&gt;"),
+                _    => ~[c],
+            }
+        }
+    });
+    DOMString(replaced)
 }
