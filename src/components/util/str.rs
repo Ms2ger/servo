@@ -85,7 +85,7 @@ impl<'a> DOMSlice<'a> {
         str::from_utf16(**self)
     }
 
-    fn ascii_lower_char(b: u16) -> u16 {
+    pub fn ascii_lower_char(b: u16) -> u16 {
         if 'A' as u16 <= b && b <= 'Z' as u16 {
             b + ('a' as u16 - 'A' as u16)
         } else {
@@ -93,7 +93,7 @@ impl<'a> DOMSlice<'a> {
         }
     }
 
-    fn ascii_upper_char(b: u16) -> u16 {
+    pub fn ascii_upper_char(b: u16) -> u16 {
         if 'a' as u16 <= b && b <= 'z' as u16 {
             b - ('a' as u16 - 'A' as u16)
         } else {

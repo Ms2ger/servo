@@ -53,17 +53,13 @@ impl<'a> Equiv<DOMString> for LowercaseAsciiString<'a> {
 
 impl<'a> IterBytes for LowercaseAsciiString<'a> {
     #[inline]
-    fn iter_bytes(&self, _: bool, f: to_bytes::Cb) -> bool {
-        /*XXX for b in self.bytes() {
-            // FIXME(pcwalton): This is a nasty hack for performance. We temporarily violate the
-            // `Ascii` type's invariants by using `to_ascii_nocheck`, but it's OK as we simply
-            // convert to a byte afterward.
-            unsafe {
-                if !f([ b.to_ascii_nocheck().to_lower().to_byte() ]) {
-                    return false
-                }
+    fn iter_bytes(&self, lsb0: bool, f: to_bytes::Cb) -> bool {
+        for &b in self.iter() {
+            let b = DOMSlice::ascii_lower_char(b);
+            if !b.iter_bytes(lsb0, |x| f(x)) {
+                return false
             }
-        }*/
+        }
         // Terminate the string with a non-UTF-8 character, to match what the built-in string
         // `ToBytes` implementation does. (See `libstd/to_bytes.rs`.)
         f([ 0xff ])
