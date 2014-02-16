@@ -44,6 +44,7 @@ impl HTMLDocument {
     }
 
     pub fn Links(&self) -> @mut HTMLCollection {
+        let href = DOMString::from_string("href");
         self.parent.createHTMLCollection(|elem| {
             (elem.tag_name == DOMString::from_string("a") ||
              elem.tag_name == DOMString::from_string("area")) &&
@@ -62,8 +63,8 @@ impl HTMLDocument {
     pub fn Anchors(&self) -> @mut HTMLCollection {
         let (a, name) = (DOMString::from_string("a"), DOMString::from_string("name"));
         self.parent.createHTMLCollection(|elem| {
-            elem.tag_name == a
-            elem.get_attribute(Null, name.as_slice()).is_some())
+            elem.tag_name == a &&
+            elem.get_attribute(Null, name.as_slice()).is_some()
         })
     }
 

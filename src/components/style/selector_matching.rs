@@ -613,9 +613,9 @@ fn matches_simple_selector<E:TElement,
             let id = DOMString::from_string(id.as_slice());
             element.with_element(|element: &E| {
                 let id_attr = DOMString::from_string("id");
-                element.get_attr(&namespace::Null, id_attr)
+                element.get_attr(&namespace::Null, id_attr.as_slice())
                        .map_default(false, |attr| {
-                    attr == *id
+                    attr == id.as_slice()
                 })
             })
         }
@@ -624,11 +624,11 @@ fn matches_simple_selector<E:TElement,
             let class = DOMString::from_string(class.as_slice());
             element.with_element(|element: &E| {
                 let class_attr = DOMString::from_string("class");
-                element.get_attr(&namespace::Null, class_attr)
+                element.get_attr(&namespace::Null, class_attr.as_slice())
                        .map_default(false, |attr| {
                     // TODO: case-sensitivity depends on the document type and quirks mode
                     attr.split(|c| SELECTOR_WHITESPACE.contains(c))
-                        .any(|c| DOMString(c.to_owned()) == class),
+                        .any(|c| DOMString(c.to_owned()) == class)
                                  // XXX compiler is dumb
                 })
             })
