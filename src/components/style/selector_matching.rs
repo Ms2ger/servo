@@ -32,13 +32,6 @@ static SELECTOR_WHITESPACE: &'static [u16] = &'static [
     '\r' as u16,
     '\x0C' as u16,
 ];
-/*static SELECTOR_WHITESPACE: &'static [Ascii] = &'static [
-    ' '.to_ascii(),
-    '\t'.to_ascii(),
-    '\n'.to_ascii(),
-    '\r'.to_ascii(),
-    '\x0C'.to_ascii(),
-];*/
 
 /// A newtype struct used to perform lowercase ASCII comparisons without allocating a whole new
 /// string.

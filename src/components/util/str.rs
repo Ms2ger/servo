@@ -2,13 +2,9 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-//use std::ascii::Ascii;
 use std::str;
 use std::to_bytes::{IterBytes, Cb};
-//use std::vec::SplitIterator;
 
-//#[deriving(Equiv)]
-pub struct DOMChar(u16);
 pub struct DOMString(~[u16]);
 pub struct DOMSlice<'a>(&'a [u16]);
 
@@ -159,21 +155,6 @@ impl<'a> DOMSlice<'a> {
         }
         DOMString(buffer)
     }
-
-/*    pub fn contains(&self, other: DOMSlice) -> bool {
-        (**self).contains(*other)
-    }*/
-
-    /*pub fn split(&'a self, separators: &'a [Ascii]) -> SplitIterator<'a, u16> {
-        (**self).split(|&c| {
-            let maybe_ascii = DOMChar(c).to_ascii_opt();
-            maybe_ascii.map_default(false, |a| separators.contains(&a))
-        })
-    }*/
-
-//    pub fn from_string(s: &str) -> DOMString {
-//        s.to_utf16()
-//    }
 }
 
 impl<'a> Eq for DOMSlice<'a> {
@@ -193,12 +174,6 @@ impl Equiv<DOMString> for DOMString {
         (**self).equiv(&**other)
     }
 }
-
-/*impl<'a> Equiv<DOMSlice<'a>> for DOMString {
-    fn equiv(&self, other: &DOMSlice<'a>) -> bool {
-        (**self).equiv(&**other)
-    }
-}*/
 
 impl<'a> Equiv<DOMString> for DOMSlice<'a> {
     fn equiv(&self, other: &DOMString) -> bool {
@@ -228,16 +203,3 @@ pub fn null_str_as_empty_ref<'a>(s: &'a Option<DOMString>) -> DOMSlice<'a> {
         None => DOMSlice(&'a []),
     }
 }
-
-
-/*impl AsciiCast<Ascii> for DOMChar {
-    #[inline]
-    unsafe fn to_ascii_nocheck(&self) -> Ascii {
-        Ascii { chr: **self as u8 }
-    }
-
-    #[inline]
-    fn is_ascii(&self) -> bool {
-        **self & 128 == 0u16
-    }
-}*/
