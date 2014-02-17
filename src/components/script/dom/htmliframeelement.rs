@@ -96,7 +96,7 @@ impl HTMLIFrameElement {
     pub fn AfterSetAttr(&mut self, name: DOMString, value: DOMString) {
         if name == DOMString::from_string("sandbox") {
             let mut modes = AllowNothing as u8;
-            for word in value.split(|&c| c == ' ' as u16) {
+            for word in value.as_slice().split(|&c| c == ' ' as u16) {
                 // FIXME: Workaround for https://github.com/mozilla/rust/issues/10683
                 /* XXX COMPILER BROKEN */
                 let word_lower = DOMString::from_buffer(word.to_owned()).to_ascii_lower();

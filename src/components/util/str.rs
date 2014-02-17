@@ -5,6 +5,7 @@
 use std::iter::range_inclusive;
 use std::str;
 use std::to_bytes::{IterBytes, Cb};
+use std::vec::SplitIterator;
 
 pub struct DOMString(~[u16]);
 pub struct DOMSlice<'a>(&'a [u16]);
@@ -98,6 +99,14 @@ impl<'a> DOMSlice<'a> {
 
     pub fn slice(&'a self, begin: uint, end: uint) -> DOMSlice<'a> {
         DOMSlice((**self).slice(begin, end))
+    }
+
+    pub fn split(&self, pred: 'a |&u16| -> bool) -> SplitIterator<'a, u16> {
+        (**self).split(pred)
+    }
+
+    pub fn split_whitespace(&self) -> SplitIterator<'a, u16> {
+        (**self).split(|c| ASCII_WHITESPACE.contains(c))
     }
 
     pub fn replace(&self, f: |u16| -> DOMString) -> DOMString {

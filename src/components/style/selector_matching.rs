@@ -24,15 +24,6 @@ pub enum StylesheetOrigin {
     UserOrigin,
 }
 
-/// The definition of whitespace per CSS Selectors Level 3 § 4.
-static SELECTOR_WHITESPACE: &'static [u16] = &'static [
-    ' ' as u16,
-    '\t' as u16,
-    '\n' as u16,
-    '\r' as u16,
-    '\x0C' as u16,
-];
-
 /// A newtype struct used to perform lowercase ASCII comparisons without allocating a whole new
 /// string.
 struct LowercaseAsciiString<'a>(DOMSlice<'a>);
@@ -131,7 +122,7 @@ impl SelectorMap {
             let class = DOMString::from_string("class");
             match element.get_attr(&namespace::Null, class.as_slice()) {
                 Some(ref class_attr) => {
-                    for class in class_attr.split(|c| SELECTOR_WHITESPACE.contains(c)) {
+                    for class in class_attr.split_whitespace() {
                         let class = DOMString::from_buffer(class.to_owned()); // XXX compiler is dumb
                         SelectorMap::get_matching_rules_from_hash(node,
                                                                   &self.class_hash,
@@ -617,7 +608,7 @@ fn matches_simple_selector<E:TElement,
                 element.get_attr(&namespace::Null, class_attr.as_slice())
                        .map_default(false, |attr| {
                     // TODO: case-sensitivity depends on the document type and quirks mode
-                    attr.split(|c| SELECTOR_WHITESPACE.contains(c))
+                    attr.split_whitespace()
                         .any(|c| DOMString::from_buffer(c.to_owned()) == class)
                                  // XXX compiler is dumb
                 })
@@ -643,7 +634,7 @@ fn matches_simple_selector<E:TElement,
             *shareable = false;
             let value = DOMString::from_string(value.as_slice());
             element.match_attr(attr, |attr_value| {
-                attr_value.split(|c| SELECTOR_WHITESPACE.contains(c))
+                attr_value.split_whitespace()
                           .any(|v| DOMString::from_buffer(v.to_owned()) == value)
             })
         }
