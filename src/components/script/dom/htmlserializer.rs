@@ -173,25 +173,24 @@ fn serialize_attr(attr: &@mut Attr) -> DOMString {
 }
 
 fn escape(string: DOMSlice, attr_mode: bool) -> DOMString {
-    let replaced = (*string).flat_map(if attr_mode {
-        |&c| {
+    string.replace(if attr_mode {
+        |c| {
             match c {
-                0x26 => *DOMString::from_string("&amp;"),
-                0xA0 => *DOMString::from_string("&nbsp;"),
-                0x22 => *DOMString::from_string("&quot;"),
-                _    => ~[c],
+                0x26 => DOMString::from_string("&amp;"),
+                0xA0 => DOMString::from_string("&nbsp;"),
+                0x22 => DOMString::from_string("&quot;"),
+                _    => DOMString::from_buffer(~[c]),
             }
         }
     } else {
-        |&c| {
+        |c| {
             match c {
-                0x26 => *DOMString::from_string("&amp;"),
-                0xA0 => *DOMString::from_string("&nbsp;"),
-                0x3C => *DOMString::from_string("&lt;"),
-                0x3E => *DOMString::from_string("&gt;"),
-                _    => ~[c],
+                0x26 => DOMString::from_string("&amp;"),
+                0xA0 => DOMString::from_string("&nbsp;"),
+                0x3C => DOMString::from_string("&lt;"),
+                0x3E => DOMString::from_string("&gt;"),
+                _    => DOMString::from_buffer(~[c]),
             }
         }
-    });
-    DOMString(replaced)
+    })
 }

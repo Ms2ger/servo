@@ -100,6 +100,11 @@ impl<'a> DOMSlice<'a> {
         DOMSlice((**self).slice(begin, end))
     }
 
+    pub fn replace(&self, f: |u16| -> DOMString) -> DOMString {
+        let replaced = (**self).flat_map(|&c| *f(c));
+        DOMString::from_buffer(replaced)
+    }
+
     pub fn as_vector(&self) -> &'a [u16] {
         **self
     }
