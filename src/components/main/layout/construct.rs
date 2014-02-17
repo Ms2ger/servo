@@ -717,11 +717,11 @@ impl<'ln> NodeUtils for ThreadSafeLayoutNode<'ln> {
 
     fn is_ignorable_whitespace(self) -> bool {
         fn is_all_whitespace(text: DOMSlice) -> bool {
-            if !is_utf16(*text) {
+            if !is_utf16(text.as_vector()) {
                 return false;
             }
             let mut non_whitespace = false;
-            utf16_chars(*text, |c| {
+            utf16_chars(text.as_vector(), |c| {
                 if !c.is_whitespace() {
                     non_whitespace = true;
                 }

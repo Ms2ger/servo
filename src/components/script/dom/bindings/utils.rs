@@ -241,7 +241,8 @@ pub fn jsval_to_domstring(cx: *JSContext, v: JSVal) -> Result<Option<DOMString>,
 }
 
 pub unsafe fn str_to_jsval(cx: *JSContext, string: DOMString) -> JSVal {
-    let jsstr = JS_NewUCStringCopyN(cx, string.as_ptr(), string.len() as libc::size_t);
+    let buffer = string.as_slice().as_vector();
+    let jsstr = JS_NewUCStringCopyN(cx, buffer.as_ptr(), buffer.len() as libc::size_t);
     if jsstr.is_null() {
         // FIXME: is there something else we should do on failure?
         JSVAL_NULL

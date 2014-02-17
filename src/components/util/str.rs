@@ -86,6 +86,10 @@ impl<'a> DOMSlice<'a> {
         DOMSlice((**self).slice(begin, end))
     }
 
+    pub fn as_vector(&self) -> &'a [u16] {
+        **self
+    }
+
     pub fn ascii_lower_char(b: u16) -> u16 {
         if 'A' as u16 <= b && b <= 'Z' as u16 {
             b + ('a' as u16 - 'A' as u16)
