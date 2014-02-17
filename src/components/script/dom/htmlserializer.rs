@@ -127,7 +127,8 @@ fn serialize_elem(node: AbstractNode, open_elements: &mut ~[DOMString]) -> DOMSt
                     match node.first_child() {
                         Some(child) if child.is_text() => {
                             child.with_imm_characterdata(|text| {
-                                if text.data[0] == 0x0A as u16 {
+                                let mut iter = text.data.as_slice().iter();
+                                if iter.next().map(|&x| x) == Some(0x0A as u16) {
                                     let nl = DOMString::from_string("\x0A");
                                     rv.push_str(nl.as_slice());
                                 }
