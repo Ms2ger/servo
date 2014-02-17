@@ -305,9 +305,10 @@ impl Document {
         }
 
         // Step 2.
-        /*XXX if data.contains("?>") {
+        let end = DOMString::from_string("?>");
+        if data.as_slice().contains(end.as_slice()) {
             return Err(InvalidCharacter);
-        }*/
+        }
 
         // Step 3.
         Ok(ProcessingInstruction::new(target, data, abstract_self))

@@ -663,12 +663,12 @@ fn matches_simple_selector<E:TElement,
                 attr_value.starts_with(value.as_slice())
             })
         }
-        AttrSubstringMatch(ref _attr, ref _value) => {
+        AttrSubstringMatch(ref attr, ref value) => {
             *shareable = false;
-            /*element.match_attr(attr, |attr_value| {
+            let value = DOMString::from_string(value.as_slice());
+            element.match_attr(attr, |attr_value| {
                 attr_value.contains(value.as_slice())
-            })*/
-            false
+            })
         }
         AttrSuffixMatch(ref attr, ref value) => {
             *shareable = false;

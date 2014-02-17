@@ -2,6 +2,7 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
+use std::iter::range_inclusive;
 use std::str;
 use std::to_bytes::{IterBytes, Cb};
 
@@ -81,6 +82,10 @@ impl<'a> DOMSlice<'a> {
         str::from_utf16(**self)
     }
 
+    pub fn slice(&'a self, begin: uint, end: uint) -> DOMSlice<'a> {
+        DOMSlice((**self).slice(begin, end))
+    }
+
     pub fn ascii_lower_char(b: u16) -> u16 {
         if 'A' as u16 <= b && b <= 'Z' as u16 {
             b + ('a' as u16 - 'A' as u16)
@@ -125,6 +130,12 @@ impl<'a> DOMSlice<'a> {
 
     pub fn ends_with(&self, other: DOMSlice) -> bool {
         (**self).ends_with(*other)
+    }
+
+    pub fn contains(&self, needle: DOMSlice) -> bool {
+        let (m, n) = (self.len(), needle.len());
+        m <= n &&
+        range_inclusive(0, m - n).any(|i| self.slice(i, m).starts_with(needle))
     }
 
     pub fn compressed_whitespace(&self) -> DOMString {
