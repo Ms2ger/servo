@@ -74,7 +74,7 @@ impl<'a> DOMSlice<'a> {
         DOMSlice(&'a [])
     }
 
-    pub fn to_str(&self) -> DOMString {
+    pub fn to_owned(&self) -> DOMString {
         DOMString((**self).to_owned())
     }
 

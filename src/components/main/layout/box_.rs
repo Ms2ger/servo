@@ -1612,7 +1612,7 @@ impl Box {
     fn side_offsets_debug_string(&self, name: &str, value: SideOffsets2D<Au>) -> ~str {
         let zero: SideOffsets2D<Au> = Zero::zero();
         if value == zero {
-            return "".to_str()
+            return ~""
         }
         format!(" {}{},{},{},{}",
                 name,

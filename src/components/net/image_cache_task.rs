@@ -260,7 +260,7 @@ impl ImageCache {
                         Err(())
                     };
                     to_cache.send(StorePrefetchedImageData(url.clone(), result));
-                    debug!("image_cache_task: ended fetch for {:s}", (url.clone()).to_str());
+                    debug!("image_cache_task: ended fetch for {:s}", url.to_str());
                 });
 
                 self.set_state(url, Prefetching(DoNotDecode));

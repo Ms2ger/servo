@@ -37,7 +37,7 @@ impl CharacterData {
     }
 
     pub fn SubstringData(&self, offset: u32, count: u32) -> Fallible<DOMString> {
-        Ok(self.data.slice(offset as uint, count as uint).to_str())
+        Ok(self.data.slice(offset as uint, count as uint).to_owned())
     }
 
     pub fn AppendData(&mut self, arg: DOMString) -> ErrorResult {

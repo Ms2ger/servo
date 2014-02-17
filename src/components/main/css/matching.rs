@@ -223,9 +223,9 @@ impl StyleSharingCandidate {
             Some(StyleSharingCandidate {
                 style: style.take_unwrap(),
                 parent_style: parent_style.take_unwrap(),
-                local_name: element.get_local_name().to_str(),
+                local_name: element.get_local_name().to_owned(),
                 class: element.get_attr(&Null, class_attr.as_slice())
-                              .map(|string| string.to_str()),
+                              .map(|string| string.to_owned()),
             })
         })
     }
