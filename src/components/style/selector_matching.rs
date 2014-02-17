@@ -132,7 +132,7 @@ impl SelectorMap {
             match element.get_attr(&namespace::Null, class.as_slice()) {
                 Some(ref class_attr) => {
                     for class in class_attr.split(|c| SELECTOR_WHITESPACE.contains(c)) {
-                        let class = DOMString(class.to_owned()); // XXX compiler is dumb
+                        let class = DOMString::from_buffer(class.to_owned()); // XXX compiler is dumb
                         SelectorMap::get_matching_rules_from_hash(node,
                                                                   &self.class_hash,
                                                                   class.as_slice(),
@@ -618,7 +618,7 @@ fn matches_simple_selector<E:TElement,
                        .map_default(false, |attr| {
                     // TODO: case-sensitivity depends on the document type and quirks mode
                     attr.split(|c| SELECTOR_WHITESPACE.contains(c))
-                        .any(|c| DOMString(c.to_owned()) == class)
+                        .any(|c| DOMString::from_buffer(c.to_owned()) == class)
                                  // XXX compiler is dumb
                 })
             })
@@ -644,7 +644,7 @@ fn matches_simple_selector<E:TElement,
             let value = DOMString::from_string(value.as_slice());
             element.match_attr(attr, |attr_value| {
                 attr_value.split(|c| SELECTOR_WHITESPACE.contains(c))
-                          .any(|v| DOMString(v.to_owned()) == value)
+                          .any(|v| DOMString::from_buffer(v.to_owned()) == value)
             })
         }
         AttrDashMatch(ref attr, ref value, ref dashing_value) => {

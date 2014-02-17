@@ -99,7 +99,7 @@ impl HTMLIFrameElement {
             for word in value.split(|&c| c == ' ' as u16) {
                 // FIXME: Workaround for https://github.com/mozilla/rust/issues/10683
                 /* XXX COMPILER BROKEN */
-                let word_lower = DOMString(word.to_owned()).to_ascii_lower();
+                let word_lower = DOMString::from_buffer(word.to_owned()).to_ascii_lower();
                 modes |= match word_lower.to_string().as_slice() {
                     "allow-same-origin" => AllowSameOrigin,
                     "allow-forms" => AllowForms,

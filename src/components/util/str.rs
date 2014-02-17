@@ -26,6 +26,10 @@ impl DOMString {
         DOMString(s.to_utf16())
     }
 
+    pub fn from_buffer(s: ~[u16]) -> DOMString {
+        DOMString(s)
+    }
+
     pub fn push_str(&mut self, s: DOMSlice) {
         self.push_all(*s)
     }

@@ -193,7 +193,7 @@ pub fn jsstring_to_str(cx: *JSContext, s: *JSString) -> DOMString {
         let length = 0;
         let chars = JS_GetStringCharsAndLength(cx, s, &length);
         vec::raw::buf_as_slice(chars, length as uint, |char_vec| {
-            DOMString(char_vec.to_owned())
+            DOMString::from_buffer(char_vec.to_owned())
         })
     }
 }

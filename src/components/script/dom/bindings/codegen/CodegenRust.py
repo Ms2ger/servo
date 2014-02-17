@@ -1091,7 +1091,7 @@ for (uint32_t i = 0; i < length; ++i) {
             return handleDefault(
                 conversionCode,
                 ("static data: [u16, ..%s] = [ %s ];\n"
-                 "%s = DOMString(data.to_owned())" %
+                 "%s = DOMString::from_buffer(data.to_owned())" %
                  (len(defaultValue.value) + 1,
                   ", ".join(["'" + char + "' as u16" for char in defaultValue.value] + ["0"]),
                   varName)))
