@@ -47,15 +47,12 @@ impl<'a> Equiv<DOMString> for LowercaseAsciiString<'a> {
 impl<'a> IterBytes for LowercaseAsciiString<'a> {
     #[inline]
     fn iter_bytes(&self, lsb0: bool, f: to_bytes::Cb) -> bool {
-        for &b in self.iter() {
+        // NB: this must match the iter_bytes of self.to_ascii_lower().
+        self.len().iter_bytes(lsb0, |x| f(x)) &&
+        self.iter().advance(|&b| {
             let b = DOMSlice::ascii_lower_char(b);
-            if !b.iter_bytes(lsb0, |x| f(x)) {
-                return false
-            }
-        }
-        // Terminate the string with a non-UTF-8 character, to match what the built-in string
-        // `ToBytes` implementation does. (See `libstd/to_bytes.rs`.)
-        f([ 0xff ])
+            b.iter_bytes(lsb0, |x| f(x))
+        })
     }
 }
 
