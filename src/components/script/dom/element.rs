@@ -600,12 +600,5 @@ impl Element {
 fn get_attribute_parts(name: DOMString) -> (Option<DOMString>, DOMString) {
     //FIXME: Throw for XML-invalid names
     //FIXME: Throw for XMLNS-invalid names
-    let (prefix, local_name) = if name.contains(&(':' as u16))  {
-        let parts: ~[&[u16]] = name.splitn(1, |&c| c == ':' as u16).collect();
-        (Some(DOMString(parts[0].to_owned())), DOMString(parts[1].to_owned()))
-    } else {
-        (None, name)
-    };
-
-    (prefix, local_name)
+    name.split_first(':' as u16)
 }

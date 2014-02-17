@@ -53,6 +53,16 @@ impl DOMString {
     pub fn to_ascii_upper(&self) -> DOMString {
         self.as_slice().to_ascii_upper()
     }
+
+    pub fn split_first(&self, s: u16) -> (Option<DOMString>, DOMString) {
+        let mut parts = (**self).splitn(1, |&c| c == s);
+        let fst = DOMString::from_buffer(
+            parts.next().expect("must have at least one part").to_owned());
+        match parts.next() {
+            Some(snd) => (Some(fst), DOMString::from_buffer(snd.to_owned())),
+            None => (None, fst),
+        }
+    }
 }
 
 impl Clone for DOMString {
