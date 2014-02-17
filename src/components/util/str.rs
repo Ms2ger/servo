@@ -5,10 +5,14 @@
 use std::iter::range_inclusive;
 use std::str;
 use std::to_bytes::{IterBytes, Cb};
-use std::vec::SplitIterator;
+use std::vec::{SplitIterator, VecIterator};
 
-pub struct DOMString(~[u16]);
-pub struct DOMSlice<'a>(&'a [u16]);
+pub struct DOMString {
+    priv repr: ~[u16]
+}
+pub struct DOMSlice<'a> {
+    priv repr: &'a [u16]
+}
 
 static ASCII_WHITESPACE: &'static [u16] = &'static [
     ' ' as u16,
@@ -20,31 +24,35 @@ static ASCII_WHITESPACE: &'static [u16] = &'static [
 
 impl DOMString {
     pub fn empty() -> DOMString {
-        DOMString(~[])
+        DOMString { repr: ~[] }
     }
 
     pub fn from_string(s: &str) -> DOMString {
-        DOMString(s.to_utf16())
+        DOMString { repr: s.to_utf16() }
     }
 
     pub fn from_buffer(s: ~[u16]) -> DOMString {
-        DOMString(s)
+        DOMString { repr: s }
+    }
+
+    pub fn len(&self) -> uint {
+        self.repr.len()
     }
 
     pub fn push_str(&mut self, s: DOMSlice) {
-        self.push_all(*s)
+        self.repr.push_all(s.repr)
     }
 
     pub fn as_slice<'a>(&'a self) -> DOMSlice<'a> {
-        DOMSlice((**self).as_slice())
+        DOMSlice { repr: self.repr.as_slice() }
     }
 
     pub fn slice<'a>(&'a self, begin: uint, end: uint) -> DOMSlice<'a> {
-        DOMSlice((**self).slice(begin, end))
+        DOMSlice { repr: self.repr.slice(begin, end) }
     }
 
     pub fn to_string(&self) -> ~str {
-        str::from_utf16(**self)
+        str::from_utf16(self.repr)
     }
 
     pub fn to_ascii_lower(&self) -> DOMString {
@@ -56,7 +64,7 @@ impl DOMString {
     }
 
     pub fn split_first(&self, s: u16) -> (Option<DOMString>, DOMString) {
-        let mut parts = (**self).splitn(1, |&c| c == s);
+        let mut parts = self.repr.splitn(1, |&c| c == s);
         let fst = DOMString::from_buffer(
             parts.next().expect("must have at least one part").to_owned());
         match parts.next() {
@@ -68,54 +76,62 @@ impl DOMString {
 
 impl Clone for DOMString {
     fn clone(&self) -> DOMString {
-        DOMString((**self).clone())
+        DOMString { repr: self.repr.clone() }
     }
 }
 
 impl Eq for DOMString {
     fn eq(&self, other: &DOMString) -> bool {
-        (**self).eq(&**other)
+        self.repr.eq(&other.repr)
     }
 }
 
 impl IterBytes for DOMString {
     fn iter_bytes(&self, lsb0: bool, f: Cb) -> bool {
-        (**self).iter_bytes(lsb0, f)
+        self.repr.iter_bytes(lsb0, f)
     }
 }
 
 impl<'a> DOMSlice<'a> {
     pub fn empty() -> DOMSlice<'a> {
-        DOMSlice(&'a [])
+        DOMSlice { repr: &'a [] }
+    }
+
+    pub fn len(&self) -> uint {
+        self.repr.len()
+    }
+
+    pub fn iter(&self) -> VecIterator<'a, u16> {
+        self.repr.iter()
     }
 
     pub fn to_owned(&self) -> DOMString {
-        DOMString((**self).to_owned())
+        DOMString { repr: self.repr.to_owned() }
     }
 
     pub fn to_string(&self) -> ~str {
-        str::from_utf16(**self)
+        str::from_utf16(self.repr)
     }
 
     pub fn slice(&'a self, begin: uint, end: uint) -> DOMSlice<'a> {
-        DOMSlice((**self).slice(begin, end))
+        DOMSlice { repr: self.repr.slice(begin, end) }
     }
 
     pub fn split(&self, pred: 'a |&u16| -> bool) -> SplitIterator<'a, u16> {
-        (**self).split(pred)
+        self.repr.split(pred)
     }
 
     pub fn split_whitespace(&self) -> SplitIterator<'a, u16> {
-        (**self).split(|c| ASCII_WHITESPACE.contains(c))
+        self.repr.split(|c| ASCII_WHITESPACE.contains(c))
     }
 
     pub fn replace(&self, f: |u16| -> DOMString) -> DOMString {
-        let replaced = (**self).flat_map(|&c| *f(c));
+        let replaced = self.repr.flat_map(|&c| f(c).repr);
         DOMString::from_buffer(replaced)
     }
 
     pub fn as_vector(&self) -> &'a [u16] {
-        **self
+        self.repr
     }
 
     pub fn ascii_lower_char(b: u16) -> u16 {
@@ -135,17 +151,19 @@ impl<'a> DOMSlice<'a> {
     }
 
     pub fn to_ascii_lower(&self) -> DOMString {
-        let bytes = (**self).iter()
-                            .map(|&b| DOMSlice::ascii_lower_char(b))
-                            .to_owned_vec();
-        DOMString(bytes)
+        let bytes = self.repr
+                        .iter()
+                        .map(|&b| DOMSlice::ascii_lower_char(b))
+                        .to_owned_vec();
+        DOMString { repr: bytes }
     }
 
     pub fn to_ascii_upper(&self) -> DOMString {
-        let bytes = (**self).iter()
-                            .map(|&b| DOMSlice::ascii_upper_char(b))
-                            .to_owned_vec();
-        DOMString(bytes)
+        let bytes = self.repr
+                        .iter()
+                        .map(|&b| DOMSlice::ascii_upper_char(b))
+                        .to_owned_vec();
+        DOMString { repr: bytes }
     }
 
     pub fn eq_ignore_ascii_case(&self, other: DOMSlice) -> bool {
@@ -157,11 +175,11 @@ impl<'a> DOMSlice<'a> {
     }
 
     pub fn starts_with(&self, other: DOMSlice) -> bool {
-        (**self).starts_with(*other)
+        self.repr.starts_with(other.repr)
     }
 
     pub fn ends_with(&self, other: DOMSlice) -> bool {
-        (**self).ends_with(*other)
+        self.repr.ends_with(other.repr)
     }
 
     pub fn contains(&self, needle: DOMSlice) -> bool {
@@ -176,11 +194,11 @@ impl<'a> DOMSlice<'a> {
         }
 
         let mut i = 0u;
-        while i < self.len() && is_whitespace(self[i]) {
+        while i < self.len() && is_whitespace(self.repr[i]) {
             i += 1;
         }
 
-        let slice = self.slice_from(i);
+        let slice = self.repr.slice_from(i);
         let mut last_whitespace = false;
         let mut buffer = ~[];
         for &c in slice.iter() {
@@ -196,31 +214,31 @@ impl<'a> DOMSlice<'a> {
         if buffer.ends_with([' ' as u16]) {
             buffer.pop();
         }
-        DOMString(buffer)
+        DOMString { repr: buffer }
     }
 }
 
 impl<'a> Eq for DOMSlice<'a> {
     fn eq(&self, other: &DOMSlice<'a>) -> bool {
-        (**self).eq(&**other)
+        self.repr.eq(&other.repr)
     }
 }
 
 impl<'a> IterBytes for DOMSlice<'a> {
     fn iter_bytes(&self, lsb0: bool, f: Cb) -> bool {
-        (**self).iter_bytes(lsb0, f)
+        self.repr.iter_bytes(lsb0, f)
     }
 }
 
 impl Equiv<DOMString> for DOMString {
     fn equiv(&self, other: &DOMString) -> bool {
-        (**self).equiv(&**other)
+        self.repr.equiv(&other.repr)
     }
 }
 
 impl<'a> Equiv<DOMString> for DOMSlice<'a> {
     fn equiv(&self, other: &DOMString) -> bool {
-        (**self).equiv(&**other)
+        self.repr.equiv(&other.repr)
     }
 }
 
@@ -243,6 +261,6 @@ pub fn null_str_as_empty(s: &Option<DOMString>) -> DOMString {
 pub fn null_str_as_empty_ref<'a>(s: &'a Option<DOMString>) -> DOMSlice<'a> {
     match *s {
         Some(ref s) => s.as_slice(),
-        None => DOMSlice(&'a []),
+        None => DOMSlice { repr: &'a [] },
     }
 }
