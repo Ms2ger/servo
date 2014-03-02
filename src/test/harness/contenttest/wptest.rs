@@ -17,7 +17,7 @@ use extra::getopts::{getopts, reqopt};
 use std::{os, str};
 use std::io::fs;
 use std::io::Reader;
-use std::io::process::{Process, ProcessConfig, Ignored, CreatePipe};
+use std::io::process::{Process, ProcessConfig, Ignored, CreatePipe, InheritFd, ExitStatus};
 
 #[deriving(Clone)]
 struct Config {
@@ -108,21 +108,21 @@ fn run_test(file: ~str) {
     let infile = ~"file://" + path.display().to_str();
     println!("BEFORE {:s}", infile);
 
-    let create_pipe = CreatePipe(true, false); // rustc #10228
+    let stdout = CreatePipe(true, false); // rustc #10228
+    let stderr = InheritFd(2);
 
     let config = ProcessConfig {
         program: "./servo",
-        args: [~"-z", infile.clone()],
+        args: [~"-z", ~"-f", infile.clone()],
         env: None,
         cwd: None,
-        io: [Ignored, create_pipe, Ignored]
+        io: [Ignored, stdout, stderr]
     };
 
     let mut prc = Process::new(config).unwrap();
-    let stdout = prc.io[1].get_mut_ref();
     let mut output = ~[];
     loop {
-        let byte = stdout.read_byte();
+        let byte = prc.io[1].get_mut_ref().read_byte();
         match byte {
             Some(byte) => {
                 print!("{}", byte as char);
@@ -154,5 +154,9 @@ fn run_test(file: ~str) {
         }
     }
     println("D");
+    let retval = prc.wait();
+    if retval != ExitStatus(0) {
+        fail!("Servo exited with non-zero status {}", retval);
+    }
     fail!("No output found");
 }
