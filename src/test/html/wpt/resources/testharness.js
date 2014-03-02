@@ -1289,7 +1289,7 @@ policies and contribution forms [3].
 
         var this_obj = this;
 
-        window.onload =
+        on_event(window, "load",
                  function()
                  {
                      this_obj.all_loaded = true;
@@ -1297,7 +1297,7 @@ policies and contribution forms [3].
                      {
                          this_obj.complete();
                      }
-                 };
+                 });
 
         this.set_timeout();
     }
@@ -1354,7 +1354,7 @@ policies and contribution forms [3].
     Tests.prototype.set_timeout = function()
     {
         var this_obj = this;
-        clearTimeout(this.timeout_id);
+        clearTimeout(this.timeout_id >> 0); // XXX
         if (this.timeout_length !== null)
         {
             this.timeout_id = setTimeout(function() {
