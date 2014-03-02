@@ -1354,7 +1354,7 @@ policies and contribution forms [3].
     Tests.prototype.set_timeout = function()
     {
         var this_obj = this;
-        clearTimeout(this.timeout_id >> 0); // XXX
+        clearTimeout(this.timeout_id);
         if (this.timeout_length !== null)
         {
             this.timeout_id = setTimeout(function() {
