@@ -59,7 +59,7 @@ interface TestBinding {
   void passOptionalNullableFloat(optional float? arg);
   void passOptionalNullableDouble(optional double? arg);
   void passOptionalNullableString(optional DOMString? arg);
-  // void passOptionalNullableInterface(optional Blob? arg);
+  void passOptionalNullableInterface(optional Blob? arg);
 
   void passOptionalBooleanWithDefault(optional boolean arg = false);
   void passOptionalByteWithDefault(optional byte arg = 0);

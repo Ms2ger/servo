@@ -92,13 +92,19 @@ class CastableObjectUnwrapper():
 
     codeOnFailure is the code to run if unwrapping fails.
     """
-    def __init__(self, descriptor, source, target, codeOnFailure, isOptional=False,
+    def __init__(self, descriptor, source, target, codeOnFailure,
+                 isOptional=False, nullable=False,
                  preUnwrapped=None, postUnwrapped=None):
         assert descriptor.castable
 
         unwrappedVal = "val"
         if preUnwrapped or postUnwrapped:
             unwrappedVal = preUnwrapped + unwrappedVal + postUnwrapped
+        if isOptional:
+            unwrappedVal = "Some(%s)" % unwrappedVal
+        if nullable:
+            unwrappedVal = "Some(%s)" % unwrappedVal
+
         self.substitution = { "type" : descriptor.nativeType,
                               "depth": descriptor.interface.inheritanceDepth(),
                               "prototype": "PrototypeList::id::" + descriptor.name,
@@ -106,7 +112,7 @@ class CastableObjectUnwrapper():
                               "source" : source,
                               "target" : target,
                               "codeOnFailure" : CGIndenter(CGGeneric(codeOnFailure), 4).define(),
-                              "unwrapped_val" : ("Some(%s)" % unwrappedVal) if isOptional else unwrappedVal,
+                              "unwrapped_val" : unwrappedVal,
                               "unwrapFn": "unwrap_jsmanaged" if 'JS' in descriptor.nativeType else "unwrap_object"}
 
     def __str__(self):
@@ -130,10 +136,10 @@ class FailureFatalCastableObjectUnwrapper(CastableObjectUnwrapper):
     """
     As CastableObjectUnwrapper, but defaulting to throwing if unwrapping fails
     """
-    def __init__(self, descriptor, source, target, isOptional):
+    def __init__(self, descriptor, source, target, isOptional, nullable):
         CastableObjectUnwrapper.__init__(self, descriptor, source, target,
                                          "return 0; //XXXjdm return Throw(cx, rv);",
-                                         isOptional)
+                                         isOptional, nullable)
 
 class CGThing():
     """
@@ -907,11 +913,6 @@ for (uint32_t i = 0; i < length; ++i) {
                                           failureCode)
             return (template, declType, None, isOptional, None)
 
-        # This is an interface that we implement as a concrete class
-        # or an XPCOM interface.
-
-        argIsPointer = type.nullable()
-
         # Sequences and callbacks have to hold a strong ref to the thing being
         # passed down.
         forceOwningType = descriptor.interface.isCallback() or isMember
@@ -930,14 +931,16 @@ for (uint32_t i = 0; i < length; ++i) {
                         "JSVAL_TO_OBJECT(${val})",
                         "${declName}",
                         failureCode,
-                        isOptional or argIsPointer or type.nullable(),
+                        isOptional=isOptional,
+                        nullable=type.nullable(),
                         preUnwrapped=preSuccess, postUnwrapped=postSuccess))
             else:
                 templateBody += str(FailureFatalCastableObjectUnwrapper(
                         descriptor,
                         "JSVAL_TO_OBJECT(${val})",
                         "${declName}",
-                        isOptional or argIsPointer or type.nullable()))
+                        isOptional=isOptional,
+                        nullable=type.nullable()))
         else:
             templateBody += (
                 "match unwrap_value::<" + typePtr + ">(&${val} as *JSVal, "
@@ -950,13 +953,17 @@ for (uint32_t i = 0; i < length; ++i) {
                 "  Ok(unwrapped) => ${declName} = Some(unwrapped)\n"
                 "}\n")
 
-        templateBody = wrapObjectTemplate(templateBody, isDefinitelyObject,
-                                          type, "${declName} = None",
-                                          failureCode)
-
         declType = CGGeneric(typePtr)
-        if argIsPointer or isOptional:
+        nullHandler = None
+        if type.nullable():
             declType = CGWrapper(declType, pre="Option<", post=">")
+            nullHandler = "${declName} = None"
+        if isOptional:
+            declType = CGWrapper(declType, pre="Option<", post=">")
+            nullHandler = "${declName} = Some(None)"
+
+        templateBody = wrapObjectTemplate(templateBody, isDefinitelyObject,
+                                          type, nullHandler, failureCode)
 
         return (templateBody, declType, None, isOptional, None)
 

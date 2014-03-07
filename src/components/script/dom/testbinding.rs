@@ -101,7 +101,7 @@ impl TestBinding {
     pub fn PassOptionalNullableFloat(&self, _: Option<Option<f32>>) {}
     pub fn PassOptionalNullableDouble(&self, _: Option<Option<f64>>) {}
     pub fn PassOptionalNullableString(&self, _: Option<Option<DOMString>>) {}
-    // pub fn PassOptionalNullableInterface(&self, _: Option<Option<JS<Blob>>>) {}
+    pub fn PassOptionalNullableInterface(&self, _: Option<Option<JS<Blob>>>) {}
 
     pub fn PassOptionalBooleanWithDefault(&self, _: bool) {}
     pub fn PassOptionalByteWithDefault(&self, _: i8) {}
