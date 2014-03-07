@@ -1335,7 +1335,7 @@ def instantiateJSToNativeConversionTemplate(templateTuple, replacements,
         conversion = CGIfElseWrapper(
             string.Template("${index} < ${argc}").substitute(argcAndIndex),
             conversion,
-            CGGeneric("%s = None" % originalDeclName))
+            CGGeneric("%s = None;" % originalDeclName))
 
     result.append(conversion)
     # Add an empty CGGeneric to get an extra newline after the argument
