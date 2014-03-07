@@ -1337,7 +1337,7 @@ def instantiateJSToNativeConversionTemplate(templateTuple, replacements,
 
         conversion = CGList(
             [CGGeneric(
-                    string.Template("if (${index} < ${argc}) {").substitute(
+                    string.Template("if ${index} < ${argc} {").substitute(
                         argcAndIndex
                         )),
              declConstruct,
