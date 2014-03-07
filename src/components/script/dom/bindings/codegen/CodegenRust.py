@@ -1235,18 +1235,20 @@ for (uint32_t i = 0; i < length; ++i) {
     successVal = "v"
     if preSuccess or postSuccess:
         successVal = preSuccess + successVal + postSuccess
-    #XXXjdm support conversionBehavior here
-    template = (
-        "match JSValConvertible::from_jsval(cx, ${val}) {\n"
-        "  Ok(v) => ${declName} = %s,\n"
-        "  Err(_) => %s\n"
-        "}" % (successVal, failureCode))
 
     declType = CGGeneric(typeName)
     if type.nullable():
         declType = CGWrapper(declType, pre="Option<", post=">")
     if isOptional:
         declType = CGWrapper(declType, pre="Option<", post=">")
+        successVal = "Some(%s)" % successVal
+
+    #XXXjdm support conversionBehavior here
+    template = (
+        "match JSValConvertible::from_jsval(cx, ${val}) {\n"
+        "  Ok(v) => ${declName} = %s,\n"
+        "  Err(_) => %s\n"
+        "}" % (successVal, failureCode))
 
     if defaultValue is not None:
         if isinstance(defaultValue, IDLNullValue):
