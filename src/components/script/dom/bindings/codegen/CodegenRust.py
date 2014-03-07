@@ -958,7 +958,7 @@ for (uint32_t i = 0; i < length; ++i) {
         if argIsPointer or isOptional:
             declType = CGWrapper(declType, pre="Option<", post=">")
 
-        return (templateBody, declType, None, isOptional, "None" if isOptional else None)
+        return (templateBody, declType, None, isOptional, None)
 
     if type.isSpiderMonkeyInterface():
         assert not isEnforceRange and not isClamp
@@ -1071,13 +1071,10 @@ for (uint32_t i = 0; i < length; ++i) {
                     declType, None, isOptional, None)
 
         declType = "DOMString"
-        initialValue = None
         if type.nullable():
             declType = "Option<%s>" % declType
-
         if isOptional:
             declType = "Option<%s>" % declType
-            initialValue = "None"
 
         return (
             "%s\n" %
@@ -1085,7 +1082,7 @@ for (uint32_t i = 0; i < length; ++i) {
             (getConversionCode("${declName}", isOptional)),
             CGGeneric(declType), None, #CGGeneric("FakeDependentString"),
             False,
-            initialValue)
+            None)
 
     if type.isEnum():
         assert not isEnforceRange and not isClamp
@@ -1159,7 +1156,7 @@ for (uint32_t i = 0; i < length; ++i) {
         templateBody = handleDefaultNull(templateBody,
                                          "${declName} = JSVAL_NULL")
 
-        return (templateBody, declType, None, isOptional, "None" if isOptional else None)
+        return (templateBody, declType, None, isOptional, None)
 
     if type.isObject():
         assert not isEnforceRange and not isClamp
