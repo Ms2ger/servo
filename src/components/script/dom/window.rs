@@ -223,8 +223,8 @@ impl Reflectable for Window {
 }
 
 impl Window {
-    pub fn SetTimeout(&mut self, _cx: *JSContext, callback: JSVal, timeout: i32) -> i32 {
-        let timeout = num::max(0, timeout) as u64;
+    pub fn SetTimeout(&mut self, _cx: *JSContext, callback: JSVal, timeout: Option<i32>) -> i32 {
+        let timeout = num::max(0, timeout.unwrap_or(0)) as u64;
         let handle = self.next_timer_handle;
         self.next_timer_handle += 1;
 

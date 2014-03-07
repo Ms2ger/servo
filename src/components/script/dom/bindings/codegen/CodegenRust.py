@@ -1242,10 +1242,11 @@ for (uint32_t i = 0; i < length; ++i) {
         "  Err(_) => %s\n"
         "}" % (successVal, failureCode))
 
+    declType = CGGeneric(typeName)
     if type.nullable():
-        declType = CGGeneric("Option<" + typeName + ">")
-    else:
-        declType = CGGeneric(typeName)
+        declType = CGWrapper(declType, pre="Option<", post=">")
+    if isOptional:
+        declType = CGWrapper(declType, pre="Option<", post=">")
 
     if defaultValue is not None:
         if isinstance(defaultValue, IDLNullValue):
@@ -1272,7 +1273,7 @@ for (uint32_t i = 0; i < length; ++i) {
     initialVal = "false" if typeName == "bool" else ("0 as %s" % typeName)
     if type.nullable():
         initialVal = "Some(%s)" % initialVal
-    return (template, declType, None, isOptional, initialVal)
+    return (template, declType, None, isOptional, None)
 
 def instantiateJSToNativeConversionTemplate(templateTuple, replacements,
                                             argcAndIndex=None):
@@ -1332,19 +1333,10 @@ def instantiateJSToNativeConversionTemplate(templateTuple, replacements,
             )
 
     if argcAndIndex is not None:
-        declConstruct = None
-        holderConstruct = None
-
-        conversion = CGList(
-            [CGGeneric(
-                    string.Template("if ${index} < ${argc} {").substitute(
-                        argcAndIndex
-                        )),
-             declConstruct,
-             holderConstruct,
-             CGIndenter(conversion),
-             CGGeneric("}")],
-            "\n")
+        conversion = CGIfElseWrapper(
+            string.Template("${index} < ${argc}").substitute(argcAndIndex),
+            conversion,
+            CGGeneric("%s = None" % originalDeclName))
 
     result.append(conversion)
     # Add an empty CGGeneric to get an extra newline after the argument
@@ -2297,6 +2289,14 @@ class CGList(CGThing):
         return self.join(child.declare() for child in self.children if child is not None)
     def define(self):
         return self.join(child.define() for child in self.children if child is not None)
+
+
+class CGIfElseWrapper(CGList):
+    def __init__(self, condition, ifTrue, ifFalse):
+        kids = [ CGIfWrapper(ifTrue, condition),
+                 CGWrapper(CGIndenter(ifFalse), pre=" else {\n", post="\n}") ]
+        CGList.__init__(self, kids)
+
 
 class CGGeneric(CGThing):
     """
