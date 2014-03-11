@@ -105,7 +105,7 @@ class CastableObjectUnwrapper():
                               "protoID" : "PrototypeList::id::" + descriptor.name + " as uint",
                               "source" : source,
                               "target" : target,
-                              "codeOnFailure" : CGIndenter(CGGeneric(codeOnFailure), 4).define(),
+                              "codeOnFailure" : CGIndenter(CGGeneric(codeOnFailure)).define(),
                               "unwrapped_val" : ("Some(%s)" % unwrappedVal) if isOptional else unwrappedVal,
                               "unwrapFn": "unwrap_jsmanaged" if 'JS' in descriptor.nativeType else "unwrap_object"}
 
@@ -1817,7 +1817,7 @@ class CGIndenter(CGThing):
     A class that takes another CGThing and generates code that indents that
     CGThing by some number of spaces.  The default indent is two spaces.
     """
-    def __init__(self, child, indentLevel=2):
+    def __init__(self, child, indentLevel=4):
         CGThing.__init__(self)
         self.child = child
         self.indent = " " * indentLevel
@@ -1964,7 +1964,8 @@ static Class: DOMJSClass = DOMJSClass {
                     0 as *libc::c_void, 0 as *libc::c_void, 0 as *libc::c_void, 0 as *libc::c_void, 0 as *libc::c_void,  // 35
                     0 as *libc::c_void, 0 as *libc::c_void, 0 as *libc::c_void, 0 as *libc::c_void, 0 as *libc::c_void)  // 40
   },
-  dom_class: %s
+  dom_class:
+%s
 };
 """ % (len(self.descriptor.interface.identifier.name) + 1,
        str_to_const_array(self.descriptor.interface.identifier.name),
@@ -2254,13 +2255,16 @@ class CGAbstractMethod(CGThing):
         return "\n  }\n" if self.unsafe else ""
 
     def define(self, fromDeclare=False):
-        return self.definition_prologue(fromDeclare) + "\n" + self.definition_body() + self.definition_epilogue()
+        body = CGGeneric(self.definition_body())
+        if self.unsafe:
+            body = CGWrapper(CGIndenter(body), "unsafe {\n", "\n}")
+        return self.definition_prologue(fromDeclare) + "\n" + body.define() + self.definition_epilogue()
 
     def definition_prologue(self, fromDeclare):
-        return "%sfn %s%s(%s)%s {%s" % (self._decorators(), self.name, self._template(),
-                                        self._argstring(fromDeclare), self._returnType(), self._unsafe_open())
+        return "%sfn %s%s(%s)%s {" % (self._decorators(), self.name, self._template(),
+                                        self._argstring(fromDeclare), self._returnType())
     def definition_epilogue(self):
-        return "%s}\n" % self._unsafe_close()
+        return "}\n"
     def definition_body(self):
         assert(False) # Override me!
 
