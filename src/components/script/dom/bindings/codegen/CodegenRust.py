@@ -643,44 +643,37 @@ def getJSToNativeConversionTemplate(type, descriptorProvider, failureCode=None,
         typePtr = descriptor.nativeType
 
         templateBody = ""
-        if descriptor.castable:
-            if descriptor.interface.isConsequential():
-                raise TypeError("Consequential interface %s being used as an "
-                                "argument but flagged as castable" %
-                                descriptor.interface.identifier.name)
-            if failureCode is not None:
-                templateBody += str(CastableObjectUnwrapper(
-                        descriptor,
-                        "(${val}).to_object()",
-                        "${declName}",
-                        failureCode,
-                        isOptional or type.nullable(),
-                        preUnwrapped=preSuccess, postUnwrapped=postSuccess))
-            else:
-                templateBody += str(FailureFatalCastableObjectUnwrapper(
-                        descriptor,
-                        "(${val}).to_object()",
-                        "${declName}",
-                        isOptional or type.nullable()))
+        assert descriptor.castable
+        if descriptor.interface.isConsequential():
+            raise TypeError("Consequential interface %s being used as an "
+                            "argument but flagged as castable" %
+                            descriptor.interface.identifier.name)
+        if failureCode is not None:
+            templateBody += str(CastableObjectUnwrapper(
+                    descriptor,
+                    "(${val}).to_object()",
+                    "${declName}",
+                    failureCode,
+                    isOptional or type.nullable(),
+                    preUnwrapped=preSuccess, postUnwrapped=postSuccess))
         else:
-            templateBody += (
-                "match unwrap_value::<" + typePtr + ">(&${val} as *JSVal, "
-                "PrototypeList::id::%s, %d) {\n" % (descriptor.name, descriptor.interface.inheritanceDepth() if descriptor.concrete else 0) +
-                "  Err(()) => {")
-            templateBody += CGIndenter(onFailureBadType(failureCode,
-                                                        descriptor.interface.identifier.name)).define()
-            templateBody += (
-                "  }\n"
-                "  Ok(unwrapped) => ${declName} = Some(unwrapped)\n"
-                "}\n")
-
-        templateBody = wrapObjectTemplate(templateBody, isDefinitelyObject,
-                                          type, "${declName} = None",
-                                          failureCode)
+            templateBody += str(FailureFatalCastableObjectUnwrapper(
+                    descriptor,
+                    "(${val}).to_object()",
+                    "${declName}",
+                    isOptional or type.nullable()))
 
         declType = CGGeneric(typePtr)
-        if type.nullable() or isOptional:
+        nullHandler = None
+        if type.nullable():
             declType = CGWrapper(declType, pre="Option<", post=">")
+            nullHandler = "${declName} = None"
+        if isOptional:
+            declType = CGWrapper(declType, pre="Option<", post=">")
+            nullHandler = "${declName} = Some(None)"
+
+        templateBody = wrapObjectTemplate(templateBody, isDefinitelyObject,
+                                          type, nullHandler, failureCode)
 
         return (templateBody, declType, None, isOptional, "None" if isOptional else None)
 
@@ -2787,7 +2780,6 @@ class CGSpecializedGetter(CGAbstractExternMethod):
     def definition_body(self):
         name = self.attr.identifier.name
         nativeName = MakeNativeName(name)
-        extraPre = ''
         argsPre = []
         (_, resultOutParam) = getRetvalDeclarationForType(self.attr.type,
                                                           self.descriptor)
@@ -2795,16 +2787,14 @@ class CGSpecializedGetter(CGAbstractExternMethod):
                       self.descriptor.getExtendedAttributes(self.attr,
                                                             getter=True))
         if name in self.descriptor.needsAbstract:
-            abstractName = re.sub(r'<\w+>', '', self.descriptor.nativeType)
-            extraPre = '  let mut abstract_this = %s::from_box(this);\n' % abstractName
             argsPre = ['&mut abstract_this']
         if resultOutParam or self.attr.type.nullable() or not infallible:
             nativeName = "Get" + nativeName
         return CGWrapper(CGIndenter(CGGetterCall(argsPre, self.attr.type, nativeName,
                                                  self.descriptor, self.attr)),
-                         pre=extraPre +
-                             "  let obj = (*obj.unnamed);\n" +
-                             "  let this = &mut (*this).data;\n").define()
+                         pre="  let obj = (*obj.unnamed);\n"
+                             "  let mut abstract_this = JS::from_box(this);\n"
+                             "  let this = abstract_this.get_mut();\n").define()
 
 class CGGenericSetter(CGAbstractBindingMethod):
     """
