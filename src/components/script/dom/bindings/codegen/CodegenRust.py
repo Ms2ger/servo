@@ -4175,12 +4175,15 @@ class CGAbstractClassHook(CGAbstractExternMethod):
                                         args)
 
     def definition_body_prologue(self):
-        return """
-  let this: *%s = &(*unwrap::<*Box<%s>>(obj)).data;
-""" % (self.descriptor.concreteType, self.descriptor.concreteType)
+        return CGGeneric("""
+let this: *%s = &(*unwrap::<*Box<%s>>(obj)).data;
+""" % (self.descriptor.concreteType, self.descriptor.concreteType))
 
     def definition_body(self):
-        return self.definition_body_prologue() + self.generate_code()
+        return CGIndenter(CGList([
+            self.definition_body_prologue(),
+            self.generate_code(),
+        ])).define()
 
     def generate_code(self):
         # Override me
@@ -4203,7 +4206,7 @@ class CGClassTraceHook(CGAbstractClassHook):
                                      args)
 
     def generate_code(self):
-        return "  (*this).trace(%s);" % self.args[0].name
+        return CGGeneric("(*this).trace(%s);" % self.args[0].name)
 
 class CGClassConstructHook(CGAbstractExternMethod):
     """
@@ -4243,7 +4246,7 @@ class CGClassFinalizeHook(CGAbstractClassHook):
                                      'void', args)
 
     def generate_code(self):
-        return CGIndenter(CGGeneric(finalizeHook(self.descriptor, self.name, self.args[0].name))).define()
+        return CGGeneric(finalizeHook(self.descriptor, self.name, self.args[0].name))
 
 class CGDOMJSProxyHandlerDOMClass(CGThing):
     def __init__(self, descriptor):
