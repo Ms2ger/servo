@@ -2698,6 +2698,25 @@ class CGAbstractBindingMethod(CGAbstractExternMethod):
     def generate_code(self):
         assert(False) # Override me
 
+class CGAbstractSpecializedFunction(CGAbstractExternMethod):
+    def __init__(self, descriptor, name, args):
+        CGAbstractExternMethod.__init__(self, descriptor, name, 'JSBool', args)
+
+    def definition_body(self):
+        name = self.attr.identifier.name
+        nativeName = "Set" + MakeNativeName(name)
+        argsPre = []
+        extraPre = ''
+        if name in self.descriptor.needsAbstract:
+            abstractName = re.sub(r'<\w+>', '', self.descriptor.nativeType)
+            extraPre = '  let mut abstract_this = %s::from_box(this);\n' % abstractName
+            argsPre = ['&mut abstract_this']
+        return CGWrapper(CGIndenter(CGSetterCall(argsPre, self.attr.type, nativeName,
+                                                 self.descriptor, self.attr)),
+                         pre=extraPre +
+                             "  let obj = (*obj.unnamed);\n" +
+                             "  let this = &mut (*this).data;\n").define()
+
 class CGGenericMethod(CGAbstractBindingMethod):
     """
     A class for generating the C++ code for an IDL method..
@@ -2712,7 +2731,7 @@ class CGGenericMethod(CGAbstractBindingMethod):
             "let _info: *JSJitInfo = RUST_FUNCTION_VALUE_TO_JITINFO(JS_CALLEE(cx, &*vp));\n"
             "return CallJitMethodOp(_info, cx, obj, this as *libc::c_void, argc, &*vp);"))
 
-class CGSpecializedMethod(CGAbstractExternMethod):
+class CGSpecializedMethod(CGAbstractSpecializedFunction):
     """
     A class for generating the C++ code for a specialized method that the JIT
     can call with lower overhead.
@@ -2723,7 +2742,7 @@ class CGSpecializedMethod(CGAbstractExternMethod):
         args = [Argument('*JSContext', 'cx'), Argument('JSHandleObject', 'obj'),
                 Argument('*mut Box<%s>' % descriptor.concreteType, 'this'),
                 Argument('libc::c_uint', 'argc'), Argument('*mut JSVal', 'vp')]
-        CGAbstractExternMethod.__init__(self, descriptor, name, 'JSBool', args)
+        CGAbstractSpecializedFunction.__init__(self, descriptor, name, args)
 
     def definition_body(self):
         name = self.method.identifier.name
@@ -2766,7 +2785,7 @@ class CGGenericGetter(CGAbstractBindingMethod):
             "  CallJitPropertyOp(info, cx, obj, this as *libc::c_void, &*vp)\n"
             "});\n"))
 
-class CGSpecializedGetter(CGAbstractExternMethod):
+class CGSpecializedGetter(CGAbstractSpecializedFunction):
     """
     A class for generating the code for a specialized attribute getter
     that the JIT can call with lower overhead.
@@ -2778,7 +2797,7 @@ class CGSpecializedGetter(CGAbstractExternMethod):
                  Argument('JSHandleObject', 'obj'),
                  Argument('*mut Box<%s>' % descriptor.concreteType, 'this'),
                  Argument('*mut JSVal', 'vp') ]
-        CGAbstractExternMethod.__init__(self, descriptor, name, "JSBool", args)
+        CGAbstractSpecializedFunction.__init__(self, descriptor, name, args)
 
     def definition_body(self):
         name = self.attr.identifier.name
@@ -2832,7 +2851,7 @@ class CGGenericSetter(CGAbstractBindingMethod):
                 "*vp = UndefinedValue();\n"
                 "return 1;"))
 
-class CGSpecializedSetter(CGAbstractExternMethod):
+class CGSpecializedSetter(CGAbstractSpecializedFunction):
     """
     A class for generating the code for a specialized attribute setter
     that the JIT can call with lower overhead.
@@ -2844,7 +2863,7 @@ class CGSpecializedSetter(CGAbstractExternMethod):
                  Argument('JSHandleObject', 'obj'),
                  Argument('*mut Box<%s>' % descriptor.concreteType, 'this'),
                  Argument('*mut JSVal', 'argv')]
-        CGAbstractExternMethod.__init__(self, descriptor, name, "JSBool", args)
+        CGAbstractSpecializedFunction.__init__(self, descriptor, name, args)
 
     def definition_body(self):
         name = self.attr.identifier.name
