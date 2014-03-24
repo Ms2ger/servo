@@ -435,15 +435,83 @@ impl AttributeHandlers for JS<Element> {
     // http://dom.spec.whatwg.org/#dom-element-setattributens
     fn SetAttributeNS(&mut self, namespace_url: Option<DOMString>,
                       name: DOMString, value: DOMString) -> ErrorResult {
-        let name_type = xml_name_type(name);
-        match name_type {
+        let node: JS<Node> = NodeCast::from(self);
+        node.get().wait_until_safe_to_modify_dom();
+
+        // Step 1.
+        let namespace = Namespace::from_str(null_str_as_empty_ref(&namespace_url));
+
+        match xml_name_type(name) {
+            // Step 2.
             InvalidXMLName => return Err(InvalidCharacter),
+            // Step 3.
             Name => return Err(NamespaceError),
             QName => {}
         }
 
-        let namespace = Namespace::from_str(null_str_as_empty_ref(&namespace_url));
-        self.set_attribute(namespace, name, value)
+        // Step 4.
+        let (prefix, local_name) = get_attribute_parts(name.clone());
+        match prefix {
+            Some(ref prefix_str) => {
+                // Step 5.
+                if namespace == namespace::Null {
+                    return Err(NamespaceError);
+                }
+
+                // Step 6.
+                if "xml" == prefix_str.as_slice() && namespace != namespace::XML {
+                    return Err(NamespaceError);
+                }
+
+                // Step 7b.
+                if "xmlns" == prefix_str.as_slice() && namespace != namespace::XMLNS {
+                    return Err(NamespaceError);
+                }
+            },
+            None => {}
+        }
+
+        // Step 7a.
+        if "xmlns" == name && namespace != namespace::XMLNS {
+            return Err(NamespaceError);
+        }
+
+        // Step 8.
+        if namespace == namespace::XMLNS && ("xmlns" != name || Some(~"xmlns") != prefix) {
+            return Err(NamespaceError);
+        }
+
+        // Step 9.4.
+        let idx = self.get().attrs.iter().position(|attr| {
+            attr.get().local_name == local_name &&
+            attr.get().namespace == namespace
+        });
+
+        match idx {
+            // Step 9.5.
+            None => {
+                let node: JS<Node> = NodeCast::from(self);
+                let doc = node.get().owner_doc().get();
+                let new_attr = Attr::new_ns(&doc.window, local_name.clone(), value.clone(),
+                                            name.clone(), namespace.clone(),
+                                            prefix);
+                self.get_mut().attrs.push(new_attr);
+            }
+
+            // Step 9.6.
+            Some(idx) => {
+                if namespace == namespace::Null {
+                    let old_value = self.get().attrs[idx].get().Value();
+                    self.before_remove_attr(local_name.clone(), old_value);
+                }
+                self.get_mut().attrs[idx].get_mut().set_value(value.clone());
+            }
+        }
+
+        if namespace == namespace::Null {
+            self.after_set_attr(local_name, value);
+        }
+        Ok(())
     }
 
     fn get_url_attribute(&self, name: &str) -> DOMString {
