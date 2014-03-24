@@ -195,6 +195,10 @@ pub trait AttributeHandlers {
     fn notify_attribute_changed(&self, local_name: DOMString);
     fn has_class(&self, name: &str) -> bool;
 
+    fn SetAttribute(&mut self, name: DOMString, value: DOMString) -> ErrorResult;
+    fn SetAttributeNS(&mut self, namespace_url: Option<DOMString>,
+                      name: DOMString, value: DOMString) -> ErrorResult;
+
     // http://www.whatwg.org/html/#reflecting-content-attributes-in-idl-attributes
     fn get_url_attribute(&self, name: &str) -> DOMString;
     fn set_url_attribute(&mut self, name: &str, value: DOMString);
@@ -384,6 +388,31 @@ impl AttributeHandlers for JS<Element> {
         classes.any(|class| name == class)
     }
 
+    // http://dom.spec.whatwg.org/#dom-element-setattribute
+    fn SetAttribute(&mut self, name: DOMString, value: DOMString) -> ErrorResult {
+        // FIXME: If name does not match the Name production in XML, throw an "InvalidCharacterError" exception.
+        let name = if self.get().html_element_in_html_document() {
+            name.to_ascii_lower()
+        } else {
+            name
+        };
+        self.set_attr(name, value)
+    }
+
+    // http://dom.spec.whatwg.org/#dom-element-setattributens
+    fn SetAttributeNS(&mut self, namespace_url: Option<DOMString>,
+                      name: DOMString, value: DOMString) -> ErrorResult {
+        let name_type = xml_name_type(name);
+        match name_type {
+            InvalidXMLName => return Err(InvalidCharacter),
+            Name => return Err(NamespaceError),
+            QName => {}
+        }
+
+        let namespace = Namespace::from_str(null_str_as_empty_ref(&namespace_url));
+        self.set_attribute(namespace, name, value)
+    }
+
     fn get_url_attribute(&self, name: &str) -> DOMString {
         // XXX Resolve URL.
         self.get_string_attribute(name)
@@ -480,16 +509,10 @@ impl Element {
     }
 
     // http://dom.spec.whatwg.org/#dom-element-setattribute
-    pub fn SetAttribute(&mut self, abstract_self: &mut JS<Element>,
+    pub fn SetAttribute(&self, abstract_self: &mut JS<Element>,
                         name: DOMString,
                         value: DOMString) -> ErrorResult {
-        // FIXME: If name does not match the Name production in XML, throw an "InvalidCharacterError" exception.
-        let name = if self.html_element_in_html_document() {
-            name.to_ascii_lower()
-        } else {
-            name
-        };
-        abstract_self.set_attr(name, value)
+        abstract_self.SetAttribute(name, value)
     }
 
     // http://dom.spec.whatwg.org/#dom-element-setattributens
@@ -498,15 +521,7 @@ impl Element {
                           namespace_url: Option<DOMString>,
                           name: DOMString,
                           value: DOMString) -> ErrorResult {
-        let name_type = xml_name_type(name);
-        match name_type {
-            InvalidXMLName => return Err(InvalidCharacter),
-            Name => return Err(NamespaceError),
-            QName => {}
-        }
-
-        let namespace = Namespace::from_str(null_str_as_empty_ref(&namespace_url));
-        abstract_self.set_attribute(namespace, name, value)
+        abstract_self.SetAttributeNS(namespace_url, name, value)
     }
 
     // http://dom.spec.whatwg.org/#dom-element-removeattribute
