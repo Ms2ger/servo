@@ -186,9 +186,6 @@ impl Element {
 
 pub trait AttributeHandlers {
     fn get_attribute(&self, namespace: Namespace, name: &str) -> Option<JS<Attr>>;
-    fn set_attr(&mut self, name: DOMString, value: DOMString) -> ErrorResult;
-    fn set_attribute(&mut self, namespace: Namespace, name: DOMString,
-                     value: DOMString) -> ErrorResult;
     fn after_set_attr(&mut self, local_name: DOMString, value: DOMString);
     fn remove_attribute(&mut self, namespace: Namespace, name: DOMString) -> ErrorResult;
     fn before_remove_attr(&mut self, local_name: DOMString, old_value: DOMString);
@@ -207,6 +204,7 @@ pub trait AttributeHandlers {
     fn set_url_attribute(&mut self, name: &str, value: DOMString);
     fn get_string_attribute(&self, name: &str) -> DOMString;
     fn set_string_attribute(&mut self, name: &str, value: DOMString);
+    fn set_uint_attribute(&mut self, name: &str, value: u32);
 }
 
 pub trait AfterSetAttrListener {
@@ -223,56 +221,6 @@ impl AttributeHandlers for JS<Element> {
             let attr = attr.get();
             name == attr.local_name && attr.namespace == namespace
         }).map(|x| x.clone())
-    }
-
-    fn set_attr(&mut self, name: DOMString, value: DOMString) -> ErrorResult {
-        self.set_attribute(namespace::Null, name, value)
-    }
-
-    fn set_attribute(&mut self, namespace: Namespace, name: DOMString,
-                     value: DOMString) -> ErrorResult {
-        let (prefix, local_name) = get_attribute_parts(name.clone());
-        match prefix {
-            Some(ref prefix_str) => {
-                if namespace == namespace::Null ||
-                   ("xml" == prefix_str.as_slice() && namespace != namespace::XML) ||
-                   ("xmlns" == prefix_str.as_slice() && namespace != namespace::XMLNS) {
-                    return Err(NamespaceError);
-                }
-            },
-            None => {}
-        }
-
-        let node: JS<Node> = NodeCast::from(self);
-        node.get().wait_until_safe_to_modify_dom();
-
-        // FIXME: reduce the time of `value.clone()`.
-        let idx = self.get().attrs.iter().position(|attr| {
-            attr.get().local_name == local_name
-        });
-
-        match idx {
-            Some(idx) => {
-                if namespace == namespace::Null {
-                    let old_value = self.get().attrs[idx].get().Value();
-                    self.before_remove_attr(local_name.clone(), old_value);
-                }
-                self.get_mut().attrs[idx].get_mut().set_value(value.clone());
-            }
-            None => {
-                let node: JS<Node> = NodeCast::from(self);
-                let doc = node.get().owner_doc().get();
-                let new_attr = Attr::new(&doc.window, local_name.clone(), value.clone(),
-                                         name.clone(), namespace.clone(),
-                                         prefix);
-                self.get_mut().attrs.push(new_attr);
-            }
-        }
-
-        if namespace == namespace::Null {
-            self.after_set_attr(local_name, value);
-        }
-        Ok(())
     }
 
     fn after_set_attr(&mut self, local_name: DOMString, value: DOMString) {
@@ -516,7 +464,12 @@ impl AttributeHandlers for JS<Element> {
     }
     fn set_string_attribute(&mut self, name: &str, value: DOMString) {
         assert!(name == name.to_ascii_lower());
-        assert!(self.set_attribute(Null, name.to_owned(), value).is_ok());
+        assert!(self.SetAttribute(name.to_owned(), value).is_ok());
+    }
+
+    fn set_uint_attribute(&mut self, name: &str, value: u32) {
+        assert!(name == name.to_ascii_lower());
+        assert!(self.SetAttribute(name.to_owned(), value.to_str()).is_ok());
     }
 }
 
