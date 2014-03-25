@@ -259,9 +259,9 @@ impl AttributeHandlers for JS<Element> {
             None => {
                 let node: JS<Node> = NodeCast::from(self);
                 let doc = node.get().owner_doc().get();
-                let new_attr = Attr::new_ns(&doc.window, local_name.clone(), value.clone(),
-                                            name.clone(), namespace.clone(),
-                                            prefix);
+                let new_attr = Attr::new(&doc.window, local_name.clone(), value.clone(),
+                                         name.clone(), namespace.clone(),
+                                         prefix);
                 self.get_mut().attrs.push(new_attr);
             }
         }
@@ -415,7 +415,9 @@ impl AttributeHandlers for JS<Element> {
             // Step 4.
             None => {
                 let doc = node.get().owner_doc().get();
-                let new_attr = Attr::new(&doc.window, name.clone(), value.clone());
+                let new_attr = Attr::new(&doc.window, name.clone(),
+                                         value.clone(), name.clone(),
+                                         namespace::Null, None);
                 self.get_mut().attrs.push(new_attr);
             }
 
@@ -492,9 +494,9 @@ impl AttributeHandlers for JS<Element> {
             None => {
                 let node: JS<Node> = NodeCast::from(self);
                 let doc = node.get().owner_doc().get();
-                let new_attr = Attr::new_ns(&doc.window, local_name.clone(), value.clone(),
-                                            name.clone(), namespace.clone(),
-                                            prefix);
+                let new_attr = Attr::new(&doc.window, local_name.clone(), value.clone(),
+                                         name.clone(), namespace.clone(),
+                                         prefix);
                 self.get_mut().attrs.push(new_attr);
             }
 
