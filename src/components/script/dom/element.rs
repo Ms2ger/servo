@@ -195,6 +195,9 @@ pub trait AttributeHandlers {
     fn notify_attribute_changed(&self, local_name: DOMString);
     fn has_class(&self, name: &str) -> bool;
 
+    fn do_set_attribute(&mut self, local_name: DOMString, value: DOMString,
+                        name: DOMString, namespace: Namespace,
+                        prefix: Option<DOMString>, cb: |&JS<Attr>| -> bool);
     fn SetAttribute(&mut self, name: DOMString, value: DOMString) -> ErrorResult;
     fn SetAttributeNS(&mut self, namespace_url: Option<DOMString>,
                       name: DOMString, value: DOMString) -> ErrorResult;
@@ -388,6 +391,33 @@ impl AttributeHandlers for JS<Element> {
         classes.any(|class| name == class)
     }
 
+    fn do_set_attribute(&mut self, local_name: DOMString, value: DOMString,
+                        name: DOMString, namespace: Namespace,
+                        prefix: Option<DOMString>, cb: |&JS<Attr>| -> bool) {
+        let idx = self.get().attrs.iter().position(cb);
+        match idx {
+            None => {
+                let node: JS<Node> = NodeCast::from(self);
+                let doc = node.get().owner_doc().get();
+                let new_attr = Attr::new(&doc.window, local_name.clone(), value.clone(),
+                                         name, namespace.clone(), prefix);
+                self.get_mut().attrs.push(new_attr);
+            }
+
+            Some(idx) => {
+                if namespace == namespace::Null {
+                    let old_value = self.get().attrs[idx].get().Value();
+                    self.before_remove_attr(local_name.clone(), old_value);
+                }
+                self.get_mut().attrs[idx].get_mut().set_value(value.clone());
+            }
+        }
+
+        if namespace == namespace::Null {
+            self.after_set_attr(local_name, value);
+        }
+    }
+
     // http://dom.spec.whatwg.org/#dom-element-setattribute
     fn SetAttribute(&mut self, name: DOMString, value: DOMString) -> ErrorResult {
         let node: JS<Node> = NodeCast::from(self);
@@ -406,31 +436,10 @@ impl AttributeHandlers for JS<Element> {
             name
         };
 
-        // Step 3.
-        let idx = self.get().attrs.iter().position(|attr| {
+        // Step 3-5.
+        self.do_set_attribute(name.clone(), value, name.clone(), namespace::Null, None, |attr| {
             attr.get().name == name
         });
-
-        match idx {
-            // Step 4.
-            None => {
-                let doc = node.get().owner_doc().get();
-                let new_attr = Attr::new(&doc.window, name.clone(),
-                                         value.clone(), name.clone(),
-                                         namespace::Null, None);
-                self.get_mut().attrs.push(new_attr);
-            }
-
-            // Step 5.
-            Some(idx) => {
-                let old_value = self.get().attrs[idx].get().Value();
-                self.before_remove_attr(name.clone(), old_value);
-
-                self.get_mut().attrs[idx].get_mut().set_value(value.clone());
-            }
-        }
-
-        self.after_set_attr(name, value);
         Ok(())
     }
 
@@ -483,36 +492,11 @@ impl AttributeHandlers for JS<Element> {
             return Err(NamespaceError);
         }
 
-        // Step 9.4.
-        let idx = self.get().attrs.iter().position(|attr| {
+        // Step 9.
+        self.do_set_attribute(local_name.clone(), value, name, namespace.clone(), prefix, |attr| {
             attr.get().local_name == local_name &&
             attr.get().namespace == namespace
         });
-
-        match idx {
-            // Step 9.5.
-            None => {
-                let node: JS<Node> = NodeCast::from(self);
-                let doc = node.get().owner_doc().get();
-                let new_attr = Attr::new(&doc.window, local_name.clone(), value.clone(),
-                                         name.clone(), namespace.clone(),
-                                         prefix);
-                self.get_mut().attrs.push(new_attr);
-            }
-
-            // Step 9.6.
-            Some(idx) => {
-                if namespace == namespace::Null {
-                    let old_value = self.get().attrs[idx].get().Value();
-                    self.before_remove_attr(local_name.clone(), old_value);
-                }
-                self.get_mut().attrs[idx].get_mut().set_value(value.clone());
-            }
-        }
-
-        if namespace == namespace::Null {
-            self.after_set_attr(local_name, value);
-        }
         Ok(())
     }
 
