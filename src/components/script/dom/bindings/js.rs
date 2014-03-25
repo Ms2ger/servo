@@ -77,7 +77,10 @@ impl<T> JS<T> {
     /// Returns an unsafe pointer to the interior of this JS object without touching the borrow
     /// flags. This is the only method that be safely accessed from layout. (The fact that this
     /// is unsafe is what necessitates the layout wrappers.)
-    pub unsafe fn unsafe_get(&self) -> *mut T {
+    pub unsafe fn unsafe_get<'a>(&'a self) -> &'a T {
+        cast::transmute_copy(&self.ptr)
+    }
+    pub unsafe fn unsafe_get_mut<'a>(&'a mut self) -> &'a mut T {
         cast::transmute_copy(&self.ptr)
     }
 }

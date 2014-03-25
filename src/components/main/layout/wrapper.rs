@@ -68,7 +68,7 @@ pub trait TLayoutNode {
     /// Returns the interior of this node as a `Node`. This is highly unsafe for layout to call
     /// and as such is marked `unsafe`.
     unsafe fn get<'a>(&'a self) -> &'a Node {
-        cast::transmute::<*mut Node,&'a Node>(self.get_jsmanaged().unsafe_get())
+        self.get_jsmanaged().unsafe_get()
     }
 
     fn node_is_element(&self) -> bool {
@@ -94,7 +94,7 @@ pub trait TLayoutNode {
                 fail!("not an image!")
             }
             let image_element: JS<HTMLImageElement> = self.get_jsmanaged().transmute_copy();
-            (*image_element.unsafe_get()).image().as_ref().map(|url| (*url).clone())
+            image_element.unsafe_get().image().as_ref().map(|url| (*url).clone())
         }
     }
 
@@ -106,7 +106,7 @@ pub trait TLayoutNode {
                 fail!("not an iframe element!")
             }
             let iframe_element: JS<HTMLIFrameElement> = self.get_jsmanaged().transmute_copy();
-            let size = (*iframe_element.unsafe_get()).size.unwrap();
+            let size = iframe_element.unsafe_get().size.unwrap();
             (size.pipeline_id, size.subpage_id)
         }
     }
@@ -120,7 +120,7 @@ pub trait TLayoutNode {
                 fail!("not text!")
             }
             let text: JS<Text> = self.get_jsmanaged().transmute_copy();
-            (*text.unsafe_get()).characterdata.data.to_str()
+            text.unsafe_get().characterdata.data.to_str()
         }
     }
 
@@ -431,12 +431,12 @@ impl<'ln> ThreadSafeLayoutNode<'ln> {
     #[inline]
     pub fn as_element(&self) -> ThreadSafeLayoutElement {
         unsafe {
-            let elem: JS<Element> = self.node.transmute_copy();
-            let element = elem.unsafe_get();
+            let mut elem: JS<Element> = self.node.transmute_copy();
+            let mut element = elem.unsafe_get_mut();
             // FIXME(pcwalton): Workaround until Rust gets multiple lifetime parameters on
             // implementations.
             ThreadSafeLayoutElement {
-                element: cast::transmute::<*mut Element,&mut Element>(element),
+                element: cast::transmute_mut_region(element),
             }
         }
     }
