@@ -120,12 +120,17 @@ pub fn unwrap_object<T>(obj: *JSObject, proto_id: PrototypeList::id::ID, proto_d
 pub fn unwrap_jsmanaged<T: Reflectable>(obj: *JSObject,
                                         proto_id: PrototypeList::id::ID,
                                         proto_depth: uint) -> Result<JS<T>, ()> {
-    let result: Result<*mut T, ()> = unwrap_object(obj, proto_id, proto_depth);
-    result.map(|unwrapped| {
-        unsafe {
-            JS::from_raw(unwrapped)
-        }
-    })
+    unsafe {
+        get_dom_class(obj).and_then(|dom_class| {
+            if dom_class.interface_chain[proto_depth] == proto_id {
+                debug!("good prototype");
+                Ok(JS::from_raw(unwrap(obj)))
+            } else {
+                debug!("bad prototype");
+                Err(())
+            }
+        })
+    }
 }
 
 pub unsafe fn squirrel_away_unique<T>(x: ~T) -> *T {
@@ -637,10 +642,8 @@ pub fn global_object_for_js_object(obj: *JSObject) -> JS<window::Window> {
         let clasp = JS_GetClass(global);
         assert!(((*clasp).flags & (JSCLASS_IS_DOMJSCLASS | JSCLASS_IS_GLOBAL)) != 0);
         // FIXME(jdm): Either don't hardcode or sanity assert prototype stuff.
-        match unwrap_object(global, PrototypeList::id::Window, 1) {
-            Ok(win) => JS::from_raw(win),
-            Err(_) => fail!("found DOM global that doesn't unwrap to Window"),
-        }
+        unwrap_jsmanaged(global, PrototypeList::id::Window, 1)
+            .ok().expect("found DOM global that doesn't unwrap to Window")
     }
 }
 
