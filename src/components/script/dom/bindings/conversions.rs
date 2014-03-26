@@ -2,9 +2,10 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
+use dom::bindings::codegen::PrototypeList;
 use dom::bindings::js::JS;
 use dom::bindings::utils::Reflectable;
-use dom::bindings::utils::jsstring_to_str;
+use dom::bindings::utils::{jsstring_to_str, unwrap_jsmanaged};
 use servo_util::str::DOMString;
 
 use js::jsapi::{JSBool, JSContext};
@@ -236,6 +237,17 @@ impl<T: Reflectable> ToJSValConvertible for JS<T> {
             fail!("JS_WrapValue failed.");
         }
         value
+    }
+}
+
+impl<T: Reflectable> FromJSValConvertible<(PrototypeList::id::ID, uint)> for JS<T> {
+    fn from_jsval(cx: *JSContext, value: JSVal,
+                  (proto_id, proto_depth): (PrototypeList::id::ID, uint)) -> Result<JS<T>, ()> {
+        if value.is_object() {
+            unwrap_jsmanaged(value.to_object(), proto_id, proto_depth)
+        } else {
+            Err(())
+        }
     }
 }
 

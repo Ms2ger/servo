@@ -101,12 +101,11 @@ class CastableObjectUnwrapper():
                               "source" : source,
                               "target" : target,
                               "codeOnFailure" : CGIndenter(CGGeneric(codeOnFailure), 4).define(),
-                              "unwrapped_val" : "Some(val)" if isOptional else "val",
-                              "unwrapFn": "unwrap_jsmanaged"}
+                              "unwrapped_val" : "Some(val)" if isOptional else "val"}
 
     def __str__(self):
         return string.Template(
-"""match ${unwrapFn}(${source}, ${prototype}, ${depth}) {
+"""match FromJSValConvertible::from_jsval(cx, ${source}, (${prototype}, ${depth})) {
   Ok(val) => ${target} = ${unwrapped_val},
   Err(()) => {
     ${codeOnFailure}
