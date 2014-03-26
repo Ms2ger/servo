@@ -167,40 +167,6 @@ pub static DOM_PROTOTYPE_SLOT: u32 = js::JSCLASS_GLOBAL_SLOT_COUNT;
 // changes.
 pub static JSCLASS_DOM_GLOBAL: u32 = js::JSCLASS_USERBIT1;
 
-pub struct NativeProperties {
-    staticMethods: *JSFunctionSpec,
-    staticMethodIds: *jsid,
-    staticMethodsSpecs: *JSFunctionSpec,
-    staticAttributes: *JSPropertySpec,
-    staticAttributeIds: *jsid,
-    staticAttributeSpecs: *JSPropertySpec,
-    methods: *JSFunctionSpec,
-    methodIds: *jsid,
-    methodsSpecs: *JSFunctionSpec,
-    attributes: *JSPropertySpec,
-    attributeIds: *jsid,
-    attributeSpecs: *JSPropertySpec,
-    unforgeableAttributes: *JSPropertySpec,
-    unforgeableAttributeIds: *jsid,
-    unforgeableAttributeSpecs: *JSPropertySpec,
-    constants: *ConstantSpec,
-    constantIds: *jsid,
-    constantSpecs: *ConstantSpec
-}
-
-pub struct NativePropertyHooks {
-    resolve_own_property: *u8,
-    resolve_property: extern "C" fn(*JSContext, *JSObject, jsid, bool, *mut JSPropertyDescriptor) -> bool,
-    enumerate_own_properties: *u8,
-    enumerate_properties: *u8,
-    proto_hooks: *NativePropertyHooks
-}
-
-pub struct JSNativeHolder {
-    native: js::jsapi::JSNative,
-    propertyHooks: *NativePropertyHooks
-}
-
 #[deriving(Clone)]
 pub enum ConstantVal {
     IntVal(i32),
@@ -223,7 +189,6 @@ pub struct DOMClass {
     interface_chain: [PrototypeList::id::ID, ..MAX_PROTO_CHAIN_LENGTH],
 
     unused: bool, // DOMObjectIsISupports (always false)
-    native_hooks: *NativePropertyHooks
 }
 
 pub struct DOMJSClass {

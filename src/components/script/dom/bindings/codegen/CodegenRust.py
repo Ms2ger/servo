@@ -1526,27 +1526,6 @@ class ConstDefiner(PropertyDefiner):
             'ConstantSpec',
             PropertyDefiner.getControllingPref, specData, doIdArrays)
 
-class CGNativePropertyHooks(CGThing):
-    """
-    Generate a NativePropertyHooks for a given descriptor
-    """
-    def __init__(self, descriptor):
-        CGThing.__init__(self)
-        self.descriptor = descriptor
-
-    def define(self):
-        if self.descriptor.concrete and self.descriptor.proxy:
-            resolveOwnProperty = "ResolveOwnProperty"
-            enumerateOwnProperties = "EnumerateOwnProperties"
-        else:
-            enumerateOwnProperties = resolveOwnProperty = "0 as *u8"
-        parent = self.descriptor.interface.parent
-        parentHooks = ("&" + toBindingNamespace(parent.identifier.name) + "::NativeHooks"
-                       if parent else '0 as *NativePropertyHooks')
-        return """
-static NativeHooks: NativePropertyHooks = NativePropertyHooks { resolve_own_property: /*%s*/ 0 as *u8, resolve_property: ResolveProperty, enumerate_own_properties: /*%s*/ 0 as *u8, enumerate_properties: /*EnumerateProperties*/ 0 as *u8, proto_hooks: /*%s*/ 0 as *NativePropertyHooks };
-""" % (resolveOwnProperty, enumerateOwnProperties, parentHooks)
-
 # We'll want to insert the indent at the beginnings of lines, but we
 # don't want to indent empty lines.  So only indent lines that have a
 # non-newline character on them.
@@ -1659,7 +1638,6 @@ def DOMClass(descriptor):
         return """DOMClass {
   interface_chain: [ %s ],
   unused: false,
-  native_hooks: &NativeHooks as *NativePropertyHooks
 }""" % prototypeChainString
 
 class CGDOMJSClass(CGThing):
@@ -4296,24 +4274,11 @@ class CGDescriptor(CGThing):
                                           CGConstant(m for m in descriptor.interface.members if m.isConst()),
                                           public=True))
 
-        # Set up our Xray callbacks as needed.
-        if descriptor.interface.hasInterfacePrototypeObject():
-            if descriptor.concrete and descriptor.proxy:
-                #cgThings.append(CGResolveOwnProperty(descriptor))
-                #cgThings.append(CGEnumerateOwnProperties(descriptor))
-                pass
-            cgThings.append(CGResolveProperty(descriptor, properties))
-            #cgThings.append(CGEnumerateProperties(descriptor, properties))
-
         if descriptor.interface.hasInterfaceObject():
             cgThings.append(CGDefineDOMInterfaceMethod(descriptor))
             if (descriptor.interface.getExtendedAttribute("PrefControlled") is not None):
                 #cgThings.append(CGPrefEnabled(descriptor))
                 pass
-
-        if descriptor.interface.hasInterfacePrototypeObject():
-            cgThings.append(CGNativePropertyHooks(descriptor))
-            pass
 
         if descriptor.concrete:
             if descriptor.proxy:
@@ -4748,13 +4713,12 @@ class CGBindingRoot(CGThing):
             'dom::bindings::utils::{GetPropertyOnPrototype, GetProtoOrIfaceArray}',
             'dom::bindings::utils::{HasPropertyOnPrototype, IntVal}',
             'dom::bindings::utils::{jsid_to_str}',
-            'dom::bindings::utils::{NativePropertyHooks}',
             'dom::bindings::utils::global_object_for_js_object',
             'dom::bindings::utils::{Reflectable}',
             'dom::bindings::utils::{squirrel_away_unique}',
             'dom::bindings::utils::{ThrowingConstructor,  unwrap, unwrap_jsmanaged}',
             'dom::bindings::utils::{unwrap_object, VoidVal, with_gc_disabled}',
-            'dom::bindings::utils::{with_gc_enabled, XrayResolveProperty}',
+            'dom::bindings::utils::{with_gc_enabled}',
             'dom::bindings::trace::Traceable',
             'dom::bindings::callback::{CallbackContainer,CallbackInterface}',
             'dom::bindings::callback::{CallSetup,ExceptionHandling}',
