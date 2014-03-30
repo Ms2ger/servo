@@ -9,6 +9,7 @@ use layout_interface::TrustedNodeAddress;
 
 use std::cast;
 use std::cell::RefCell;
+use std::ops::{Deref, DerefMut};
 
 pub struct JS<T> {
     priv ptr: RefCell<*mut T>
@@ -90,5 +91,17 @@ impl<From, To> JS<From> {
 
     pub unsafe fn transmute_copy(&self) -> JS<To> {
         cast::transmute_copy(self)
+    }
+}
+
+impl<T> Deref<T> for JS<T> {
+    fn deref<'a>(&'a self) -> &'a T {
+        self.get()
+    }
+}
+
+impl<T> DerefMut<T> for JS<T> {
+    fn deref_mut<'a>(&'a mut self) -> &'a mut T {
+        self.get_mut()
     }
 }

@@ -2406,7 +2406,7 @@ class CGCallGenerator(CGThing):
         if static:
             call = CGWrapper(call, pre="%s::" % descriptorProvider.interface.identifier.name)
         else: 
-            call = CGWrapper(call, pre="(*%s)." % object)
+            call = CGWrapper(call, pre="%s." % object)
         call = CGList([call, CGWrapper(args, pre="(", post=");")])
 
         if isFallible:
@@ -3836,15 +3836,12 @@ class CGProxyNamedSetter(CGProxySpecialOperation):
 class CGProxyUnwrap(CGAbstractMethod):
     def __init__(self, descriptor):
         args = [Argument('*JSObject', 'obj')]
-        CGAbstractMethod.__init__(self, descriptor, "UnwrapProxy", '*' + descriptor.concreteType, args, alwaysInline=True)
+        CGAbstractMethod.__init__(self, descriptor, "UnwrapProxy",
+                                  'JS<%s>' % descriptor.concreteType, args,
+                                  alwaysInline=True)
 
     def definition_body(self):
-        return """  /*if (xpc::WrapperFactory::IsXrayWrapper(obj)) {
-    obj = js::UnwrapObject(obj);
-  }*/
-  //MOZ_ASSERT(IsProxy(obj));
-  let box_: *%s = cast::transmute(GetProxyPrivate(obj).to_private());
-  return box_;""" % (self.descriptor.concreteType)
+        return "JS::from_raw(GetProxyPrivate(obj).to_private() as *mut %s)" % self.descriptor.concreteType
 
 class CGDOMJSProxyHandler_getOwnPropertyDescriptor(CGAbstractExternMethod):
     def __init__(self, descriptor):
@@ -3869,9 +3866,9 @@ class CGDOMJSProxyHandler_getOwnPropertyDescriptor(CGAbstractExternMethod):
                               'obj': 'proxy', 'successCode': fillDescriptor}
             get = ("if index.is_some() {\n" +
                    "  let index = index.unwrap();\n" +
-                   "  let this: *%s = UnwrapProxy(proxy);\n" +
+                   "  let this = UnwrapProxy(proxy);\n" +
                    CGIndenter(CGProxyIndexedGetter(self.descriptor, templateValues)).define() + "\n" +
-                   "}\n") % (self.descriptor.concreteType)
+                   "}\n")
 
         if indexedSetter or self.descriptor.operations['NamedSetter']:
             setOrIndexedGet += "if set != 0 {\n"
@@ -3915,9 +3912,9 @@ class CGDOMJSProxyHandler_getOwnPropertyDescriptor(CGAbstractExternMethod):
             namedGet = ("\n" +
                         "if set == 0 && RUST_JSID_IS_STRING(id) != 0 && !HasPropertyOnPrototype(cx, proxy, id) {\n" +
                         "  let name = Some(jsid_to_str(cx, id));\n" +
-                        "  let this: *%s = UnwrapProxy(proxy);\n" +
+                        "  let this = UnwrapProxy(proxy);\n" +
                         CGIndenter(CGProxyNamedGetter(self.descriptor, templateValues)).define() + "\n" +
-                        "}\n") % (self.descriptor.concreteType)
+                        "}\n")
         else:
             namedGet = ""
 
@@ -3958,10 +3955,10 @@ class CGDOMJSProxyHandler_defineProperty(CGAbstractExternMethod):
             set += ("let index = GetArrayIndexFromId(cx, id);\n" +
                     "if index.is_some() {\n" +
                     "  let index = index.unwrap();\n" +
-                    "  let this: *mut %s = UnwrapProxy(proxy) as *mut %s;\n" +
+                    "  let this = UnwrapProxy(proxy);\n" +
                     CGIndenter(CGProxyIndexedSetter(self.descriptor)).define() +
                     "  return 1;\n" +
-                    "}\n") % (self.descriptor.concreteType, self.descriptor.concreteType)
+                    "}\n")
         elif self.descriptor.operations['IndexedGetter']:
             set += ("if GetArrayIndexFromId(cx, id).is_some() {\n" +
                     "  return 0;\n" +
@@ -3974,20 +3971,20 @@ class CGDOMJSProxyHandler_defineProperty(CGAbstractExternMethod):
                 raise TypeError("Can't handle creator that's different from the setter")
             set += ("if RUST_JSID_IS_STRING(id) != 0 {\n" +
                     "  let name = Some(jsid_to_str(cx, id));\n" +
-                    "  let this: *%s = UnwrapProxy(proxy);\n" +
+                    "  let this = UnwrapProxy(proxy);\n" +
                     CGIndenter(CGProxyNamedSetter(self.descriptor)).define() + "\n" +
-                    "}\n") % (self.descriptor.concreteType)
+                    "}\n")
         elif self.descriptor.operations['NamedGetter']:
             set += ("if RUST_JSID_IS_STRING(id) {\n" +
                     "  let name = Some(jsid_to_str(cx, id));\n" +
-                    "  let this: %%s = UnwrapProxy(proxy);\n" +
+                    "  let this = UnwrapProxy(proxy);\n" +
                     CGIndenter(CGProxyNamedGetter(self.descriptor)).define() +
                     "  if (found) {\n"
                     "    return 0;\n" +
                     "    //return ThrowErrorMessage(cx, MSG_NO_PROPERTY_SETTER, \"%s\");\n" +
                     "  }\n" +
                     "  return 1;\n"
-                    "}\n") % (self.descriptor.concreteType, self.descriptor.name)
+                    "}\n") % self.descriptor.name
         return set + """return proxyhandler::defineProperty_(%s);""" % ", ".join(a.name for a in self.args)
 
     def definition_body(self):
@@ -4005,11 +4002,11 @@ class CGDOMJSProxyHandler_hasOwn(CGAbstractExternMethod):
             indexed = ("let index = GetArrayIndexFromId(cx, id);\n" +
                        "if index.is_some() {\n" +
                        "  let index = index.unwrap();\n" +
-                       "  let this: *%s = UnwrapProxy(proxy);\n" +
+                       "  let this = UnwrapProxy(proxy);\n" +
                        CGIndenter(CGProxyIndexedGetter(self.descriptor)).define() + "\n" +
                        "  *bp = found as JSBool;\n" +
                        "  return 1;\n" +
-                       "}\n\n") % (self.descriptor.concreteType)
+                       "}\n\n")
         else:
             indexed = ""
 
@@ -4017,12 +4014,12 @@ class CGDOMJSProxyHandler_hasOwn(CGAbstractExternMethod):
         if namedGetter:
             named = ("if RUST_JSID_IS_STRING(id) != 0 && !HasPropertyOnPrototype(cx, proxy, id) {\n" +
                      "  let name = Some(jsid_to_str(cx, id));\n" +
-                     "  let this: *%s = UnwrapProxy(proxy);\n" +
+                     "  let this = UnwrapProxy(proxy);\n" +
                      CGIndenter(CGProxyNamedGetter(self.descriptor)).define() + "\n" +
                      "  *bp = found as JSBool;\n"
                      "  return 1;\n"
                      "}\n" +
-                     "\n") % (self.descriptor.concreteType)
+                     "\n")
         else:
             named = ""
 
@@ -4087,7 +4084,7 @@ if expando.is_not_null() {
                         "  let name = Some(jsid_to_str(cx, id));\n" +
                         "  let this = UnwrapProxy(proxy);\n" +
                         CGIndenter(CGProxyNamedGetter(self.descriptor, templateValues)).define() +
-                        "}\n") % (self.descriptor.concreteType)
+                        "}\n")
         else:
             getNamed = ""
 
