@@ -2285,7 +2285,7 @@ class CGDefineDOMInterfaceMethod(CGAbstractMethod):
     """
     def __init__(self, descriptor):
         args = [Argument('&mut JSPageInfo', 'js_info')]
-        CGAbstractMethod.__init__(self, descriptor, 'DefineDOMInterface', 'bool', args, pub=True)
+        CGAbstractMethod.__init__(self, descriptor, 'DefineDOMInterface', 'void', args, pub=True)
 
     def define(self):
         return CGAbstractMethod.define(self)
@@ -2347,7 +2347,7 @@ class CGDefineDOMInterfaceMethod(CGAbstractMethod):
         return (body + """  let cx = js_info.js_context.deref().ptr;
   let receiver = js_info.js_compartment.global_obj;
   let global: *JSObject = JS_GetGlobalForObject(cx, receiver);
-  return %s(cx, global, receiver).is_not_null();""" % (getter))
+  assert!(%s(cx, global, receiver).is_not_null());""" % (getter))
 
 def needCx(returnType, arguments, extendedAttributes, considerTypes):
     return (considerTypes and
@@ -4634,7 +4634,7 @@ class CGRegisterProtos(CGAbstractMethod):
         self.config = config
 
     def _registerProtos(self):
-        lines = ["  assert!(codegen::%sBinding::DefineDOMInterface(js_info));" % (desc.name)
+        lines = ["  codegen::%sBinding::DefineDOMInterface(js_info);" % desc.name
                  for desc in self.config.getDescriptors(hasInterfaceObject=True,
                                                         register=True)]
         return '\n'.join(lines) + '\n'
