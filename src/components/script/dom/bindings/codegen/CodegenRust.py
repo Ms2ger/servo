@@ -2692,7 +2692,6 @@ class CGSpecializedMethod(CGAbstractExternMethod):
         return CGWrapper(CGMethodCall(argsPre, nativeName, self.method.isStatic(),
                                       self.descriptor, self.method),
                          pre=extraPre +
-                             "  let obj = *obj.unnamed;\n" +
                              "  let this = &mut *this;\n").define()
 
 class CGGenericGetter(CGAbstractBindingMethod):
@@ -2752,7 +2751,6 @@ class CGSpecializedGetter(CGAbstractExternMethod):
         return CGWrapper(CGIndenter(CGGetterCall(argsPre, self.attr.type, nativeName,
                                                  self.descriptor, self.attr)),
                          pre=extraPre +
-                             "  let obj = *obj.unnamed;\n" +
                              "  let this = &mut *this;\n").define()
 
 class CGGenericSetter(CGAbstractBindingMethod):
@@ -2813,7 +2811,6 @@ class CGSpecializedSetter(CGAbstractExternMethod):
         return CGWrapper(CGIndenter(CGSetterCall(argsPre, self.attr.type, nativeName,
                                                  self.descriptor, self.attr)),
                          pre=extraPre +
-                             "  let obj = *obj.unnamed;\n" +
                              "  let this = &mut *this;\n").define()
 
 def infallibleForMember(member, type, descriptorProvider):
