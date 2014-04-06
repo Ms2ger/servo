@@ -1074,7 +1074,7 @@ def getWrapTemplateForType(type, descriptorProvider, result, successCode,
                 tail) % (value)
 
     if type is None or type.isVoid():
-        return (setValue("UndefinedValue()"), True)
+        return (setValue("(%s).to_jsval(cx)" % result), True)
 
     if type.isArray():
         raise TypeError("Can't handle array return values yet")
@@ -1313,8 +1313,6 @@ class PropertyDefiner:
                                      # at the very front of the list.
         specs = []
         prefableSpecs = []
-        if doIdArrays:
-            prefableIds = []
 
         prefableTemplate = '  { true, &%s[%d] }'
         prefCacheTemplate = '&%s[%d].enabled'
@@ -1352,8 +1350,6 @@ class PropertyDefiner:
                    #"static Prefable<%s> %s[] = [\n" +
                    #',\n'.join(prefableSpecs) + "\n" +
                    #"];\n\n")
-        if doIdArrays:
-            arrays += ("static %s_ids: [jsid, ..%i] = [" % (name, len(specs))) + ", ".join(["JSID_VOID"] * len(specs)) + "];\n\n"
         return arrays
 
 # The length of a method is the maximum of the lengths of the
@@ -1610,6 +1606,7 @@ class CGImports(CGWrapper):
             'dead_assignment',
             'dead_code',
         ]
+        ignored_warnings = ['unused_imports']
 
         statements = ['#[allow(%s)];' % ','.join(ignored_warnings)]
         statements.extend('use %s;' % i for i in sorted(imports))
@@ -2085,9 +2082,9 @@ class CGAbstractExternMethod(CGAbstractMethod):
     Abstract base class for codegen of implementation-only (no
     declaration) static methods.
     """
-    def __init__(self, descriptor, name, returnType, args):
+    def __init__(self, descriptor, name, returnType, args, unsafe=True):
         CGAbstractMethod.__init__(self, descriptor, name, returnType, args,
-                                  inline=False, extern=True)
+                                  inline=False, extern=True, unsafe=unsafe)
 
 class PropertyArrays():
     def __init__(self, descriptor):
@@ -2128,7 +2125,8 @@ class CGCreateInterfaceObjectsMethod(CGAbstractMethod):
     def __init__(self, descriptor, properties):
         args = [Argument('*JSContext', 'aCx'), Argument('*JSObject', 'aGlobal'),
                 Argument('*JSObject', 'aReceiver')]
-        CGAbstractMethod.__init__(self, descriptor, 'CreateInterfaceObjects', '*JSObject', args)
+        CGAbstractMethod.__init__(self, descriptor, 'CreateInterfaceObjects', '*JSObject', args,
+                                  unsafe=len(descriptor.prototypeChain) == 1)
         self.properties = properties
     def definition_body(self):
         protoChain = self.descriptor.prototypeChain
@@ -2673,7 +2671,7 @@ class CGSpecializedMethod(CGAbstractExternMethod):
     def __init__(self, descriptor, method):
         self.method = method
         name = method.identifier.name
-        args = [Argument('*JSContext', 'cx'), Argument('JSHandleObject', 'obj'),
+        args = [Argument('*JSContext', 'cx'), Argument('JSHandleObject', '_obj'),
                 Argument('*mut %s' % descriptor.concreteType, 'this'),
                 Argument('libc::c_uint', 'argc'), Argument('*mut JSVal', 'vp')]
         CGAbstractExternMethod.__init__(self, descriptor, name, 'JSBool', args)
@@ -2690,7 +2688,6 @@ class CGSpecializedMethod(CGAbstractExternMethod):
         return CGWrapper(CGMethodCall(argsPre, nativeName, self.method.isStatic(),
                                       self.descriptor, self.method),
                          pre=extraPre +
-                             "  let obj = *obj.unnamed;\n" +
                              "  let this = &mut *this;\n").define()
 
 class CGGenericGetter(CGAbstractBindingMethod):
@@ -2698,7 +2695,7 @@ class CGGenericGetter(CGAbstractBindingMethod):
     A class for generating the C++ code for an IDL attribute getter.
     """
     def __init__(self, descriptor, lenientThis=False):
-        args = [Argument('*JSContext', 'cx'), Argument('libc::c_uint', 'argc'),
+        args = [Argument('*JSContext', 'cx'), Argument('libc::c_uint', '_argc'),
                 Argument('*mut JSVal', 'vp')]
         if lenientThis:
             name = "genericLenientGetter"
@@ -2728,7 +2725,7 @@ class CGSpecializedGetter(CGAbstractExternMethod):
         self.attr = attr
         name = 'get_' + attr.identifier.name
         args = [ Argument('*JSContext', 'cx'),
-                 Argument('JSHandleObject', 'obj'),
+                 Argument('JSHandleObject', '_obj'),
                  Argument('*mut %s' % descriptor.concreteType, 'this'),
                  Argument('*mut JSVal', 'vp') ]
         CGAbstractExternMethod.__init__(self, descriptor, name, "JSBool", args)
@@ -2750,7 +2747,6 @@ class CGSpecializedGetter(CGAbstractExternMethod):
         return CGWrapper(CGIndenter(CGGetterCall(argsPre, self.attr.type, nativeName,
                                                  self.descriptor, self.attr)),
                          pre=extraPre +
-                             "  let obj = *obj.unnamed;\n" +
                              "  let this = &mut *this;\n").define()
 
 class CGGenericSetter(CGAbstractBindingMethod):
@@ -2794,7 +2790,7 @@ class CGSpecializedSetter(CGAbstractExternMethod):
         self.attr = attr
         name = 'set_' + attr.identifier.name
         args = [ Argument('*JSContext', 'cx'),
-                 Argument('JSHandleObject', 'obj'),
+                 Argument('JSHandleObject', '_obj'),
                  Argument('*mut %s' % descriptor.concreteType, 'this'),
                  Argument('*mut JSVal', 'argv')]
         CGAbstractExternMethod.__init__(self, descriptor, name, "JSBool", args)
@@ -2811,7 +2807,6 @@ class CGSpecializedSetter(CGAbstractExternMethod):
         return CGWrapper(CGIndenter(CGSetterCall(argsPre, self.attr.type, nativeName,
                                                  self.descriptor, self.attr)),
                          pre=extraPre +
-                             "  let obj = *obj.unnamed;\n" +
                              "  let this = &mut *this;\n").define()
 
 def infallibleForMember(member, type, descriptorProvider):
@@ -3688,7 +3683,7 @@ class CGClass(CGThing):
 
 class CGXrayHelper(CGAbstractExternMethod):
     def __init__(self, descriptor, name, args, properties):
-        CGAbstractExternMethod.__init__(self, descriptor, name, "bool", args)
+        CGAbstractExternMethod.__init__(self, descriptor, name, "bool", args, unsafe=False)
         self.properties = properties
 
     def definition_body(self):
@@ -4046,7 +4041,7 @@ return 1;"""
 class CGDOMJSProxyHandler_get(CGAbstractExternMethod):
     def __init__(self, descriptor):
         args = [Argument('*JSContext', 'cx'), Argument('*JSObject', 'proxy'),
-                Argument('*JSObject', 'receiver'), Argument('jsid', 'id'),
+                Argument('*JSObject', '_receiver'), Argument('jsid', 'id'),
                 Argument('*mut JSVal', 'vp')]
         CGAbstractExternMethod.__init__(self, descriptor, "get", "JSBool", args)
         self.descriptor = descriptor
@@ -4113,8 +4108,8 @@ return 1;""" % (getIndexedOrExpando, getNamed)
 
 class CGDOMJSProxyHandler_obj_toString(CGAbstractExternMethod):
     def __init__(self, descriptor):
-        args = [Argument('*JSContext', 'cx'), Argument('*JSObject', 'proxy')]
-        CGAbstractExternMethod.__init__(self, descriptor, "obj_toString", "*JSString", args)
+        args = [Argument('*JSContext', 'cx'), Argument('*JSObject', '_proxy')]
+        CGAbstractExternMethod.__init__(self, descriptor, "obj_toString", "*JSString", args, unsafe=False)
         self.descriptor = descriptor
     def getBody(self):
         stringifier = self.descriptor.operations['Stringifier']
@@ -4204,7 +4199,6 @@ class CGClassConstructHook(CGAbstractExternMethod):
     def generate_code(self):
         preamble = """
   let global = global_object_for_js_object(JS_CALLEE(cx, &*vp).to_object());
-  let obj = global.reflector().get_jsobject();
 """
         nativeName = MakeNativeName(self._ctor.identifier.name)
         callGenerator = CGMethodCall(["&global"], nativeName, True,
@@ -4216,7 +4210,7 @@ class CGClassFinalizeHook(CGAbstractClassHook):
     A hook for finalize, used to release our native object.
     """
     def __init__(self, descriptor):
-        args = [Argument('*JSFreeOp', 'fop'), Argument('*JSObject', 'obj')]
+        args = [Argument('*JSFreeOp', '_fop'), Argument('*JSObject', 'obj')]
         CGAbstractClassHook.__init__(self, descriptor, FINALIZE_HOOK_NAME,
                                      'void', args)
 
@@ -4468,9 +4462,9 @@ class CGDictionary(CGThing):
 
         return string.Template(
             "static initedIds: bool = false;\n" +
-            "\n".join("static %s: jsid = JSID_VOID;" %
-                      self.makeIdName(m.identifier.name)
-                      for m in d.members) + "\n"
+            #"\n".join("static %s: jsid = JSID_VOID;" %
+            #          self.makeIdName(m.identifier.name)
+            #          for m in d.members) + "\n"
             "\n"
             "impl ${selfName} {\n"
             "  pub fn new() -> ${selfName} {\n"
@@ -4481,7 +4475,7 @@ class CGDictionary(CGThing):
             "    }\n"
             "  }\n"
             "\n"
-            "  pub fn InitIds(&mut self, cx: *JSContext) -> bool {\n"
+            "  pub fn InitIds(&mut self, _cx: *JSContext) -> bool {\n"
             "    //MOZ_ASSERT(!initedIds);\n"
             "  /*${idInit}\n"
             "    initedIds = true;*/ //XXXjdm\n"
