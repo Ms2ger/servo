@@ -794,7 +794,8 @@ impl ScriptTask {
 
         {
             let mut js_info = page.mut_js_info();
-            RegisterBindings::Register(&window, js_info.get_mut_ref());
+            RegisterBindings::Register((*cx).ptr, &window,
+                &mut *js_info.get_mut_ref().dom_static.proxy_handlers);
         }
 
         self.compositor.set_ready_state(Loading);

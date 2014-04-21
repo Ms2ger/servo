@@ -44,9 +44,12 @@ use js::JSPROP_PERMANENT;
 use js::{JSFUN_CONSTRUCTOR, JSPROP_READONLY};
 use js;
 
+/// Mapping from prototype id to a proxy handler for that interface.
+pub type ProxyHandlerMap = HashMap<uint, *libc::c_void>;
+
 #[deriving(Encodable)]
 pub struct GlobalStaticData {
-    proxy_handlers: Untraceable<HashMap<uint, *libc::c_void>>
+    proxy_handlers: Untraceable<ProxyHandlerMap>
 }
 
 pub fn GlobalStaticData() -> GlobalStaticData {

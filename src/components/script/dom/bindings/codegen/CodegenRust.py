@@ -2119,8 +2119,9 @@ class CGDefineDOMInterfaceMethod(CGAbstractMethod):
     """
     def __init__(self, descriptor):
         args = [
+            Argument('*JSContext', 'cx'),
             Argument('&JS<Window>', 'window'),
-            Argument('&mut JSPageInfo', 'js_info'),
+            Argument('&mut ProxyHandlerMap', 'proxy_handlers'),
         ]
         CGAbstractMethod.__init__(self, descriptor, 'DefineDOMInterface', 'void', args, pub=True)
 
@@ -2169,15 +2170,14 @@ class CGDefineDOMInterfaceMethod(CGAbstractMethod):
     getPrototypeOf: ptr::null(),
     trace: %s
   };
-  js_info.dom_static.proxy_handlers.insert(PrototypeList::id::%s as uint,
-                                           CreateProxyHandler(&traps, cast::transmute(&Class)));
+  proxy_handlers.insert(PrototypeList::id::%s as uint,
+                        CreateProxyHandler(&traps, cast::transmute(&Class)));
 
 """ % (FINALIZE_HOOK_NAME,
        ('Some(%s)' % TRACE_HOOK_NAME),
        self.descriptor.name)
 
-        return (body + """  let cx = (**js_info.js_context).ptr;
-  let global = window.reflector().get_jsobject();
+        return (body + """  let global = window.reflector().get_jsobject();
   assert!(global.is_not_null());
   assert!(%s(cx, global, global).is_not_null());""" % (getter))
 
@@ -4309,15 +4309,16 @@ class CGDictionary(CGThing):
 class CGRegisterProtos(CGAbstractMethod):
     def __init__(self, config):
         arguments = [
+            Argument('*JSContext', 'cx'),
             Argument('&JS<Window>', 'window'),
-            Argument('&mut JSPageInfo', 'js_info'),
+            Argument('&mut ProxyHandlerMap', 'proxy_handlers'),
         ]
         CGAbstractMethod.__init__(self, None, 'Register', 'void', arguments,
                                   unsafe=False, pub=True)
         self.config = config
 
     def _registerProtos(self):
-        lines = ["  codegen::%sBinding::DefineDOMInterface(window, js_info);" % desc.name
+        lines = ["  codegen::%sBinding::DefineDOMInterface(cx, window, proxy_handlers);" % desc.name
                  for desc in self.config.getDescriptors(hasInterfaceObject=True,
                                                         register=True)]
         return '\n'.join(lines) + '\n'
@@ -4431,6 +4432,7 @@ class CGBindingRoot(CGThing):
             'dom::bindings::utils::{VoidVal, with_gc_disabled}',
             'dom::bindings::utils::{with_gc_enabled}',
             'dom::bindings::utils::get_dictionary_property',
+            'dom::bindings::utils::ProxyHandlerMap',
             'dom::bindings::trace::JSTraceable',
             'dom::bindings::callback::{CallbackContainer,CallbackInterface}',
             'dom::bindings::callback::{CallSetup,ExceptionHandling}',
@@ -5356,8 +5358,9 @@ class GlobalGenRoots():
         return CGImports(CGRegisterProtos(config), [
             'dom::bindings::codegen',
             'dom::bindings::js::JS',
+            'dom::bindings::utils::ProxyHandlerMap',
             'dom::window::Window',
-            'script_task::JSPageInfo',
+            'js::jsapi::JSContext',
         ])
 
     @staticmethod
