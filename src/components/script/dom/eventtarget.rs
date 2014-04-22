@@ -27,10 +27,24 @@ pub enum EventTargetTypeId {
     NodeTargetTypeId(NodeTypeId)
 }
 
+#[deriving(Eq, Encodable)]
+pub enum EventListenerType {
+    Additive(EventListener),
+    Inline(EventListener),
+}
+
+impl EventListenerType {
+    fn get_listener(&self) -> EventListener {
+        match *self {
+            Additive(listener) | Inline(listener) => listener
+        }
+    }
+}
+
 #[deriving(Eq,Encodable)]
 pub struct EventListenerEntry {
     pub phase: ListenerPhase,
-    pub listener: EventListener
+    pub listener: EventListenerType
 }
 
 #[deriving(Encodable)]
@@ -51,7 +65,7 @@ impl EventTarget {
 
     pub fn get_listeners(&self, type_: &str) -> Option<Vec<EventListener>> {
         self.handlers.find_equiv(&type_).map(|listeners| {
-            listeners.iter().map(|entry| entry.listener).collect()
+            listeners.iter().map(|entry| entry.listener.get_listener()).collect()
         })
     }
 
@@ -59,7 +73,7 @@ impl EventTarget {
         -> Option<Vec<EventListener>> {
         self.handlers.find_equiv(&type_).map(|listeners| {
             let filtered = listeners.iter().filter(|entry| entry.phase == desired_phase);
-            filtered.map(|entry| entry.listener).collect()
+            filtered.map(|entry| entry.listener.get_listener()).collect()
         })
     }
 
@@ -72,7 +86,7 @@ impl EventTarget {
             let phase = if capture { Capturing } else { Bubbling };
             let new_entry = EventListenerEntry {
                 phase: phase,
-                listener: listener
+                listener: Additive(listener)
             };
             if entry.as_slice().position_elem(&new_entry).is_none() {
                 entry.push(new_entry);
@@ -90,7 +104,7 @@ impl EventTarget {
                 let phase = if capture { Capturing } else { Bubbling };
                 let old_entry = EventListenerEntry {
                     phase: phase,
-                    listener: listener
+                    listener: Additive(listener)
                 };
                 let position = entry.as_slice().position_elem(&old_entry);
                 for &position in position.iter() {
@@ -103,6 +117,47 @@ impl EventTarget {
     pub fn DispatchEvent(&self, abstract_self: &JS<EventTarget>,
                          event: &mut JS<Event>) -> Fallible<bool> {
         self.dispatch_event_with_target(abstract_self, None, event)
+    }
+
+    pub fn set_inline_event_listener(&mut self,
+                                     ty: DOMString,
+                                     listener: Option<EventListener>) {
+        let entries = self.handlers.find_or_insert_with(ty, |_| vec!());
+        let idx = entries.iter().position(|&entry| {
+            match entry.listener {
+                Inline(_) => true,
+                _ => false,
+            }
+        });
+
+        match idx {
+            Some(idx) => {
+                match listener {
+                    Some(listener) => entries.get_mut(idx).listener = Inline(listener),
+                    None => {
+                        entries.remove(idx);
+                    }
+                }
+            }
+            None => {
+                if listener.is_some() {
+                    entries.push(EventListenerEntry {
+                        phase: Capturing, //XXXjdm no idea when inline handlers should run
+                        listener: Inline(listener.unwrap()),
+                    });
+                }
+            }
+        }
+    }
+
+    pub fn get_inline_event_listener(&self, ty: DOMString) -> Option<EventListener> {
+        let entries = self.handlers.find(&ty);
+        entries.and_then(|entries| entries.iter().find(|entry| {
+            match entry.listener {
+                Inline(_) => true,
+                _ => false,
+            }
+        }).map(|entry| entry.listener.get_listener()))
     }
 
     pub fn dispatch_event_with_target(&self,
