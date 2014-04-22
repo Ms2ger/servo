@@ -705,17 +705,17 @@ def getJSToNativeConversionTemplate(type, descriptorProvider, failureCode=None,
                             "rooting issues")
         # XXXbz we're going to assume that callback types are always
         # nullable and always have [TreatNonCallableAsNull] for now.
-        haveCallable = "${val}.isObject() && JS_ObjectIsCallable(cx, &${val}.toObject())"
+        haveCallable = "${val}.is_object() && JS_ObjectIsCallable(cx, ${val}.to_object()) != 0"
         if defaultValue is not None:
             assert(isinstance(defaultValue, IDLNullValue))
             haveCallable = "${haveValue} && " + haveCallable
         return (
             "if (%s) {\n"
-            "  ${declName} = &${val}.toObject();\n"
+            "  ${val}.to_object()\n"
             "} else {\n"
-            "  ${declName} = NULL;\n"
+            "  ptr::null()\n"
             "}" % haveCallable,
-            CGGeneric("JSObject*"), None, needsRooting)
+            CGGeneric("*JSObject"), None, needsRooting)
 
     if type.isAny():
         assert not isEnforceRange and not isClamp
@@ -1345,6 +1345,14 @@ class CGIfWrapper(CGWrapper):
                         reindent=True)
         CGWrapper.__init__(self, CGIndenter(child), pre=pre.define(),
                            post="\n}")
+
+class CGTemplatedType(CGWrapper):
+    def __init__(self, templateName, child, isConst=False, isReference=False):
+        const = "const " if isConst else ""
+        pre = "%s%s<" % (const, templateName)
+        ref = "&" if isReference else ""
+        post = ">%s" % ref
+        CGWrapper.__init__(self, child, pre=pre, post=post)
 
 class CGNamespace(CGWrapper):
     def __init__(self, namespace, child, public=False):
@@ -4364,7 +4372,7 @@ class CGNativeMember(ClassMethod):
         elif type.isAny():
             typeDecl, template = "JS::Value", "return ${declName};"
         elif type.isObject():
-            typeDecl, template = "JSObject*", "return ${declName};"
+            typeDecl, template = "*JSObject", "return ${declName};"
         elif type.isSpiderMonkeyInterface():
             if type.nullable():
                 returnCode = "return ${declName}.IsNull() ? nullptr : ${declName}.Value().Obj();"
@@ -4568,7 +4576,7 @@ class CGNativeMember(ClassMethod):
         elif optional:
             # Note: All variadic args claim to be optional, but we can just use
             # empty arrays to represent them not being present.
-            decl = CGTemplatedType("Optional", decl)
+            decl = CGTemplatedType("Option", decl)
             ref = True
         return (decl, ref)
 

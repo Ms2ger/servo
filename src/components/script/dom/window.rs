@@ -23,7 +23,7 @@ use servo_util::str::DOMString;
 use servo_util::task::{spawn_named};
 use servo_util::url::parse_url;
 
-use js::jsapi::JSContext;
+use js::jsapi::{JSContext, JSObject};
 use js::jsapi::{JS_GC, JS_GetRuntime};
 use js::jsval::{NullValue, JSVal};
 
@@ -33,6 +33,7 @@ use std::comm::{channel, Sender};
 use std::comm::Select;
 use std::hash::{Hash, sip};
 use std::io::timer::Timer;
+use std::ptr;
 use std::rc::Rc;
 
 use time;
@@ -140,6 +141,12 @@ pub trait WindowMethods {
     fn Window(&self) -> Temporary<Window>;
     fn Self(&self) -> Temporary<Window>;
     fn Performance(&mut self) -> Temporary<Performance>;
+    fn GetOnload(&self, _cx: *JSContext) -> *JSObject;
+    fn SetOnload(&self, _cx: *JSContext, _listener: *JSObject);
+    fn GetOnunload(&self, _cx: *JSContext) -> *JSObject;
+    fn SetOnunload(&self, _cx: *JSContext, _listener: *JSObject);
+    fn GetOnerror(&self, _cx: *JSContext) -> *JSObject;
+    fn SetOnerror(&self, _cx: *JSContext, _listener: *JSObject);
     fn Debug(&self, message: DOMString);
     fn Gc(&self);
 }
@@ -266,6 +273,27 @@ impl<'a> WindowMethods for JSRef<'a, Window> {
             self.performance.assign(Some(performance));
         }
         Temporary::new(self.performance.get_ref().clone())
+    }
+
+    fn GetOnload(&self, _cx: *JSContext) -> *JSObject {
+        ptr::null()
+    }
+
+    fn SetOnload(&self, _cx: *JSContext, _listener: *JSObject) {
+    }
+
+    fn GetOnunload(&self, _cx: *JSContext) -> *JSObject {
+        ptr::null()
+    }
+
+    fn SetOnunload(&self, _cx: *JSContext, _listener: *JSObject) {
+    }
+
+    fn GetOnerror(&self, _cx: *JSContext) -> *JSObject {
+        ptr::null()
+    }
+
+    fn SetOnerror(&self, _cx: *JSContext, _listener: *JSObject) {
     }
 
     fn Debug(&self, message: DOMString) {
