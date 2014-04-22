@@ -2,6 +2,7 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
+use dom::bindings::codegen::EventHandlerBinding::{OnErrorEventHandlerNonNull, EventHandlerNonNull};
 use dom::bindings::codegen::WindowBinding;
 use dom::bindings::js::JS;
 use dom::bindings::trace::Untraceable;
@@ -200,7 +201,7 @@ impl Window {
         self.eventtarget.get_event_handler_common("load")
     }
 
-    pub fn SetOnload(&mut self, _cx: *JSContext, listener: *JSObject) {
+    pub fn SetOnload(&mut self, _cx: *JSContext, listener: Option<EventHandlerNonNull>) {
         self.eventtarget.set_event_handler_common("load", listener)
     }
 
@@ -208,7 +209,7 @@ impl Window {
         self.eventtarget.get_event_handler_common("unload")
     }
 
-    pub fn SetOnunload(&mut self, _cx: *JSContext, listener: *JSObject) {
+    pub fn SetOnunload(&mut self, _cx: *JSContext, listener: Option<EventHandlerNonNull>) {
         self.eventtarget.set_event_handler_common("unload", listener)
     }
 
@@ -216,7 +217,7 @@ impl Window {
         self.eventtarget.get_event_handler_common("error")
     }
 
-    pub fn SetOnerror(&mut self, _cx: *JSContext, listener: *JSObject) {
+    pub fn SetOnerror(&mut self, _cx: *JSContext, listener: Option<OnErrorEventHandlerNonNull>) {
         self.eventtarget.set_event_handler_common("error", listener)
     }
 }
@@ -230,6 +231,7 @@ impl Reflectable for Window {
         self.eventtarget.mut_reflector()
     }
 }
+
 impl Window {
     fn set_timeout_or_interval(&mut self, callback: JSVal, timeout: i32, is_interval: bool) -> i32 {
         let timeout = cmp::max(0, timeout) as u64;
