@@ -79,3 +79,6 @@ interface WindowTimers {
   void clearInterval(optional long handle = 0);*/
 };
 Window implements WindowTimers;
+Window implements GlobalEventHandlers;
+Window implements WindowEventHandlers;
+Window implements OnErrorEventHandlerForWindow;

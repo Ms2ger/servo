@@ -21,7 +21,7 @@ use servo_net::image_cache_task::ImageCacheTask;
 use servo_util::str::DOMString;
 use servo_util::task::{spawn_named};
 
-use js::jsapi::JSContext;
+use js::jsapi::{JSContext, JSObject};
 use js::jsval::{NullValue, JSVal};
 
 use collections::hashmap::HashMap;
@@ -30,6 +30,7 @@ use std::comm::{channel, Sender};
 use std::comm::Select;
 use std::hash::{Hash, sip};
 use std::io::timer::Timer;
+use std::ptr;
 use std::rc::Rc;
 
 use serialize::{Encoder, Encodable};
@@ -194,6 +195,27 @@ impl Window {
 
     pub fn ShowModalDialog(&self, _cx: *JSContext, _url: DOMString, _argument: Option<JSVal>) -> JSVal {
         NullValue()
+    }
+
+    pub fn GetOnload(&self, _cx: *JSContext) -> *JSObject {
+        ptr::null()
+    }
+
+    pub fn SetOnload(&self, _cx: *JSContext, _listener: *JSObject) {
+    }
+
+    pub fn GetOnunload(&self, _cx: *JSContext) -> *JSObject {
+        ptr::null()
+    }
+
+    pub fn SetOnunload(&self, _cx: *JSContext, _listener: *JSObject) {
+    }
+
+    pub fn GetOnerror(&self, _cx: *JSContext) -> *JSObject {
+        ptr::null()
+    }
+
+    pub fn SetOnerror(&self, _cx: *JSContext, _listener: *JSObject) {
     }
 }
 
