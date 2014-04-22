@@ -10,10 +10,11 @@ use dom::bindings::js::JS;
 use dom::bindings::utils::{Reflectable, Reflector};
 use dom::event::Event;
 use dom::eventdispatcher::dispatch_event;
-use dom::node::NodeTypeId;
+use dom::node::{Node, NodeTypeId, window_from_node};
 use dom::virtualmethods::VirtualMethods;
-use js::jsapi::JSObject;
+use js::jsapi::{JSObject, JS_CompileUCFunction, JS_GetFunctionObject, JS_CloneFunctionObject};
 use servo_util::str::DOMString;
+use std::libc::{c_char, size_t};
 use std::ptr;
 
 use collections::hashmap::HashMap;
@@ -171,6 +172,39 @@ impl EventTarget {
             return Err(InvalidState);
         }
         Ok(dispatch_event(abstract_self, abstract_target, event))
+    }
+
+    pub fn set_event_handler_uncompiled(&mut self,
+                                        content: &JS<Node>,
+                                        ty: &str,
+                                        source: DOMString) {
+        let win = window_from_node(content);
+        let cx = win.get().get_cx();
+        let url = win.get().get_url();
+        let url = url.to_str().to_c_str();
+        let name = ty.to_c_str();
+        let lineno = 0; //XXXjdm need to get a real number here
+
+        let nargs = 1; //XXXjdm not true for onerror
+        static arg_name: [c_char, ..6] =
+            ['e' as c_char, 'v' as c_char, 'e' as c_char, 'n' as c_char, 't' as c_char, 0];
+        static arg_names: [*c_char, ..1] = [&arg_name as *c_char];
+
+        let source = source.to_utf16();
+        let handler =
+            name.with_ref(|name| {
+            url.with_ref(|url| { unsafe {
+                let fun = JS_CompileUCFunction(cx, ptr::null(), name,
+                                               nargs, &arg_names as **i8, source.as_ptr(),
+                                               source.len() as size_t,
+                                               url, lineno);
+                assert!(fun.is_not_null());
+                JS_GetFunctionObject(fun)
+            }})});
+        let scope = win.reflector().get_jsobject();
+        let funobj = unsafe { JS_CloneFunctionObject(cx, handler, scope) };
+        assert!(funobj.is_not_null());
+        self.set_event_handler_common(ty, funobj)
     }
 
     pub fn set_event_handler_common(&mut self, ty: &str, listener: *JSObject) {
