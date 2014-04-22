@@ -43,8 +43,9 @@ use servo_util::namespace::{Namespace, Null};
 use servo_util::str::{DOMString, null_str_as_empty_ref};
 
 use collections::hashmap::HashMap;
-use js::jsapi::JSContext;
+use js::jsapi::{JSObject, JSContext};
 use std::ascii::StrAsciiExt;
+use std::ptr;
 use url::{Url, from_str};
 
 #[deriving(Eq,Encodable)]
@@ -692,5 +693,12 @@ impl Document {
             None => (),
         }
         self.idmap.insert(id, vec!(element.clone()));
+    }
+
+    pub fn GetOnload(&self, _cx: *JSContext) -> *JSObject {
+        ptr::null()
+    }
+
+    pub fn SetOnload(&self, _cx: *JSContext, _listener: *JSObject) {
     }
 }
