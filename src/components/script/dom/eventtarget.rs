@@ -2,16 +2,19 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
+use dom::bindings::callback::CallbackContainer;
+use dom::bindings::codegen::BindingDeclarations::EventListenerBinding::EventListener;
+use dom::bindings::error::{Fallible, InvalidState};
 use dom::bindings::js::JSRef;
 use dom::bindings::utils::{Reflectable, Reflector};
-use dom::bindings::error::{Fallible, InvalidState};
-use dom::bindings::codegen::BindingDeclarations::EventListenerBinding::EventListener;
 use dom::event::Event;
 use dom::eventdispatcher::dispatch_event;
 use dom::node::NodeTypeId;
 use dom::xmlhttprequest::XMLHttpRequestId;
 use dom::virtualmethods::VirtualMethods;
+use js::jsapi::JSObject;
 use servo_util::str::DOMString;
+use std::ptr;
 
 use collections::hashmap::HashMap;
 
@@ -87,6 +90,8 @@ pub trait EventTargetHelpers {
                                  ty: DOMString,
                                  listener: Option<EventListener>);
     fn get_inline_event_listener(&self, ty: DOMString) -> Option<EventListener>;
+    fn set_event_handler_common(&mut self, ty: &str, listener: *JSObject);
+    fn get_event_handler_common(&self, ty: &str) -> *JSObject;
 }
 
 impl<'a> EventTargetHelpers for JSRef<'a, EventTarget> {
@@ -138,6 +143,16 @@ impl<'a> EventTargetHelpers for JSRef<'a, EventTarget> {
                 _ => false,
             }
         }).map(|entry| entry.listener.get_listener()))
+    }
+
+    fn set_event_handler_common(&mut self, ty: &str, listener: *JSObject) {
+        let listener = EventListener::new(listener);
+        self.set_inline_event_listener(ty.to_owned(), Some(listener));
+    }
+
+    fn get_event_handler_common(&self, ty: &str) -> *JSObject {
+        let listener = self.get_inline_event_listener(ty.to_owned());
+        listener.map(|listener| listener.parent.callback()).unwrap_or(ptr::null())
     }
 }
 
