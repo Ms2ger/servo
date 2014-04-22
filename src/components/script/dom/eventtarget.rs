@@ -4,6 +4,7 @@
 
 use dom::bindings::callback::CallbackContainer;
 use dom::bindings::codegen::BindingDeclarations::EventListenerBinding::EventListener;
+use dom::bindings::codegen::BindingDeclarations::EventHandlerBinding::EventHandlerNonNull;
 use dom::bindings::error::{Fallible, InvalidState};
 use dom::bindings::js::JSRef;
 use dom::bindings::utils::{Reflectable, Reflector};
@@ -95,7 +96,8 @@ pub trait EventTargetHelpers {
                                     content: &JS<Node>,
                                     ty: &str,
                                     source: DOMString);
-    fn set_event_handler_common(&mut self, ty: &str, listener: *JSObject);
+    fn set_event_handler_common<T: CallbackContainer>(&mut self, ty: &str,
+                                                      listener: Option<T>);
     fn get_event_handler_common(&self, ty: &str) -> *JSObject;
 }
 
@@ -132,7 +134,7 @@ impl<'a> EventTargetHelpers for JSRef<'a, EventTarget> {
             None => {
                 if listener.is_some() {
                     entries.push(EventListenerEntry {
-                        phase: Capturing, //XXXjdm no idea when inline handlers should run
+                        phase: Bubbling,
                         listener: Inline(listener.unwrap()),
                     });
                 }
@@ -180,12 +182,15 @@ impl<'a> EventTargetHelpers for JSRef<'a, EventTarget> {
         let scope = win.reflector().get_jsobject();
         let funobj = unsafe { JS_CloneFunctionObject(cx, handler, scope) };
         assert!(funobj.is_not_null());
-        self.set_event_handler_common(ty, funobj)
+        self.set_event_handler_common(ty, Some(EventHandlerNonNull::new(funobj)))
     }
 
-    fn set_event_handler_common(&mut self, ty: &str, listener: *JSObject) {
-        let listener = EventListener::new(listener);
-        self.set_inline_event_listener(ty.to_owned(), Some(listener));
+    fn set_event_handler_common<T: CallbackContainer>(
+        &mut self, ty: &str, listener: Option<T>)
+    {
+        let event_listener = listener.map(|listener|
+                                          EventListener::new(listener.callback()));
+        self.set_inline_event_listener(ty.to_owned(), event_listener);
     }
 
     fn get_event_handler_common(&self, ty: &str) -> *JSObject {

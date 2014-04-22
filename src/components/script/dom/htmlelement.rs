@@ -2,6 +2,7 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
+use dom::bindings::codegen::BindingDeclarations::EventHandlerBinding::EventHandlerNonNull;
 use dom::bindings::codegen::BindingDeclarations::HTMLElementBinding;
 use dom::bindings::codegen::InheritTypes::{ElementCast, HTMLFrameSetElementDerived};
 use dom::bindings::codegen::InheritTypes::{HTMLElementDerived, HTMLBodyElementDerived};
@@ -217,7 +218,7 @@ impl<'a> HTMLElementMethods for JSRef<'a, HTMLElement> {
         }
     }
 
-    fn SetOnload(&mut self, cx: *JSContext, listener: *JSObject) {
+    fn SetOnload(&mut self, cx: *JSContext, listener: Option<EventHandlerNonNull>) {
         if self.is_body_or_frameset() {
             let mut win = window_from_node(self);
             win.get_mut().SetOnload(cx, listener)

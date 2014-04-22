@@ -2,6 +2,7 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
+use dom::bindings::codegen::EventHandlerBinding::EventHandlerNonNull;
 use dom::bindings::codegen::InheritTypes::{DocumentDerived, EventCast, HTMLElementCast};
 use dom::bindings::codegen::InheritTypes::{HTMLHeadElementCast, TextCast, ElementCast};
 use dom::bindings::codegen::InheritTypes::{DocumentTypeCast, HTMLHtmlElementCast, NodeCast};
@@ -809,7 +810,7 @@ impl<'a> DocumentMethods for JSRef<'a, Document> {
         self.node.eventtarget.get_event_handler_common("load")
     }
 
-    pub fn SetOnload(&mut self, _cx: *JSContext, listener: *JSObject) {
+    pub fn SetOnload(&mut self, _cx: *JSContext, listener: Option<EventHandlerNonNull>) {
         self.node.eventtarget.set_event_handler_common("load", listener)
     }
 }

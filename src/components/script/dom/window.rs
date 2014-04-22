@@ -2,6 +2,7 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
+use dom::bindings::codegen::BindingDeclarations::EventHandlerBinding::{OnErrorEventHandlerNonNull, EventHandlerNonNull};
 use dom::bindings::codegen::BindingDeclarations::WindowBinding;
 use dom::bindings::js::{JS, JSRef, Temporary, OptionalSettable};
 use dom::bindings::trace::{Traceable, Untraceable};
@@ -141,11 +142,11 @@ pub trait WindowMethods {
     fn Self(&self) -> Temporary<Window>;
     fn Performance(&mut self) -> Temporary<Performance>;
     fn GetOnload(&self, _cx: *JSContext) -> *JSObject;
-    fn SetOnload(&self, _cx: *JSContext, _listener: *JSObject);
+    fn SetOnload(&self, _cx: *JSContext, _listener: Option<EventHandlerNonNull>);
     fn GetOnunload(&self, _cx: *JSContext) -> *JSObject;
-    fn SetOnunload(&self, _cx: *JSContext, _listener: *JSObject);
+    fn SetOnunload(&self, _cx: *JSContext, _listener: Option<EventHandlerNonNull>);
     fn GetOnerror(&self, _cx: *JSContext) -> *JSObject;
-    fn SetOnerror(&self, _cx: *JSContext, _listener: *JSObject);
+    fn SetOnerror(&self, _cx: *JSContext, _listener: Option<OnErrorEventHandlerNonNull>);
     fn Debug(&self, message: DOMString);
     fn Gc(&self);
 }
@@ -278,7 +279,7 @@ impl<'a> WindowMethods for JSRef<'a, Window> {
         self.eventtarget.get_event_handler_common("load")
     }
 
-    fn SetOnload(&mut self, _cx: *JSContext, listener: *JSObject) {
+    fn SetOnload(&mut self, _cx: *JSContext, listener: Option<EventHandlerNonNull>) {
         self.eventtarget.set_event_handler_common("load", listener)
     }
 
@@ -286,7 +287,7 @@ impl<'a> WindowMethods for JSRef<'a, Window> {
         self.eventtarget.get_event_handler_common("unload")
     }
 
-    fn SetOnunload(&mut self, _cx: *JSContext, listener: *JSObject) {
+    fn SetOnunload(&mut self, _cx: *JSContext, listener: Option<EventHandlerNonNull>) {
         self.eventtarget.set_event_handler_common("unload", listener)
     }
 
@@ -294,7 +295,7 @@ impl<'a> WindowMethods for JSRef<'a, Window> {
         self.eventtarget.get_event_handler_common("error")
     }
 
-    fn SetOnerror(&mut self, _cx: *JSContext, listener: *JSObject) {
+    fn SetOnerror(&mut self, _cx: *JSContext, listener: Option<OnErrorEventHandlerNonNull>) {
         self.eventtarget.set_event_handler_common("error", listener)
     }
 
@@ -422,6 +423,7 @@ impl<'a> PrivateWindowHelpers for JSRef<'a, Window> {
         handle
     }
 }
+
 impl Window {
     pub fn new(cx: *JSContext,
                page: Rc<Page>,
