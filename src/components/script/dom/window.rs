@@ -2,7 +2,9 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
+use dom::bindings::callback::CallbackContainer;
 use dom::bindings::codegen::WindowBinding;
+use dom::bindings::codegen::EventListenerBinding::EventListener;
 use dom::bindings::js::JS;
 use dom::bindings::trace::Untraceable;
 use dom::bindings::utils::{Reflectable, Reflector};
@@ -198,24 +200,33 @@ impl Window {
     }
 
     pub fn GetOnload(&self, _cx: *JSContext) -> *JSObject {
-        ptr::null()
+        let listener = self.eventtarget.get_inline_event_listener(~"load");
+        listener.map(|listener| listener.parent.callback()).unwrap_or(ptr::null())
     }
 
-    pub fn SetOnload(&self, _cx: *JSContext, _listener: *JSObject) {
+    pub fn SetOnload(&mut self, _cx: *JSContext, listener: *JSObject) {
+        let listener = EventListener::new(listener);
+        self.eventtarget.set_inline_event_listener(~"load", Some(listener));
     }
 
     pub fn GetOnunload(&self, _cx: *JSContext) -> *JSObject {
-        ptr::null()
+        let listener = self.eventtarget.get_inline_event_listener(~"unload");
+        listener.map(|listener| listener.parent.callback()).unwrap_or(ptr::null())
     }
 
-    pub fn SetOnunload(&self, _cx: *JSContext, _listener: *JSObject) {
+    pub fn SetOnunload(&mut self, _cx: *JSContext, listener: *JSObject) {
+        let listener = EventListener::new(listener);
+        self.eventtarget.set_inline_event_listener(~"unload", Some(listener));
     }
 
     pub fn GetOnerror(&self, _cx: *JSContext) -> *JSObject {
-        ptr::null()
+        let listener = self.eventtarget.get_inline_event_listener(~"error");
+        listener.map(|listener| listener.parent.callback()).unwrap_or(ptr::null())
     }
 
-    pub fn SetOnerror(&self, _cx: *JSContext, _listener: *JSObject) {
+    pub fn SetOnerror(&mut self, _cx: *JSContext, listener: *JSObject) {
+        let listener = EventListener::new(listener);
+        self.eventtarget.set_inline_event_listener(~"error", Some(listener));
     }
 }
 
