@@ -2,14 +2,12 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-use dom::bindings::utils::Reflectable;
+use dom::bindings::trace::Traceable;
+use dom::bindings::utils::{Reflectable, global_object_for_js_object};
 use js::jsapi::{JSContext, JSObject, JS_WrapObject, JS_ObjectIsCallable};
-use js::jsapi::{JS_GetProperty, JSTracer, JS_CallTracer};
+use js::jsapi::JS_GetProperty;
 use js::jsval::{JSVal, UndefinedValue};
-use js::JSTRACE_OBJECT;
 
-use libc;
-use std::cast;
 use std::ptr;
 
 use serialize::{Encodable, Encoder};
@@ -25,24 +23,29 @@ pub enum ExceptionHandling {
     RethrowExceptions
 }
 
-#[deriving(Clone,Eq)]
-pub struct CallbackInterface {
-    pub callback: *JSObject
+#[deriving(Clone,Eq,Encodable)]
+pub struct CallbackFunction {
+    object: CallbackObject
 }
 
-impl<S: Encoder<E>, E> Encodable<S, E> for CallbackInterface {
-    fn encode(&self, s: &mut S) -> Result<(), E> {
-        unsafe {
-            let tracer: *mut JSTracer = cast::transmute(s);
-            "callback".to_c_str().with_ref(|name| {
-                (*tracer).debugPrinter = ptr::null();
-                (*tracer).debugPrintIndex = -1;
-                (*tracer).debugPrintArg = name as *libc::c_void;
-                JS_CallTracer(tracer as *JSTracer, self.callback, JSTRACE_OBJECT as u32);
-            });
-        };
-        Ok(())
+impl CallbackFunction {
+    pub fn new(callback: *JSObject) -> CallbackFunction {
+        CallbackFunction {
+            object: CallbackObject {
+                callback: Traceable::new(callback)
+            }
+        }
     }
+}
+
+#[deriving(Clone,Eq,Encodable)]
+pub struct CallbackInterface {
+    object: CallbackObject
+}
+
+#[deriving(Clone,Eq,Encodable)]
+struct CallbackObject {
+    callback: Traceable<*JSObject>,
 }
 
 pub trait CallbackContainer {
@@ -51,21 +54,29 @@ pub trait CallbackContainer {
 
 impl CallbackContainer for CallbackInterface {
     fn callback(&self) -> *JSObject {
-        self.callback
+        *self.object.callback.deref()
+    }
+}
+
+impl CallbackContainer for CallbackFunction {
+    fn callback(&self) -> *JSObject {
+        *self.object.callback.deref()
     }
 }
 
 impl CallbackInterface {
     pub fn new(callback: *JSObject) -> CallbackInterface {
         CallbackInterface {
-            callback: callback
+            object: CallbackObject {
+                callback: Traceable::new(callback)
+            }
         }
     }
 
     pub fn GetCallableProperty(&self, cx: *JSContext, name: &str) -> Result<JSVal, ()> {
         let mut callable = UndefinedValue();
         unsafe {
-            if name.to_c_str().with_ref(|name| JS_GetProperty(cx, self.callback, name, &mut callable as *mut JSVal as *JSVal)) == 0 {
+            if name.to_c_str().with_ref(|name| JS_GetProperty(cx, self.callback(), name, &mut callable as *mut JSVal as *JSVal)) == 0 {
                 return Err(());
             }
 
@@ -104,7 +115,9 @@ pub struct CallSetup {
 }
 
 impl CallSetup {
-    pub fn new(cx: *JSContext, handling: ExceptionHandling) -> CallSetup {
+    pub fn new<T: CallbackContainer>(callback: &T, handling: ExceptionHandling) -> CallSetup {
+        let win = global_object_for_js_object(callback.callback());
+        let cx = win.get().get_cx();
         CallSetup {
             cx: cx,
             handling: handling

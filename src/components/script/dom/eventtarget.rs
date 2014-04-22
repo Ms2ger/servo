@@ -3,6 +3,7 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 use dom::bindings::callback::CallbackContainer;
+use dom::bindings::codegen::EventHandlerBinding::EventHandlerNonNull;
 use dom::bindings::codegen::EventListenerBinding;
 use self::EventListenerBinding::EventListener;
 use dom::bindings::error::{Fallible, InvalidState};
@@ -146,7 +147,7 @@ impl EventTarget {
             None => {
                 if listener.is_some() {
                     entries.push(EventListenerEntry {
-                        phase: Capturing, //XXXjdm no idea when inline handlers should run
+                        phase: Bubbling,
                         listener: Inline(listener.unwrap()),
                     });
                 }
@@ -204,12 +205,15 @@ impl EventTarget {
         let scope = win.reflector().get_jsobject();
         let funobj = unsafe { JS_CloneFunctionObject(cx, handler, scope) };
         assert!(funobj.is_not_null());
-        self.set_event_handler_common(ty, funobj)
+        self.set_event_handler_common(ty, Some(EventHandlerNonNull::new(funobj)))
     }
 
-    pub fn set_event_handler_common(&mut self, ty: &str, listener: *JSObject) {
-        let listener = EventListener::new(listener);
-        self.set_inline_event_listener(ty.to_owned(), Some(listener));
+    pub fn set_event_handler_common<T: CallbackContainer>(
+        &mut self, ty: &str, listener: Option<T>)
+    {
+        let event_listener = listener.map(|listener|
+                                          EventListener::new(listener.callback()));
+        self.set_inline_event_listener(ty.to_owned(), event_listener);
     }
 
     pub fn get_event_handler_common(&self, ty: &str) -> *JSObject {

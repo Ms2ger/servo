@@ -44,6 +44,7 @@ pub mod dom {
         pub mod trace;
         pub mod codegen {
             pub use self::BindingDeclarations::*;
+            pub mod EventHandlerBinding;
             pub mod InterfaceTypes;
             pub mod InheritTypes;
             pub mod PrototypeList;

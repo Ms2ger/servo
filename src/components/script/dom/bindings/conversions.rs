@@ -298,7 +298,11 @@ impl<X: Default, T: FromJSValConvertible<X>> FromJSValConvertible<()> for Option
 }
 
 impl ToJSValConvertible for *JSObject {
-    fn to_jsval(&self, _cx: *JSContext) -> JSVal {
-        ObjectOrNullValue(*self)
+    fn to_jsval(&self, cx: *JSContext) -> JSVal {
+        let mut wrapped = ObjectOrNullValue(*self);
+        unsafe {
+            assert!(JS_WrapValue(cx, &mut wrapped as *mut JSVal as *JSVal) != 0);
+        }
+        wrapped
     }
 }

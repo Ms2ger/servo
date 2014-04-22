@@ -2,6 +2,7 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
+use dom::bindings::codegen::EventHandlerBinding::EventHandlerNonNull;
 use dom::bindings::codegen::HTMLBodyElementBinding;
 use dom::bindings::codegen::InheritTypes::{HTMLBodyElementDerived, HTMLElementCast};
 use dom::bindings::codegen::InheritTypes::{EventTargetCast, NodeCast};
@@ -97,7 +98,7 @@ impl HTMLBodyElement {
         win.get().GetOnunload(cx)
     }
 
-    pub fn SetOnunload(&mut self, cx: *JSContext, abstract_self: &JS<HTMLBodyElement>, listener: *JSObject) {
+    pub fn SetOnunload(&mut self, cx: *JSContext, abstract_self: &JS<HTMLBodyElement>, listener: Option<EventHandlerNonNull>) {
         let mut win = window_from_node(abstract_self);
         win.get_mut().SetOnunload(cx, listener)
     }
