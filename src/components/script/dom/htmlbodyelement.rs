@@ -10,7 +10,8 @@ use dom::document::Document;
 use dom::element::HTMLBodyElementTypeId;
 use dom::eventtarget::{EventTarget, NodeTargetTypeId};
 use dom::htmlelement::HTMLElement;
-use dom::node::{Node, ElementNodeTypeId};
+use dom::node::{Node, ElementNodeTypeId, window_from_node};
+use js::jsapi::{JSContext, JSObject};
 use servo_util::str::DOMString;
 
 #[deriving(Encodable)]
@@ -87,5 +88,15 @@ impl HTMLBodyElement {
 
     pub fn SetBackground(&self, _background: DOMString) -> ErrorResult {
         Ok(())
+    }
+
+    pub fn GetOnunload(&self, cx: *JSContext, abstract_self: &JS<HTMLBodyElement>) -> *JSObject {
+        let win = window_from_node(abstract_self);
+        win.get().GetOnunload(cx)
+    }
+
+    pub fn SetOnunload(&mut self, cx: *JSContext, abstract_self: &JS<HTMLBodyElement>, listener: *JSObject) {
+        let mut win = window_from_node(abstract_self);
+        win.get_mut().SetOnunload(cx, listener)
     }
 }

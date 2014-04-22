@@ -3,19 +3,20 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 use dom::bindings::codegen::HTMLElementBinding;
-use dom::bindings::codegen::InheritTypes::ElementCast;
-use dom::bindings::codegen::InheritTypes::HTMLElementDerived;
+use dom::bindings::codegen::InheritTypes::{ElementCast, HTMLFrameSetElementDerived};
+use dom::bindings::codegen::InheritTypes::{HTMLElementDerived, HTMLBodyElementDerived};
 use dom::bindings::js::JS;
 use dom::bindings::error::{ErrorResult, Fallible};
 use dom::document::Document;
 use dom::element::{Element, ElementTypeId, HTMLElementTypeId};
 use dom::eventtarget::{EventTarget, NodeTargetTypeId};
-use dom::node::{Node, ElementNodeTypeId};
+use dom::node::{Node, ElementNodeTypeId, window_from_node};
 use dom::virtualmethods::VirtualMethods;
-use js::jsapi::JSContext;
+use js::jsapi::{JSContext, JSObject};
 use js::jsval::{JSVal, NullValue};
 use servo_util::namespace;
 use servo_util::str::DOMString;
+use std::ptr;
 
 #[deriving(Encodable)]
 pub struct HTMLElement {
@@ -161,6 +162,27 @@ impl HTMLElement {
 
     pub fn OffsetHeight(&self) -> i32 {
         0
+    }
+
+    fn is_body_or_frameset(&self) -> bool {
+        self.element.node.eventtarget.is_htmlbodyelement() ||
+        self.element.node.eventtarget.is_htmlframesetelement()
+    }
+
+    pub fn GetOnload(&self, cx: *JSContext, abstract_self: &JS<HTMLElement>) -> *JSObject {
+        if self.is_body_or_frameset() {
+            let win = window_from_node(abstract_self);
+            win.get().GetOnload(cx)
+        } else {
+            ptr::null()
+        }
+    }
+
+    pub fn SetOnload(&mut self, cx: *JSContext, abstract_self: &JS<HTMLElement>, listener: *JSObject) {
+        if self.is_body_or_frameset() {
+            let mut win = window_from_node(abstract_self);
+            win.get_mut().SetOnload(cx, listener)
+        }
     }
 }
 
