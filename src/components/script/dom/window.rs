@@ -2,9 +2,7 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-use dom::bindings::callback::CallbackContainer;
 use dom::bindings::codegen::WindowBinding;
-use dom::bindings::codegen::EventListenerBinding::EventListener;
 use dom::bindings::js::JS;
 use dom::bindings::trace::Untraceable;
 use dom::bindings::utils::{Reflectable, Reflector};
@@ -32,7 +30,6 @@ use std::comm::{channel, Sender};
 use std::comm::Select;
 use std::hash::{Hash, sip};
 use std::io::timer::Timer;
-use std::ptr;
 use std::rc::Rc;
 
 use serialize::{Encoder, Encodable};
@@ -200,33 +197,27 @@ impl Window {
     }
 
     pub fn GetOnload(&self, _cx: *JSContext) -> *JSObject {
-        let listener = self.eventtarget.get_inline_event_listener(~"load");
-        listener.map(|listener| listener.parent.callback()).unwrap_or(ptr::null())
+        self.eventtarget.get_event_handler_common("load")
     }
 
     pub fn SetOnload(&mut self, _cx: *JSContext, listener: *JSObject) {
-        let listener = EventListener::new(listener);
-        self.eventtarget.set_inline_event_listener(~"load", Some(listener));
+        self.eventtarget.set_event_handler_common("load", listener)
     }
 
     pub fn GetOnunload(&self, _cx: *JSContext) -> *JSObject {
-        let listener = self.eventtarget.get_inline_event_listener(~"unload");
-        listener.map(|listener| listener.parent.callback()).unwrap_or(ptr::null())
+        self.eventtarget.get_event_handler_common("unload")
     }
 
     pub fn SetOnunload(&mut self, _cx: *JSContext, listener: *JSObject) {
-        let listener = EventListener::new(listener);
-        self.eventtarget.set_inline_event_listener(~"unload", Some(listener));
+        self.eventtarget.set_event_handler_common("unload", listener)
     }
 
     pub fn GetOnerror(&self, _cx: *JSContext) -> *JSObject {
-        let listener = self.eventtarget.get_inline_event_listener(~"error");
-        listener.map(|listener| listener.parent.callback()).unwrap_or(ptr::null())
+        self.eventtarget.get_event_handler_common("error")
     }
 
     pub fn SetOnerror(&mut self, _cx: *JSContext, listener: *JSObject) {
-        let listener = EventListener::new(listener);
-        self.eventtarget.set_inline_event_listener(~"error", Some(listener));
+        self.eventtarget.set_event_handler_common("error", listener)
     }
 }
 
@@ -239,7 +230,6 @@ impl Reflectable for Window {
         self.eventtarget.mut_reflector()
     }
 }
-
 impl Window {
     fn set_timeout_or_interval(&mut self, callback: JSVal, timeout: i32, is_interval: bool) -> i32 {
         let timeout = cmp::max(0, timeout) as u64;

@@ -2,16 +2,19 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-use dom::bindings::js::JS;
-use dom::bindings::utils::{Reflectable, Reflector};
-use dom::bindings::error::{Fallible, InvalidState};
+use dom::bindings::callback::CallbackContainer;
 use dom::bindings::codegen::EventListenerBinding;
 use self::EventListenerBinding::EventListener;
+use dom::bindings::error::{Fallible, InvalidState};
+use dom::bindings::js::JS;
+use dom::bindings::utils::{Reflectable, Reflector};
 use dom::event::Event;
 use dom::eventdispatcher::dispatch_event;
 use dom::node::NodeTypeId;
 use dom::virtualmethods::VirtualMethods;
+use js::jsapi::JSObject;
 use servo_util::str::DOMString;
+use std::ptr;
 
 use collections::hashmap::HashMap;
 
@@ -168,6 +171,16 @@ impl EventTarget {
             return Err(InvalidState);
         }
         Ok(dispatch_event(abstract_self, abstract_target, event))
+    }
+
+    pub fn set_event_handler_common(&mut self, ty: &str, listener: *JSObject) {
+        let listener = EventListener::new(listener);
+        self.set_inline_event_listener(ty.to_owned(), Some(listener));
+    }
+
+    pub fn get_event_handler_common(&self, ty: &str) -> *JSObject {
+        let listener = self.get_inline_event_listener(ty.to_owned());
+        listener.map(|listener| listener.parent.callback()).unwrap_or(ptr::null())
     }
 }
 

@@ -2,13 +2,11 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-use dom::bindings::callback::CallbackContainer;
 use dom::bindings::codegen::InheritTypes::{DocumentDerived, EventCast, HTMLElementCast};
 use dom::bindings::codegen::InheritTypes::{DocumentBase, NodeCast, DocumentCast};
 use dom::bindings::codegen::InheritTypes::{HTMLHeadElementCast, TextCast, ElementCast};
 use dom::bindings::codegen::InheritTypes::{DocumentTypeCast, HTMLHtmlElementCast};
 use dom::bindings::codegen::DocumentBinding;
-use dom::bindings::codegen::EventListenerBinding::EventListener;
 use dom::bindings::js::JS;
 use dom::bindings::trace::Untraceable;
 use dom::bindings::utils::{Reflectable, Reflector, reflect_dom_object};
@@ -47,7 +45,6 @@ use servo_util::str::{DOMString, null_str_as_empty_ref};
 use collections::hashmap::HashMap;
 use js::jsapi::{JSObject, JSContext};
 use std::ascii::StrAsciiExt;
-use std::ptr;
 use url::{Url, from_str};
 
 #[deriving(Eq,Encodable)]
@@ -698,12 +695,10 @@ impl Document {
     }
 
     pub fn GetOnload(&self, _cx: *JSContext) -> *JSObject {
-        let listener = self.node.eventtarget.get_inline_event_listener(~"load");
-        listener.map(|listener| listener.parent.callback()).unwrap_or(ptr::null())
+        self.node.eventtarget.get_event_handler_common("load")
     }
 
     pub fn SetOnload(&mut self, _cx: *JSContext, listener: *JSObject) {
-        let listener = EventListener::new(listener);
-        self.node.eventtarget.set_inline_event_listener(~"load", Some(listener));
+        self.node.eventtarget.set_event_handler_common("load", listener)
     }
 }
