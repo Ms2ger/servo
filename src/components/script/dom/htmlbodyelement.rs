@@ -3,7 +3,8 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 use dom::bindings::codegen::HTMLBodyElementBinding;
-use dom::bindings::codegen::InheritTypes::HTMLBodyElementDerived;
+use dom::bindings::codegen::InheritTypes::{HTMLBodyElementDerived, HTMLElementCast};
+use dom::bindings::codegen::InheritTypes::{EventTargetCast, NodeCast};
 use dom::bindings::error::ErrorResult;
 use dom::bindings::js::JS;
 use dom::document::Document;
@@ -11,6 +12,7 @@ use dom::element::HTMLBodyElementTypeId;
 use dom::eventtarget::{EventTarget, NodeTargetTypeId};
 use dom::htmlelement::HTMLElement;
 use dom::node::{Node, ElementNodeTypeId, window_from_node};
+use dom::virtualmethods::VirtualMethods;
 use js::jsapi::{JSContext, JSObject};
 use servo_util::str::DOMString;
 
@@ -98,5 +100,28 @@ impl HTMLBodyElement {
     pub fn SetOnunload(&mut self, cx: *JSContext, abstract_self: &JS<HTMLBodyElement>, listener: *JSObject) {
         let mut win = window_from_node(abstract_self);
         win.get_mut().SetOnunload(cx, listener)
+    }
+}
+
+impl VirtualMethods for JS<HTMLBodyElement> {
+    fn super_type(&self) -> Option<~VirtualMethods:> {
+        let element: JS<HTMLElement> = HTMLElementCast::from(self);
+        Some(~element as ~VirtualMethods:)
+    }
+
+    fn after_set_attr(&mut self, name: DOMString, value: DOMString) {
+        match self.super_type() {
+            Some(ref mut s) => s.after_set_attr(name.clone(), value.clone()),
+            _ => (),
+        }
+
+        if name.starts_with("on") {
+            //XXXjdm This should only forward a subset of event handler names
+            let mut evtarget: JS<EventTarget> = EventTargetCast::from(&window_from_node(self));
+            let content: JS<Node> = NodeCast::from(self);
+            evtarget.get_mut().set_event_handler_uncompiled(&content,
+                                                            name.slice_from(2).to_owned(),
+                                                            value);
+        }
     }
 }
