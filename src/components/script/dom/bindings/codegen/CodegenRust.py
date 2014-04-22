@@ -3143,7 +3143,7 @@ class ClassMember(ClassItem):
         ClassItem.__init__(self, name, visibility)
 
     def declare(self, cgClass):
-        return '%s: %s,\n' % (self.name, self.type)
+        return '%s %s: %s,\n' % (self.visibility, self.name, self.type)
 
     def define(self, cgClass):
         if not self.static:

@@ -2,10 +2,12 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
+use dom::bindings::callback::CallbackContainer;
 use dom::bindings::codegen::InheritTypes::{DocumentDerived, EventCast, HTMLElementCast};
 use dom::bindings::codegen::InheritTypes::{HTMLHeadElementCast, TextCast, ElementCast};
 use dom::bindings::codegen::InheritTypes::{DocumentTypeCast, HTMLHtmlElementCast, NodeCast};
 use dom::bindings::codegen::BindingDeclarations::DocumentBinding;
+use dom::bindings::codegen::BindingDeclarations::EventListenerBinding::EventListener;
 use dom::bindings::js::{JS, JSRef, Temporary, OptionalSettable, TemporaryPushable};
 use dom::bindings::js::OptionalRootable;
 use dom::bindings::trace::Untraceable;
@@ -807,9 +809,12 @@ impl<'a> DocumentMethods for JSRef<'a, Document> {
     }
 
     pub fn GetOnload(&self, _cx: *JSContext) -> *JSObject {
-        ptr::null()
+        let listener = self.node.eventtarget.get_inline_event_listener(~"load");
+        listener.map(|listener| listener.parent.callback()).unwrap_or(ptr::null())
     }
 
-    pub fn SetOnload(&self, _cx: *JSContext, _listener: *JSObject) {
+    pub fn SetOnload(&mut self, _cx: *JSContext, listener: *JSObject) {
+        let listener = EventListener::new(listener);
+        self.node.eventtarget.set_inline_event_listener(~"load", Some(listener));
     }
 }
