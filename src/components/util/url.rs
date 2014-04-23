@@ -18,7 +18,7 @@ Create a URL object from a string. Does various helpful browsery things like
 
 */
 // TODO: about:failure->
-pub fn parse_url(str_url: &str, base_url: Option<std_url::Url>) -> std_url::Url {
+pub fn parse_url(str_url: &str, base_url: Option<std_url::Url>) -> Result<std_url::Url, ~str> {
     let str_url = str_url.trim_chars(& &[' ', '\t', '\n', '\r', '\x0C']).to_owned();
     let schm = std_url::get_scheme(str_url);
     let str_url = match schm {
@@ -84,8 +84,7 @@ pub fn parse_url(str_url: &str, base_url: Option<std_url::Url>) -> std_url::Url 
         }
     };
 
-    // FIXME: Need to handle errors
-    std_url::from_str(str_url).ok().expect("URL parsing failed")
+    std_url::from_str(str_url)
 }
 
 #[cfg(test)]

@@ -1155,7 +1155,10 @@ impl ScriptTask {
             let click_frag = href.get().value_ref().starts_with("#");
             let base_url = Some(page.get_url());
             debug!("ScriptTask: current url is {:?}", base_url);
-            let url = parse_url(href.get().value_ref(), base_url);
+            let url = match parse_url(href.get().value_ref(), base_url) {
+                Ok(url) => url,
+                Err(_) => return,
+            };
 
             if click_frag {
                 match page.find_fragment_node(url.fragment.unwrap()) {

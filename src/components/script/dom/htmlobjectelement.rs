@@ -68,9 +68,13 @@ impl ProcessDataURL for JS<HTMLObjectElement> {
                elem.get_attribute(Null, "data").map(|x| x.get().Value())) {
             (None, Some(uri)) => {
                 if is_image_data(uri) {
-                    let data_url = parse_url(uri, url);
-                    // Issue #84
-                    image_cache.send(image_cache_task::Prefetch(data_url));
+                    match parse_url(uri, url) {
+                        Ok(data_url) => {
+                            // Issue #84
+                            image_cache.send(image_cache_task::Prefetch(data_url));
+                        },
+                        Err(_) => (),
+                    }
                 }
             }
             _ => { }

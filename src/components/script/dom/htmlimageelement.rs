@@ -68,7 +68,10 @@ impl HTMLImageElement {
                 *self.image = None;
             }
             Some(src) => {
-                let img_url = parse_url(src, url);
+                let img_url = match parse_url(src, url) {
+                    Ok(url) => url,
+                    Err(_) => return,
+                };
                 *self.image = Some(img_url.clone());
 
                 // inform the image cache to load this, but don't store a

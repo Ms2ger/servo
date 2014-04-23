@@ -354,8 +354,10 @@ pub fn parse_html(page: &Page,
                                     s.eq_ignore_ascii_case("stylesheet")
                                 }) => {
                             debug!("found CSS stylesheet: {:s}", href.get().value_ref());
-                            let url = parse_url(href.get().value_ref(), Some(url2.clone()));
-                            css_chan2.send(CSSTaskNewFile(UrlProvenance(url, resource_task.clone())));
+                            match parse_url(href.get().value_ref(), Some(url2.clone())) {
+                                Ok(url) => css_chan2.send(CSSTaskNewFile(UrlProvenance(url, resource_task.clone()))),
+                                Err(_) => (),
+                            }
                         }
                         _ => {}
                     }
@@ -369,21 +371,25 @@ pub fn parse_html(page: &Page,
                     let elem: JS<Element> = ElementCast::from(&iframe_element);
                     let src_opt = elem.get_attribute(Null, "src").map(|x| x.get().Value());
                     for src in src_opt.iter() {
-                        let iframe_url = parse_url(*src, Some(url2.clone()));
-                        iframe_element.get_mut().set_frame(iframe_url.clone());
+                        match parse_url(*src, Some(url2.clone())) {
+                            Ok(iframe_url) => {
+                                iframe_element.get_mut().set_frame(iframe_url.clone());
 
-                        // Subpage Id
-                        let subpage_id = *next_subpage_id.borrow();
-                        let SubpageId(id_num) = subpage_id;
-                        next_subpage_id.set(SubpageId(id_num + 1));
+                                // Subpage Id
+                                let subpage_id = *next_subpage_id.borrow();
+                                let SubpageId(id_num) = subpage_id;
+                                next_subpage_id.set(SubpageId(id_num + 1));
 
-                        iframe_element.get_mut().size = Some(IFrameSize {
-                            pipeline_id: pipeline_id,
-                            subpage_id: subpage_id,
-                        });
-                        iframe_chan.send(HtmlDiscoveredIFrame((iframe_url,
-                                                               subpage_id,
-                                                               sandboxed)));
+                                iframe_element.get_mut().size = Some(IFrameSize {
+                                    pipeline_id: pipeline_id,
+                                    subpage_id: subpage_id,
+                                });
+                                iframe_chan.send(HtmlDiscoveredIFrame((iframe_url,
+                                                                       subpage_id,
+                                                                       sandboxed)));
+                            },
+                            Err(_) => (),
+                        }
                     }
                 }
                 _ => {}
@@ -461,7 +467,10 @@ pub fn parse_html(page: &Page,
                 match script.get_attribute(Null, "src") {
                     Some(src) => {
                         debug!("found script: {:s}", src.get().Value());
-                        let new_url = parse_url(src.get().value_ref(), Some(url3.clone()));
+                        let new_url = match parse_url(src.get().value_ref(), Some(url3.clone())) {
+                            Ok(url) => url,
+                            Err(_) => return,
+                        };
                         js_chan2.send(JSTaskNewFile(new_url));
                     }
                     None => {
