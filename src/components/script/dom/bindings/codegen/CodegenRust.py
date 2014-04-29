@@ -736,7 +736,7 @@ def getJSToNativeConversionTemplate(type, descriptorProvider, failureCode=None,
 
     if type.isCallback():
         assert not isEnforceRange and not isClamp
-        assert not type.treatNonCallableAsNull() or type.nullable()
+        assert not type.treatNonCallableAsNull()
         assert not type.treatNonObjectAsNull() or type.nullable()
         assert not type.treatNonObjectAsNull() or not type.treatNonCallableAsNull()
 
@@ -748,17 +748,7 @@ def getJSToNativeConversionTemplate(type, descriptorProvider, failureCode=None,
             declType = CGTemplatedType("Option", declType)
             conversion = CGWrapper(conversion, pre="Some(", post=")")
 
-        if allowTreatNonCallableAsNull and type.treatNonCallableAsNull():
-            haveCallable = "JS_ObjectIsCallable(cx, ${val}.to_object()) != 0"
-            if not isDefinitelyObject:
-                haveCallable = "${val}.is_object() && " + haveCallable
-            if defaultValue is not None:
-                assert(isinstance(defaultValue, IDLNullValue))
-                haveCallable = "${haveValue} && " + haveCallable
-                template = CGIfElseWrapper(haveCallable,
-                                           conversion,
-                                           CGGeneric("None")).define()
-        elif allowTreatNonCallableAsNull and type.treatNonObjectAsNull():
+        if allowTreatNonCallableAsNull and type.treatNonObjectAsNull():
             if not isDefinitelyObject:
                 haveObject = "${val}.is_object()"
                 if defaultValue is not None:
