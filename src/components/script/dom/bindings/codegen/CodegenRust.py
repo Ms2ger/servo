@@ -1652,8 +1652,6 @@ def getAllTypes(descriptors, dictionaries, callbacks):
     from a descriptor or dictionary; they will never both be non-None.
     """
     for d in descriptors:
-        if d.interface.isExternal():
-            continue
         for t in getTypesFromDescriptor(d):
             yield (t, d, None)
     for dictionary in dictionaries:

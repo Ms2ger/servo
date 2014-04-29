@@ -54,13 +54,13 @@ pub trait CallbackContainer {
 
 impl CallbackContainer for CallbackInterface {
     fn callback(&self) -> *JSObject {
-        *self.object.callback.deref()
+        *self.object.callback
     }
 }
 
 impl CallbackContainer for CallbackFunction {
     fn callback(&self) -> *JSObject {
-        *self.object.callback.deref()
+        *self.object.callback
     }
 }
 
