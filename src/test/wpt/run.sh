@@ -13,7 +13,6 @@ test -d _virtualenv || virtualenv _virtualenv
 test -d $servo_root/src/test/wpt/metadata || mkdir -p $servo_root/src/test/wpt/metadata
 test -d $servo_root/src/test/wpt/prefs || mkdir -p $servo_root/src/test/wpt/prefs
 source _virtualenv/bin/activate
-(python -c "import html5lib" &>/dev/null) || pip install html5lib
 (python -c "import wptrunner"  &>/dev/null) || pip install wptrunner
 
 python $servo_root/src/test/wpt/run.py --binary $objdir/../servo --log-mach - "$@"
