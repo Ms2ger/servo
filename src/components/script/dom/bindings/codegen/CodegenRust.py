@@ -742,13 +742,11 @@ def getJSToNativeConversionTemplate(type, descriptorProvider, failureCode=None,
 
         declType = CGGeneric('%s::%s' % (type.unroll().module(), type.unroll().identifier.name))
 
-        conversion = CGIndenter(CGCallbackTempRoot(declType.define()))
+        conversion = CGCallbackTempRoot(declType.define())
 
         if type.nullable():
             declType = CGTemplatedType("Option", declType)
             conversion = CGWrapper(conversion, pre="Some(", post=")")
-
-        conversion = conversion.define()
 
         if allowTreatNonCallableAsNull and type.treatNonCallableAsNull():
             haveCallable = "JS_ObjectIsCallable(cx, ${val}.to_object()) != 0"
@@ -757,12 +755,9 @@ def getJSToNativeConversionTemplate(type, descriptorProvider, failureCode=None,
             if defaultValue is not None:
                 assert(isinstance(defaultValue, IDLNullValue))
                 haveCallable = "${haveValue} && " + haveCallable
-            template = (
-                ("if %s {\n" % haveCallable) +
-                conversion +
-                "} else {\n"
-                "  None\n"
-                "}")
+                template = CGIfElseWrapper(haveCallable,
+                                           conversion,
+                                           CGGeneric("None")).define()
         elif allowTreatNonCallableAsNull and type.treatNonObjectAsNull():
             if not isDefinitelyObject:
                 haveObject = "${val}.is_object()"
@@ -770,17 +765,16 @@ def getJSToNativeConversionTemplate(type, descriptorProvider, failureCode=None,
                     assert(isinstance(defaultValue, IDLNullValue))
                     haveObject = "${haveValue} && " + haveObject
                 template = CGIfElseWrapper(haveObject,
-                                           CGGeneric(conversion),
+                                           conversion,
                                            CGGeneric("None")).define()
             else:
                 template = conversion
         else:
+            template = CGIfElseWrapper("JS_ObjectIsCallable(cx, ${val}.to_object()) != 0",
+                                       conversion,
+                                       onFailureNotCallable(failureCode)).define()
             template = wrapObjectTemplate(
-                "if JS_ObjectIsCallable(cx, ${val}.to_object()) != 0 {\n" +
-                conversion +
-                "} else {\n"
-                "%s"
-                "}" % CGIndenter(onFailureNotCallable(failureCode)).define(),
+                template,
                 type,
                 "nullptr",
                 failureCode)
@@ -1677,8 +1671,7 @@ class CGCallbackTempRoot(CGGeneric):
         define = """{
   let tempRoot: *JSObject = ${val}.to_object();
   %s
-}
-""" % val
+}""" % val
         CGGeneric.__init__(self, define)
 
 def getRelevantProviders(descriptor, config):
