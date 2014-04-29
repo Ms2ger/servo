@@ -1853,7 +1853,7 @@ class CGWrapMethod(CGAbstractMethod):
     def definition_body(self):
         if not self.descriptor.createGlobal:
             return """
-  let scope = aScope.reflector().get_jsobject();
+  let scope = aScope.get().reflector().get_jsobject();
   assert!(scope.is_not_null());
   assert!(((*JS_GetClass(scope)).flags & JSCLASS_IS_GLOBAL) != 0);
 
@@ -1863,7 +1863,7 @@ class CGWrapMethod(CGAbstractMethod):
 
 %s
 
-  raw.mut_reflector().set_jsobject(obj);
+  raw.get_mut().mut_reflector().set_jsobject(obj);
 
   return raw;""" % CreateBindingJSObject(self.descriptor, "scope")
         else:
@@ -1871,7 +1871,7 @@ class CGWrapMethod(CGAbstractMethod):
 %s
   let proto = GetProtoObject(aCx, obj, obj);
   JS_SetPrototype(aCx, obj, proto);
-  raw.mut_reflector().set_jsobject(obj);
+  raw.get_mut().mut_reflector().set_jsobject(obj);
   return raw;""" % CreateBindingJSObject(self.descriptor)
 
 
@@ -2161,7 +2161,7 @@ class CGDefineDOMInterfaceMethod(CGAbstractMethod):
        self.descriptor.name)
 
         return (body + """  let cx = (**js_info.js_context).ptr;
-  let global = window.reflector().get_jsobject();
+  let global = window.get().reflector().get_jsobject();
   assert!(global.is_not_null());
   assert!(%s(cx, global, global).is_not_null());""" % (getter))
 
@@ -3860,7 +3860,7 @@ class CGClassConstructHook(CGAbstractExternMethod):
     def generate_code(self):
         preamble = """
   let global = global_object_for_js_object(JS_CALLEE(cx, &*vp).to_object());
-  let obj = global.reflector().get_jsobject();
+  let obj = global.get().reflector().get_jsobject();
 """
         nativeName = MakeNativeName(self._ctor.identifier.name)
         callGenerator = CGMethodCall(["&global"], nativeName, True,
@@ -4778,7 +4778,7 @@ class CGCallback(CGClass):
                 "errorReturn" : method.getDefaultRetval(),
                 "callArgs" : ", ".join(argnamesWithoutThis),
                 "methodName": 'self.' + method.name,
-                "cxProvider": args[2].name #XXXjdm There's no guarantee that this is a DOM object
+                "cxProvider": "%s.get()" % args[2].name #XXXjdm There's no guarantee that this is a DOM object
                 })
         return [ClassMethod(method.name+'_', method.returnType, args,
                             bodyInHeader=True,

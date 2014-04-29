@@ -51,7 +51,7 @@ impl<T: Reflectable> JS<T> {
     }
 }
 
-impl<T: Reflectable> Reflectable for JS<T> {
+/*impl<T: Reflectable> Reflectable for JS<T> {
     fn reflector<'a>(&'a self) -> &'a Reflector {
         self.get().reflector()
     }
@@ -59,7 +59,7 @@ impl<T: Reflectable> Reflectable for JS<T> {
     fn mut_reflector<'a>(&'a mut self) -> &'a mut Reflector {
         self.get_mut().mut_reflector()
     }
-}
+}*/
 
 impl<T> JS<T> {
     pub fn get<'a>(&'a self) -> &'a T {

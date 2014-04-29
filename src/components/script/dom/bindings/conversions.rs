@@ -255,7 +255,7 @@ impl FromJSValConvertible<StringificationBehavior> for DOMString {
 
 impl<T: Reflectable> ToJSValConvertible for JS<T> {
     fn to_jsval(&self, cx: *JSContext) -> JSVal {
-        let obj = self.reflector().get_jsobject();
+        let obj = self.get().reflector().get_jsobject();
         assert!(obj.is_not_null());
         let mut value = ObjectValue(unsafe { &*obj });
         if unsafe { JS_WrapValue(cx, &mut value as *mut JSVal as *JSVal) } == 0 {
