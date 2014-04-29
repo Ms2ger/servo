@@ -3752,14 +3752,15 @@ if expando.is_not_null() {
             //"Should not have a XrayWrapper here");
 
 %s
-let mut found = false;
-if !GetPropertyOnPrototype(cx, proxy, id, &mut found, vp as *JSVal) {
-  return 0;
+match GetPropertyOnPrototype(cx, proxy, id) {
+    Ok(Some(value)) => {
+        *vp = value;
+        return 1;
+    },
+    Ok(None) => (),
+    Err(_) => return 0,
 }
 
-if found {
-  return 1;
-}
 %s
 *vp = UndefinedValue();
 return 1;""" % (getIndexedOrExpando, getNamed)

@@ -420,27 +420,29 @@ impl Reflector {
     }
 }
 
-pub fn GetPropertyOnPrototype(cx: *JSContext, proxy: *JSObject, id: jsid, found: *mut bool,
-                              vp: *JSVal) -> bool {
+pub fn GetPropertyOnPrototype(cx: *JSContext, proxy: *JSObject, id: jsid) -> Result<Option<JSVal>, ()> {
     unsafe {
-      //let proto = GetObjectProto(proxy);
-      let proto = JS_GetPrototype(proxy);
-      if proto.is_null() {
-          *found = false;
-          return true;
-      }
-      let hasProp = 0;
-      if JS_HasPropertyById(cx, proto, id, &hasProp) == 0 {
-          return false;
-      }
-      *found = hasProp != 0;
-      let no_output = vp.is_null();
-      if hasProp == 0 || no_output {
-          return true;
-      }
+        let proto = JS_GetPrototype(proxy);
+        if proto.is_null() {
+            return Ok(None);
+        }
 
-      JS_ForwardGetPropertyTo(cx, proto, id, proxy, vp) != 0
-  }
+        let hasProp = 0;
+        if JS_HasPropertyById(cx, proto, id, &hasProp) == 0 {
+            return Err(());
+        }
+
+        if hasProp == 0 {
+            return Ok(None);
+        }
+
+        let value = NullValue();
+        if JS_ForwardGetPropertyTo(cx, proto, id, proxy, &value) == 0 {
+            return Err(());
+        }
+
+        Ok(Some(value))
+    }
 }
 
 pub fn GetArrayIndexFromId(_cx: *JSContext, id: jsid) -> Option<u32> {
@@ -559,10 +561,24 @@ pub fn get_dictionary_property(cx: *JSContext,
     Ok(Some(value))
 }
 
-pub fn HasPropertyOnPrototype(cx: *JSContext, proxy: *JSObject, id: jsid) -> bool {
-    //  MOZ_ASSERT(js::IsProxy(proxy) && js::GetProxyHandler(proxy) == handler);
-    let mut found = false;
-    return !GetPropertyOnPrototype(cx, proxy, id, &mut found, ptr::null()) || found;
+pub fn HasPropertyOnPrototype(cx: *JSContext, proxy: *JSObject, id: jsid) -> Result<bool, ()> {
+    unsafe {
+        let proto = JS_GetPrototype(proxy);
+        if proto.is_null() {
+            return Ok(false);
+        }
+
+        let hasProp = 0;
+        if JS_HasPropertyById(cx, proto, id, &hasProp) == 0 {
+            return Err(());
+        }
+
+        if hasProp == 0 {
+            return Ok(false);
+        }
+
+        Ok(true)
+    }
 }
 
 pub fn IsConvertibleToCallbackInterface(cx: *JSContext, obj: *JSObject) -> bool {
