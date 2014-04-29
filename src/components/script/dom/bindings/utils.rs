@@ -205,10 +205,10 @@ pub struct DOMJSClass {
     pub dom_class: DOMClass
 }
 
-pub fn GetProtoOrIfaceArray(global: *JSObject) -> **JSObject {
+pub fn GetProtoOrIfaceArray<'a>(global: &'a JSObject) -> &'a [*JSObject, ..PrototypeList::id::IDCount as uint] {
     unsafe {
-        /*assert ((*JS_GetClass(global)).flags & JSCLASS_DOM_GLOBAL) != 0;*/
-        JS_GetReservedSlot(global, DOM_PROTOTYPE_SLOT).to_private() as **JSObject
+        assert!(((*JS_GetClass(global)).flags & JSCLASS_DOM_GLOBAL) != 0);
+        cast::transmute(JS_GetReservedSlot(global, DOM_PROTOTYPE_SLOT).to_private())
     }
 }
 

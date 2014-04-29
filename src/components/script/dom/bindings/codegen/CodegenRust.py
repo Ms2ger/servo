@@ -2057,12 +2057,9 @@ class CGGetPerInterfaceObject(CGAbstractMethod):
      wrapper and aGlobal is the sandbox's global.
    */
 
-  /* Make sure our global is sane.  Hopefully we can remove this sometime */
-  /*if ((*JS_GetClass(aGlobal)).flags & JSCLASS_DOM_GLOBAL) == 0 {
-    return ptr::null();
-  }*/
   /* Check to see whether the interface objects are already installed */
-  let protoOrIfaceArray: *mut *JSObject = GetProtoOrIfaceArray(aGlobal) as *mut *JSObject;
+  assert!(aGlobal.is_not_null());
+  let protoOrIfaceArray: *mut *JSObject = GetProtoOrIfaceArray(&*aGlobal) as *mut *JSObject;
   let cachedObject: *JSObject = *protoOrIfaceArray.offset(%s as int);
   if cachedObject.is_null() {
     let tmp: *JSObject = CreateInterfaceObjects(aCx, aGlobal, aReceiver);
