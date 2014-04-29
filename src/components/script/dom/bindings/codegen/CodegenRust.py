@@ -740,12 +740,15 @@ def getJSToNativeConversionTemplate(type, descriptorProvider, failureCode=None,
         assert not type.treatNonObjectAsNull() or type.nullable()
         assert not type.treatNonObjectAsNull() or not type.treatNonCallableAsNull()
 
-        name = '%s::%s' % (type.unroll().module(), type.unroll().identifier.name)
+        declType = CGGeneric('%s::%s' % (type.unroll().module(), type.unroll().identifier.name))
+
+        conversion = CGIndenter(CGCallbackTempRoot(declType.define()))
+
         if type.nullable():
-            declType = CGGeneric("Option<%s>" % name);
-        else:
-            declType = CGGeneric(name)
-        conversion = CGIndenter(CGCallbackTempRoot(name, isOptional=type.nullable())).define()
+            declType = CGTemplatedType("Option", declType)
+            conversion = CGWrapper(conversion, pre="Some(", post=")")
+
+        conversion = conversion.define()
 
         if allowTreatNonCallableAsNull and type.treatNonCallableAsNull():
             haveCallable = "JS_ObjectIsCallable(cx, ${val}.to_object()) != 0"
@@ -1669,15 +1672,8 @@ class CGGeneric(CGThing):
         return self.text
 
 class CGCallbackTempRoot(CGGeneric):
-    def __init__(self, name, isOptional=False):
+    def __init__(self, name):
         val = "%s::new(tempRoot)" % name
-        if isOptional:
-            val = "Some(%s)" % val
-#        define = """{ // Scope for tempRoot
-#  JS::Rooted<JSObject*> tempRoot(cx, &${val}.toObject());
-#  ${declName} = new %s(tempRoot, mozilla::dom::GetIncumbentGlobal());
-#}
-#""" % name
         define = """{
   let tempRoot: *JSObject = ${val}.to_object();
   %s
