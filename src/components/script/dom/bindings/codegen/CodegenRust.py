@@ -4318,7 +4318,9 @@ class CGBindingRoot(CGThing):
         cgthings.extend([CGDescriptor(x) for x in descriptors])
 
         # Do codegen for all the callback interfaces.
-        cgthings.extend([CGCallbackInterface(x) for x in callbackDescriptors])
+        cgthings.extend(CGList([CGCallbackInterface(x),
+                                CGCallbackFunctionImpl(x)], "\n")
+                        for x in callbackDescriptors)
 
         # And make sure we have the right number of newlines at the end
         curr = CGWrapper(CGList(cgthings, "\n\n"), post="\n\n")
