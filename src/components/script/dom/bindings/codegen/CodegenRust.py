@@ -4606,7 +4606,6 @@ class CGNativeMember(ClassMethod):
             if isMember:
                 declType = "JS::Value"
             else:
-                #declType = "JS::Handle<JS::Value>"
                 declType = "JSVal"
             return declType, False, False
 
@@ -5077,7 +5076,6 @@ class CallCallback(CallbackMethod):
         return "aThisObj"
 
     def getCallableDecl(self):
-        #return "JS::Rooted<JS::Value> callable(cx, JS::ObjectValue(*mCallback));\n"
         return "let callable = ObjectValue(unsafe {&*self.parent.callback()});\n";
 
 class CallbackOperationBase(CallbackMethod):
