@@ -765,8 +765,8 @@ def getJSToNativeConversionTemplate(type, descriptorProvider, failureCode=None,
                                        onFailureNotCallable(failureCode)).define()
             template = wrapObjectTemplate(
                 template,
+                isDefinitelyObject,
                 type,
-                "nullptr",
                 failureCode)
         return (template, declType, isOptional, None)
 
