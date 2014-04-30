@@ -4954,17 +4954,8 @@ class CallbackMember(CGNativeMember):
             jsvalIndex = "%d" % i
             if arg.optional and not arg.defaultValue:
                 argval += ".unwrap()"
-        if arg.type.isDOMString():
-            # XPConnect string-to-JS conversion wants to mutate the string.  So
-            # let's give it a string it can mutate
-            # XXXbz if we try to do a sequence of strings, this will kinda fail.
-            result = "mutableStr"
-            prepend = "let mut mutableStr: DOMString = %s;\n" % argval
-        else:
-            result = argval
-            prepend = ""
 
-        conversion = prepend + wrapForType("*argv.get_mut(%s)" % jsvalIndex,
+        conversion = wrapForType("*argv.get_mut(%s)" % jsvalIndex,
                 result=result,
                 successCode="continue;" if arg.variadic else "break;")
         if arg.variadic:
