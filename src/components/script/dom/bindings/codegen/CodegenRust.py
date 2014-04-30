@@ -752,7 +752,7 @@ def getJSToNativeConversionTemplate(type, descriptorProvider, failureCode=None,
             if not isDefinitelyObject:
                 haveObject = "${val}.is_object()"
                 if defaultValue is not None:
-                    assert(isinstance(defaultValue, IDLNullValue))
+                    assert isinstance(defaultValue, IDLNullValue)
                     haveObject = "${haveValue} && " + haveObject
                 template = CGIfElseWrapper(haveObject,
                                            conversion,
