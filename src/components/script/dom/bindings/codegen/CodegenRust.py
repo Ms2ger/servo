@@ -3010,8 +3010,7 @@ class ClassMethod(ClassItem):
     def __init__(self, name, returnType, args, inline=False, static=False,
                  virtual=False, const=False, bodyInHeader=False,
                  templateArgs=None, visibility='public', body=None,
-                 breakAfterReturnDecl="\n",
-                 breakAfterSelf="\n", override=False):
+                 override=False):
         """
         override indicates whether to flag the method as MOZ_OVERRIDE
         """
@@ -3025,8 +3024,6 @@ class ClassMethod(ClassItem):
         self.bodyInHeader = True
         self.templateArgs = templateArgs
         self.body = body
-        self.breakAfterReturnDecl = breakAfterReturnDecl
-        self.breakAfterSelf = breakAfterSelf
         self.override = override
         ClassItem.__init__(self, name, visibility)
 
@@ -3054,14 +3051,12 @@ class ClassMethod(ClassItem):
         args = ', '.join([a.declare() for a in self.args])
         if self.bodyInHeader:
             body = CGIndenter(CGGeneric(self.getBody())).define()
-            body = ' {\n' + body + '\n}'
+            body = ' {\n' + body + '\n}\n'
         else:
            body = ';'
 
-        return string.Template("${decorators}%s"
-                               "${visibility}fn ${name}${templateClause}(${args})${returnType}${const}${override}${body}%s" %
-                               (self.breakAfterReturnDecl, self.breakAfterSelf)
-                               ).substitute({
+        return string.Template("${decorators}\n"
+                               "${visibility}fn ${name}${templateClause}(${args})${returnType}${const}${override}${body}").substitute({
                 'templateClause': templateClause,
                 'decorators': self.getDecorators(True),
                 'returnType': (" -> %s" % self.returnType) if self.returnType else "",
@@ -3390,7 +3385,7 @@ class CGClass(CGThing):
 
         assert len(self.bases) == 1 #XXjdm Can we support multiple inheritance?
 
-        result += '{\n%s\n' % self.indent
+        result += ' {\n%s\n' % self.indent
 
         if self.bases:
             self.members = [ClassMember("parent", self.bases[0].name, "pub")] + self.members
@@ -4407,7 +4402,6 @@ class CGNativeMember(ClassMethod):
         self.passJSBitsAsNeeded = passJSBitsAsNeeded
         self.jsObjectsArePtr = jsObjectsArePtr
         self.variadicIsSequence = variadicIsSequence
-        breakAfterSelf = "\n" if breakAfter else ""
         ClassMethod.__init__(self, name,
                              self.getReturnType(signature[0], False),
                              self.getArgs(signature[0], signature[1]),
@@ -4416,8 +4410,6 @@ class CGNativeMember(ClassMethod):
                              # have a non-void return type, as const.
                              const=(not member.isStatic() and member.isAttr() and
                                     not signature[0].isVoid()),
-                             breakAfterReturnDecl=" ",
-                             breakAfterSelf=breakAfterSelf,
                              visibility=visibility)
 
     def getReturnType(self, type, isMember):
@@ -4921,7 +4913,7 @@ class CallbackMember(CGNativeMember):
                                 jsObjectsArePtr=True)
         # We have to do all the generation of our body now, because
         # the caller relies on us throwing if we can't manage it.
-        self.exceptionCode= "return Err(FailureUnknown);\n"
+        self.exceptionCode= "return Err(FailureUnknown);"
         self.body = self.getImpl()
 
     def getImpl(self):
@@ -4991,9 +4983,9 @@ class CallbackMember(CGNativeMember):
         argConversions.reverse();
         # Wrap each one in a scope so that any locals it has don't leak out, and
         # also so that we can just "break;" for our successCode.
-        argConversions = [CGWrapper(CGIndenter(CGGeneric(c)),
+        argConversions = [CGWrapper(CGIndenter(CGWrapper(CGGeneric(c), post="\nbreak;\n")),
                                     pre="loop {\n",
-                                    post="\nbreak;}\n")
+                                    post="}\n")
                           for c in argConversions]
         if self.argCount > 0:
             argConversions.insert(0, self.getArgcDecl())
