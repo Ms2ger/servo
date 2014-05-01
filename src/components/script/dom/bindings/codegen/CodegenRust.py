@@ -4398,7 +4398,8 @@ class CGNativeMember(ClassMethod):
         elif type.isPrimitive() and type.tag() in builtinNames:
             result = CGGeneric(builtinNames[type.tag()])
             if type.nullable():
-                result = CGTemplatedType("Nullable", result)
+                raise TypeError("Nullable primitives are not supported here.")
+
             typeDecl, template = result.define(), "return Ok(${declName});"
         elif type.isDOMString():
             if isMember:
