@@ -126,9 +126,7 @@ impl<'a> EventTargetHelpers for JSRef<'a, EventTarget> {
             Some(idx) => {
                 match listener {
                     Some(listener) => entries.get_mut(idx).listener = Inline(listener),
-                    None => {
-                        entries.remove(idx);
-                    }
+                    None => entries.remove(idx),
                 }
             }
             None => {
