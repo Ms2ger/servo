@@ -211,42 +211,42 @@ $(eval $(call DEF_SUBMODULE_RULES,$(submodule))))
 
 DONE_SUBMODULES = $(foreach submodule,$(SUBMODULES),$(DONE_$(submodule)))
 
-RFLAGS_macros = $(strip $(CFG_RUSTC_FLAGS)) $(addprefix -L $(B)src/,$(DEPS_SUBMODULES))
+RFLAGS_macros = $(addprefix -L $(B)src/,$(DEPS_SUBMODULES))
 SRC_macros = $(call rwildcard,$(S)src/components/macros/,*.rs)
 CRATE_macros = $(S)src/components/macros/macros.rs
 DONE_macros = $(B)src/components/macros/libmacros.dummy
 
 DEPS_macros = $(CRATE_macros) $(SRC_macros) $(DONE_SUBMODULES)
 
-RFLAGS_util = $(strip $(CFG_RUSTC_FLAGS)) $(addprefix -L $(B)src/,$(DEPS_SUBMODULES))
+RFLAGS_util = $(addprefix -L $(B)src/,$(DEPS_SUBMODULES))
 SRC_util = $(call rwildcard,$(S)src/components/util/,*.rs)
 CRATE_util = $(S)src/components/util/util.rs
 DONE_util = $(B)src/components/util/libutil.dummy
 
 DEPS_util = $(CRATE_util) $(SRC_util) $(DONE_SUBMODULES)
 
-RFLAGS_net = $(strip $(CFG_RUSTC_FLAGS)) $(addprefix -L $(B)src/,$(DEPS_SUBMODULES)) -L $(B)src/components/util
+RFLAGS_net = $(addprefix -L $(B)src/,$(DEPS_SUBMODULES)) -L $(B)src/components/util
 SRC_net = $(call rwildcard,$(S)src/components/net/,*.rs)
 CRATE_net = $(S)src/components/net/net.rs
 DONE_net = $(B)src/components/net/libnet.dummy
 
 DEPS_net = $(CRATE_net) $(SRC_net) $(DONE_SUBMODULES) $(DONE_util)
 
-RFLAGS_msg = $(strip $(CFG_RUSTC_FLAGS)) $(addprefix -L $(B)src/,$(DEPS_SUBMODULES))
+RFLAGS_msg = $(addprefix -L $(B)src/,$(DEPS_SUBMODULES))
 SRC_msg = $(call rwildcard,$(S)src/components/msg/,*.rs)
 CRATE_msg = $(S)src/components/msg/msg.rs
 DONE_msg = $(B)src/components/msg/libmsg.dummy
 
 DEPS_msg = $(CRATE_msg) $(SRC_msg) $(DONE_SUBMODULES)
 
-RFLAGS_gfx = $(strip $(CFG_RUSTC_FLAGS)) $(addprefix -L $(B)src/,$(DEPS_SUBMODULES)) -L $(B)src/components/util -L $(B)src/components/style -L $(B)src/components/net -L $(B)src/components/msg -L$(B)src/components/macros
+RFLAGS_gfx = $(addprefix -L $(B)src/,$(DEPS_SUBMODULES)) -L $(B)src/components/util -L $(B)src/components/style -L $(B)src/components/net -L $(B)src/components/msg -L$(B)src/components/macros
 SRC_gfx = $(call rwildcard,$(S)src/components/gfx/,*.rs)
 CRATE_gfx = $(S)src/components/gfx/gfx.rs
 DONE_gfx = $(B)src/components/gfx/libgfx.dummy
 
 DEPS_gfx = $(CRATE_gfx) $(SRC_gfx) $(DONE_SUBMODULES) $(DONE_util) $(DONE_style) $(DONE_net) $(DONE_msg) $(DONE_macros)
 
-RFLAGS_script = $(strip $(CFG_RUSTC_FLAGS)) $(addprefix -L $(B)src/,$(DEPS_SUBMODULES)) -L $(B)src/components/util -L $(B)src/components/style -L $(B)src/components/net -L $(B)src/components/msg -L$(B)src/components/macros
+RFLAGS_script = $(addprefix -L $(B)src/,$(DEPS_SUBMODULES)) -L $(B)src/components/util -L $(B)src/components/style -L $(B)src/components/net -L $(B)src/components/msg -L$(B)src/components/macros
 
 BINDINGS_SRC = $(S)src/components/script/dom/bindings/codegen
 WEBIDLS_SRC = $(S)src/components/script/dom/webidls
@@ -261,7 +261,7 @@ DONE_script = $(B)src/components/script/libscript.dummy
 
 DEPS_script = $(CRATE_script) $(SRC_script) $(DONE_SUBMODULES) $(DONE_util) $(DONE_style) $(DONE_net) $(DONE_msg) $(DONE_macros)
 
-RFLAGS_style = $(strip $(CFG_RUSTC_FLAGS)) $(addprefix -L $(B)src/,$(DEPS_SUBMODULES)) -L $(B)src/components/util
+RFLAGS_style = $(addprefix -L $(B)src/,$(DEPS_SUBMODULES)) -L $(B)src/components/util
 MAKO_ZIP = $(S)src/components/style/Mako-0.9.1.zip
 MAKO_style = $(S)src/components/style/properties.rs
 MAKO_SRC_style = $(MAKO_style).mako
@@ -271,7 +271,7 @@ DONE_style = $(B)src/components/style/libstyle.dummy
 
 DEPS_style = $(CRATE_style) $(SRC_style) $(DONE_SUBMODULES) $(DONE_util)
 
-RFLAGS_servo = $(strip $(CFG_RUSTC_FLAGS)) $(addprefix -L $(B)src/,$(DEPS_SUBMODULES)) -L $(B)src/components/gfx -L $(B)src/components/util -L $(B)src/components/net -L $(B)src/components/script -L $(B)src/components/style -L $(B)src/components/msg -L$(B)src/components/macros
+RFLAGS_servo = $(addprefix -L $(B)src/,$(DEPS_SUBMODULES)) -L $(B)src/components/gfx -L $(B)src/components/util -L $(B)src/components/net -L $(B)src/components/script -L $(B)src/components/style -L $(B)src/components/msg -L$(B)src/components/macros
 
 SRC_servo = $(call rwildcard,$(S)src/components/main/,*.rs)
 CRATE_servo = $(S)src/components/main/servo.rs
@@ -294,7 +294,9 @@ all: servo
 define DEF_LIB_CRATE_RULES
 $$(DONE_$(1)):	$$(DEPS_$(1))
 	@$$(call E, compile: $$@)
-	$$(Q)$$(RUSTC) $$(RFLAGS_$(1)) --out-dir $$(B)src/components/$(1) $$< && touch $$@
+	$$(Q)$$(RUSTC) $$(strip $(CFG_RUSTC_FLAGS)) $$(RFLAGS_$(1)) --out-dir $$(B)src/components/$(1) $$< && touch $$@
+	@$$(call E, rustdoc: $$<)
+	$$(CFG_RUST_HOME)/bin/rustdoc $$(RFLAGS_$(1)) --output $$(B)src/components/$(1) $$<
 endef
 
 $(foreach lib_crate,$(SERVO_LIB_CRATES),\
@@ -340,17 +342,17 @@ $(BINDINGS_SRC)/ParserResults.pkl: $(globalgen_dependencies) \
 ifneq ($(CFG_OSTYPE),linux-androideabi)
 servo:	$(DEPS_servo)
 	@$(call E, compile: $@)
-	$(Q)$(RUSTC) $(RFLAGS_servo) -o $@ $<
+	$(Q)$(RUSTC) $(strip $(CFG_RUSTC_FLAGS)) $(RFLAGS_servo) -o $@ $<
 
 libservo.dummy: $(DEPS_servo)
 	@$(call E, compile: $@)
-	$(Q)$(RUSTC) $(RFLAGS_servo) $< --crate-type dylib,rlib
+	$(Q)$(RUSTC) $(strip $(CFG_RUSTC_FLAGS)) $(RFLAGS_servo) $< --crate-type dylib,rlib
 	touch libservo.dummy
 
 else
 servo:  $(DEPS_servo)
 	@$(call E, compile: $@)
-	$(Q)$(RUSTC) $(RFLAGS_servo) $< -o libservo.so --crate-type dylib
+	$(Q)$(RUSTC) $(strip $(CFG_RUSTC_FLAGS)) $(RFLAGS_servo) $< -o libservo.so --crate-type dylib
 	touch servo
 endif
 
