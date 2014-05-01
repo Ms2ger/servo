@@ -1617,11 +1617,6 @@ class CGCallbackTempRoot(CGGeneric):
 }""" % val
         CGGeneric.__init__(self, define)
 
-def getRelevantProviders(descriptor, config):
-    if descriptor is not None:
-        return [descriptor]
-    return [config.getDescriptorProvider()]
-
 
 def getAllTypes(descriptors, dictionaries, callbacks):
     """
@@ -1674,9 +1669,9 @@ def UnionTypes(descriptors, dictionaries, callbacks, config):
             continue
         name = str(t)
         if not name in unionStructs:
-            providers = getRelevantProviders(descriptor, config)
+            provider = descriptor or config.getDescriptorProvider()
             # FIXME: Unions are broken in workers.  See bug 809899.
-            unionStructs[name] = CGList([CGUnionStruct(t, providers[0]), CGUnionConversionStruct(t, providers[0])])
+            unionStructs[name] = CGList([CGUnionStruct(t, provider), CGUnionConversionStruct(t, provider)])
             #XXXjdm Haven't looked into what this means, but in practice
             #       we get duplicate enum definitions.
             #owningUnionStructs[name] = CGUnionStruct(t, providers[0],
