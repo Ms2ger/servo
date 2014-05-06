@@ -1,0 +1,11 @@
+<script src=harness.js></script>
+<iframe src=iframe.html></iframe>
+<script>
+setTimeout(function() {}, 0);
+document.addEventListener("test", {handleEvent: function(e) { e.type; }});
+window.addEventListener("load", {handleEvent: function(e) { e.type; }});
+document.addEventListener("test", function(e) { e.type; });
+window.addEventListener("load", function(e) { e.type; });
+document.dispatchEvent(new Event("test"));
+finish();
+</script>
