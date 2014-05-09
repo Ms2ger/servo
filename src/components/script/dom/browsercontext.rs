@@ -4,7 +4,7 @@
 
 use dom::bindings::js::{JS, JSRef, Temporary};
 use dom::bindings::trace::Traceable;
-use dom::bindings::utils::Reflectable;
+use dom::bindings::utils::{Reflectable, object_handle};
 use dom::document::Document;
 use dom::window::Window;
 
@@ -55,10 +55,10 @@ impl BrowserContext {
         let handler = js_info.get_ref().dom_static.windowproxy_handler;
         assert!(handler.deref().is_not_null());
 
-        let parent = win.deref().reflector().get_jsobject();
+        let obj = win.deref().reflector().get_jsobject();
         let cx = js_info.get_ref().js_context.deref().deref().ptr;
-        let wrapper = with_compartment(cx, parent, || unsafe {
-            WrapperNew(cx, parent, *handler.deref())
+        let wrapper = with_compartment(cx, obj, || unsafe {
+            WrapperNew(cx, object_handle(&obj), object_handle(&ptr::mut_null()), *handler.deref())
         });
         assert!(wrapper.is_not_null());
         wrapper
@@ -81,6 +81,7 @@ impl SessionHistoryEntry {
 }
 
 static proxy_handler: ProxyTraps = ProxyTraps {
+    preventExtensions: None,
     getPropertyDescriptor: None,
     getOwnPropertyDescriptor: None,
     defineProperty: None,
@@ -95,19 +96,16 @@ static proxy_handler: ProxyTraps = ProxyTraps {
     keys: 0 as *u8,
     iterate: None,
 
+    isExtensible: None,
     call: None,
     construct: None,
     nativeCall: 0 as *u8,
     hasInstance: None,
-    typeOf: None,
     objectClassIs: None,
-    obj_toString: None,
     fun_toString: None,
     //regexp_toShared: 0 as *u8,
     defaultValue: None,
-    iteratorNext: None,
     finalize: None,
-    getElementIfPresent: None,
     getPrototypeOf: None,
     trace: None
 };

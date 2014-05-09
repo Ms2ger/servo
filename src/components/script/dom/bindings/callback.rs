@@ -7,6 +7,7 @@ use dom::bindings::trace::Traceable;
 use dom::bindings::utils::{Reflectable, global_object_for_js_object};
 use js::jsapi::{JSContext, JSObject, JS_WrapObject, JS_ObjectIsCallable};
 use js::jsapi::JS_GetProperty;
+use js::jsapi::{JSMutableHandleValue, JSHandleObject, JSMutableHandleObject};
 use js::jsval::{JSVal, UndefinedValue};
 
 use std::ptr;
@@ -78,7 +79,13 @@ impl CallbackInterface {
     pub fn GetCallableProperty(&self, cx: *mut JSContext, name: &str) -> Result<JSVal, ()> {
         let mut callable = UndefinedValue();
         unsafe {
-            if name.to_c_str().with_ref(|name| JS_GetProperty(cx, self.callback(), name, &mut callable)) == 0 {
+            let callback = JSHandleObject {
+                unnamed_field1: &self.callback(), // XXX unrooted
+            };
+            let callablehandle = JSMutableHandleValue {
+                unnamed_field1: &mut callable,
+            };
+            if name.to_c_str().with_ref(|name| JS_GetProperty(cx, callback, name, callablehandle)) == 0 {
                 return Err(());
             }
 
@@ -97,13 +104,15 @@ pub fn WrapCallThisObject<T: Reflectable>(cx: *mut JSContext,
     let mut obj = p.reflector().get_jsobject();
     assert!(obj.is_not_null());
 
+    let obj = JSMutableHandleObject {
+        unnamed_field1: &mut obj,
+    };
     unsafe {
-        if JS_WrapObject(cx, &mut obj) == 0 {
+        if JS_WrapObject(cx, obj) == 0 {
             return ptr::mut_null();
         }
+        return *obj.unnamed_field1;
     }
-
-    return obj;
 }
 
 pub struct CallSetup {

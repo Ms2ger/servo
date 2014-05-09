@@ -24,6 +24,7 @@ extern crate layers;
 extern crate opengles;
 extern crate png;
 extern crate rustuv;
+#[link_args = "-ljs_static"]
 extern crate script;
 #[phase(syntax)]
 extern crate servo_macros = "macros";
@@ -164,6 +165,10 @@ pub fn run(opts: opts::Opts) {
     pool_config.event_loop_factory = rustuv::event_loop;
     let mut pool = green::SchedPool::new(pool_config);
 
+    unsafe {
+        js::jsapi::JS_Init();
+    }
+
     let (compositor_port, compositor_chan) = CompositorChan::new();
     let profiler_chan = Profiler::create(opts.profiler_period);
 
@@ -217,5 +222,9 @@ pub fn run(opts: opts::Opts) {
                            profiler_chan);
 
     pool.shutdown();
+
+    unsafe {
+        js::jsapi::JS_ShutDown();
+    }
 }
 

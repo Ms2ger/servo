@@ -5,10 +5,9 @@
 use dom::bindings::js::JS;
 use dom::bindings::utils::{Reflectable, Reflector};
 
-use js::jsapi::{JSObject, JSTracer, JS_CallTracer, JSTRACE_OBJECT};
+use js::jsapi::{JSObject, JSTracer, JS_CallValueTracer, JS_CallObjectTracer};
 use js::jsval::JSVal;
 
-use libc;
 use std::cast;
 use std::cell::{Cell, RefCell};
 use serialize::{Encodable, Encoder};
@@ -41,18 +40,15 @@ pub trait JSTraceable {
     fn trace(&self, trc: *mut JSTracer);
 }
 
-pub fn trace_jsval(tracer: *mut JSTracer, description: &str, val: JSVal) {
+pub fn trace_jsval(tracer: *mut JSTracer, description: &str, mut val: JSVal) {
     if !val.is_gcthing() {
         return;
     }
 
     unsafe {
         description.to_c_str().with_ref(|name| {
-            (*tracer).debugPrinter = None;
-            (*tracer).debugPrintIndex = -1;
-            (*tracer).debugPrintArg = name as *libc::c_void;
             debug!("tracing value {:s}", description);
-            JS_CallTracer(tracer, val.to_gcthing(), val.trace_kind());
+            JS_CallValueTracer(tracer, &mut val, name);
         });
     }
 }
@@ -61,14 +57,11 @@ pub fn trace_reflector(tracer: *mut JSTracer, description: &str, reflector: &Ref
     trace_object(tracer, description, reflector.get_jsobject())
 }
 
-pub fn trace_object(tracer: *mut JSTracer, description: &str, obj: *mut JSObject) {
+pub fn trace_object(tracer: *mut JSTracer, description: &str, mut obj: *mut JSObject) {
     unsafe {
         description.to_c_str().with_ref(|name| {
-            (*tracer).debugPrinter = None;
-            (*tracer).debugPrintIndex = -1;
-            (*tracer).debugPrintArg = name as *libc::c_void;
             debug!("tracing {:s}", description);
-            JS_CallTracer(tracer, obj as *mut libc::c_void, JSTRACE_OBJECT);
+            JS_CallObjectTracer(tracer, &mut obj, name);
         });
     }
 }
