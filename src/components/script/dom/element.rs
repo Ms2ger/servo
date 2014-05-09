@@ -12,7 +12,7 @@ use dom::bindings::codegen::Bindings::AttrBinding::AttrMethods;
 use dom::bindings::codegen::Bindings::ElementBinding;
 use dom::bindings::codegen::Bindings::ElementBinding::ElementMethods;
 use dom::bindings::codegen::InheritTypes::{ElementDerived, NodeCast};
-use dom::bindings::js::{JS, JSRef, Temporary, TemporaryPushable};
+use dom::bindings::js::{MutNullableJS, JS, JSRef, Temporary, TemporaryPushable};
 use dom::bindings::js::{OptionalSettable, OptionalRootable, Root};
 use dom::bindings::trace::Traceable;
 use dom::bindings::utils::{Reflectable, Reflector};
@@ -39,7 +39,8 @@ use servo_util::namespace::{Namespace, Null};
 use servo_util::str::{DOMString, null_str_as_empty_ref, split_html_space_chars};
 
 use std::ascii::StrAsciiExt;
-use std::cell::{Cell, RefCell};
+use std::cell::RefCell;
+use std::default::Default;
 use std::mem;
 
 #[deriving(Encodable)]
@@ -50,8 +51,8 @@ pub struct Element {
     pub prefix: Option<DOMString>,
     pub attrs: RefCell<Vec<JS<Attr>>>,
     pub style_attribute: Traceable<RefCell<Option<style::PropertyDeclarationBlock>>>,
-    pub attr_list: Cell<Option<JS<AttrList>>>,
-    class_list: Cell<Option<JS<DOMTokenList>>>,
+    pub attr_list: MutNullableJS<AttrList>,
+    class_list: MutNullableJS<DOMTokenList>,
 }
 
 impl ElementDerived for EventTarget {
@@ -154,8 +155,8 @@ impl Element {
             namespace: namespace,
             prefix: prefix,
             attrs: RefCell::new(vec!()),
-            attr_list: Cell::new(None),
-            class_list: Cell::new(None),
+            attr_list: Default::default(),
+            class_list: Default::default(),
             style_attribute: Traceable::new(RefCell::new(None)),
         }
     }
@@ -273,7 +274,7 @@ impl<'a> AttributeHandlers for JSRef<'a, Element> {
         let element: &Element = self.deref();
         let is_html_element = self.html_element_in_html_document();
 
-        element.attrs.borrow().iter().map(|attr| attr.root()).find(|attr| {
+        element.attrs.borrow().iter().map(|attr| *attr.root()).find(|attr| {
             let same_name = if is_html_element {
                 name.to_ascii_lower() == attr.local_name
             } else {
@@ -281,7 +282,7 @@ impl<'a> AttributeHandlers for JSRef<'a, Element> {
             };
 
             same_name && attr.namespace == namespace
-        }).map(|x| Temporary::from_rooted(&*x))
+        }).map(|x| Temporary::from_rooted(&x))
     }
 
     fn set_attribute_from_parser(&self, local_name: DOMString,
@@ -519,11 +520,11 @@ impl<'a> ElementMethods for JSRef<'a, Element> {
     // http://dom.spec.whatwg.org/#dom-element-classlist
     fn ClassList(&self) -> Temporary<DOMTokenList> {
         match self.class_list.get() {
-            Some(class_list) => Temporary::new(class_list),
+            Some(class_list) => class_list,
             None => {
-                let class_list = DOMTokenList::new(self, "class").root();
-                self.class_list.assign(Some(class_list.deref().clone()));
-                Temporary::from_rooted(&*class_list)
+                let class_list = DOMTokenList::new(self, "class");
+                self.class_list.assign(Some(class_list));
+                self.class_list.get().unwrap()
             }
         }
     }
@@ -532,7 +533,7 @@ impl<'a> ElementMethods for JSRef<'a, Element> {
     fn Attributes(&self) -> Temporary<AttrList> {
         match self.attr_list.get() {
             None => (),
-            Some(ref list) => return Temporary::new(list.clone()),
+            Some(list) => return list,
         }
 
         let doc = {
@@ -542,7 +543,7 @@ impl<'a> ElementMethods for JSRef<'a, Element> {
         let window = doc.deref().window.root();
         let list = AttrList::new(&*window, self);
         self.attr_list.assign(Some(list));
-        Temporary::new(self.attr_list.get().get_ref().clone())
+        self.attr_list.get().unwrap()
     }
 
     // http://dom.spec.whatwg.org/#dom-element-getattribute
@@ -884,6 +885,7 @@ impl<'a> VirtualMethods for JSRef<'a, Element> {
 
         match self.get_attribute(Null, "id").root() {
             Some(attr) => {
+                attr.init();
                 let doc = document_from_node(self).root();
                 doc.deref().register_named_element(self, attr.deref().Value());
             }
@@ -901,6 +903,7 @@ impl<'a> VirtualMethods for JSRef<'a, Element> {
 
         match self.get_attribute(Null, "id").root() {
             Some(attr) => {
+                attr.init();
                 let doc = document_from_node(self).root();
                 doc.deref().unregister_named_element(self, attr.deref().Value());
             }

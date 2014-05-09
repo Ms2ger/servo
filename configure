@@ -340,6 +340,7 @@ opt manage-submodules 1 "let the build manage the git submodules"
 opt fast-make 0 "use .gitmodules as timestamp for submodule deps"
 opt debug 0 "build with debugging code and symbols"
 opt debug-skia 0 "build Skia and Azure for debugging (significant performance hit)"
+opt debug-mozjs 0 "build mozjs for debugging"
 opt tree-rust 0 "build in-tree rust compiler"
 valopt local-rust-root "" "set prefix for local rust binary"
 valopt target "${DEFAULT_TARGET}" "target to be compiled"
@@ -602,6 +603,7 @@ putvar CFG_LOCAL_RUST_ROOT
 putvar CFG_ENABLE_TREE_RUST
 putvar CFG_ENABLE_DEBUG
 putvar CFG_ENABLE_DEBUG_SKIA
+putvar CFG_ENABLE_DEBUG_MOZJS
 
 msg
 copy_if_changed ${CFG_SRC_DIR}Makefile.in ${CFG_BUILD_HOME}Makefile
@@ -740,7 +742,10 @@ do
                 CONFIGURE_ARGS="${CONFIGURE_ARGS} --with-android-ndk=${CFG_ANDROID_NDK_PATH}"
                 CONFIGURE_ARGS="${CONFIGURE_ARGS} --with-android-toolchain=${CFG_ANDROID_CROSS_PATH}"
             fi
-            CONFIGURE_ARGS="${CONFIGURE_ARGS} --enable-gczeal"
+            CONFIGURE_ARGS="${CONFIGURE_ARGS} --enable-gczeal --without-intl-api"
+            if [ -n "$CFG_ENABLE_DEBUG_MOZJS" ]; then
+                CONFIGURE_ARGS="${CONFIGURE_ARGS} --enable-debug=-g --enable-optimize=-O0"
+            fi
             ;;
         support/skia/skia)
             # Right now the skia configure script actually ignores --enable-debug and the

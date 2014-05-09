@@ -8,7 +8,7 @@
 
 #![feature(macro_rules,unsafe_destructor)]
 
-#![feature(phase)]
+#![feature(phase, unsafe_destructor)]
 #[phase(plugin, link)]
 extern crate log;
 

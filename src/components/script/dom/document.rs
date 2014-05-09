@@ -14,8 +14,8 @@ use dom::bindings::codegen::InheritTypes::EventTargetCast;
 use dom::bindings::error::{ErrorResult, Fallible, NotSupported, InvalidCharacter};
 use dom::bindings::error::{HierarchyRequest, NamespaceError};
 use dom::bindings::global::{GlobalRef, Window};
-use dom::bindings::js::{JS, JSRef, Temporary, OptionalSettable, TemporaryPushable};
-use dom::bindings::js::OptionalRootable;
+use dom::bindings::js::{MutNullableJS, JS, JSRef, Temporary, OptionalSettable};
+use dom::bindings::js::{TemporaryPushable, OptionalRootable};
 use dom::bindings::trace::{Traceable, Untraceable};
 use dom::bindings::utils::{Reflectable, Reflector, reflect_dom_object};
 use dom::bindings::utils::{xml_name_type, InvalidXMLName, Name, QName};
@@ -25,7 +25,7 @@ use dom::documentfragment::DocumentFragment;
 use dom::documenttype::DocumentType;
 use dom::domimplementation::DOMImplementation;
 use dom::element::{Element, AttributeHandlers, get_attribute_parts};
-use dom::element::{HTMLHtmlElementTypeId, HTMLHeadElementTypeId, HTMLTitleElementTypeId};
+use dom::element::{HTMLHeadElementTypeId, HTMLTitleElementTypeId};
 use dom::element::{HTMLBodyElementTypeId, HTMLFrameSetElementTypeId};
 use dom::event::Event;
 use dom::eventtarget::{EventTarget, NodeTargetTypeId, EventTargetHelpers};
@@ -50,10 +50,12 @@ use servo_util::namespace;
 use servo_util::namespace::{Namespace, Null};
 use servo_util::str::{DOMString, null_str_as_empty_ref, split_html_space_chars};
 
+use url::Url;
+
 use std::collections::hashmap::HashMap;
 use std::ascii::StrAsciiExt;
 use std::cell::{Cell, RefCell};
-use url::Url;
+use std::default::Default;
 
 #[deriving(PartialEq,Encodable)]
 pub enum IsHTMLDocument {
@@ -67,7 +69,7 @@ pub struct Document {
     reflector_: Reflector,
     pub window: JS<Window>,
     idmap: Traceable<RefCell<HashMap<DOMString, Vec<JS<Element>>>>>,
-    implementation: Cell<Option<JS<DOMImplementation>>>,
+    implementation: MutNullableJS<DOMImplementation>,
     content_type: DOMString,
     pub encoding_name: Traceable<RefCell<DOMString>>,
     pub is_html_document: bool,
@@ -159,6 +161,7 @@ impl<'a> DocumentHelpers for JSRef<'a, Document> {
         // FIXME https://github.com/mozilla/rust/issues/13195
         //       Use mangle() when it exists again.
         let root = self.GetDocumentElement().expect("The element is in the document, so there must be a document element.").root();
+        root.init();
         match idmap.find_mut(&id) {
             Some(elements) => {
                 let new_node: &JSRef<Node> = NodeCast::from_ref(element);
@@ -206,7 +209,7 @@ impl Document {
             reflector_: Reflector::new(),
             window: JS::from_rooted(window),
             idmap: Traceable::new(RefCell::new(HashMap::new())),
-            implementation: Cell::new(None),
+            implementation: Default::default(),
             content_type: match content_type {
                 Some(string) => string.clone(),
                 None => match is_html_document {
@@ -255,6 +258,7 @@ trait PrivateDocumentHelpers {
 impl<'a> PrivateDocumentHelpers for JSRef<'a, Document> {
     fn createNodeList(&self, callback: |node: &JSRef<Node>| -> bool) -> Temporary<NodeList> {
         let window = self.window.root();
+        window.init();
 
         match self.GetDocumentElement().root() {
             None => {
@@ -275,11 +279,9 @@ impl<'a> PrivateDocumentHelpers for JSRef<'a, Document> {
     }
 
     fn get_html_element(&self) -> Option<Temporary<HTMLHtmlElement>> {
-        self.GetDocumentElement().root().filtered(|root| {
-            root.node.type_id == ElementNodeTypeId(HTMLHtmlElementTypeId)
-        }).map(|elem| {
-            Temporary::from_rooted(HTMLHtmlElementCast::to_ref(&*elem).unwrap())
-        })
+        self.GetDocumentElement().root().as_ref().and_then(|root| {
+            HTMLHtmlElementCast::to_ref(&**root)
+        }).map(|elem| Temporary::from_rooted(elem))
     }
 }
 
@@ -289,7 +291,7 @@ impl<'a> DocumentMethods for JSRef<'a, Document> {
         if self.implementation.get().is_none() {
             self.implementation.assign(Some(DOMImplementation::new(self)));
         }
-        Temporary::new(self.implementation.get().get_ref().clone())
+        self.implementation.get().unwrap()
     }
 
     // http://dom.spec.whatwg.org/#dom-document-url

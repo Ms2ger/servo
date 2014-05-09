@@ -6,7 +6,7 @@
 #![comment = "The Servo Parallel Browser Project"]
 #![license = "MPL"]
 
-#![feature(globs, macro_rules, phase, thread_local)]
+#![feature(globs, macro_rules, phase, thread_local, unsafe_destructor)]
 
 #[phase(plugin, link)]
 extern crate log;
@@ -19,6 +19,7 @@ extern crate servo_net = "net";
 extern crate servo_msg = "msg";
 #[phase(plugin, link)]
 extern crate servo_util = "util";
+#[link_args = "-ljs_static"]
 extern crate script;
 extern crate layout;
 extern crate green;
@@ -103,6 +104,10 @@ pub fn run(opts: opts::Opts) {
     pool_config.event_loop_factory = rustuv::event_loop;
     let mut pool = green::SchedPool::new(pool_config);
 
+    unsafe {
+        js::jsapi::JS_Init();
+    }
+
     let (compositor_port, compositor_chan) = CompositorChan::new();
     let time_profiler_chan = TimeProfiler::create(opts.time_profiler_period);
     let memory_profiler_chan = MemoryProfiler::create(opts.memory_profiler_period);
@@ -159,5 +164,10 @@ pub fn run(opts: opts::Opts) {
                            memory_profiler_chan);
 
     pool.shutdown();
+
+    // Not strictly necessary, and hard to synchronize with native script tasks
+    /*unsafe {
+        js::jsapi::JS_ShutDown();
+    }*/
 }
 
