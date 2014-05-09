@@ -42,7 +42,8 @@
 use dom::bindings::utils::{Reflector, Reflectable, cx_for_dom_object};
 use dom::node::Node;
 use dom::xmlhttprequest::{XMLHttpRequest, TrustedXHRAddress};
-use js::jsapi::{JSObject, JS_AddObjectRoot, JS_RemoveObjectRoot};
+use js::glue::{AddObjectRoot, RemoveObjectRoot};
+use js::jsapi::JSObject;
 use layout_interface::TrustedNodeAddress;
 use script_task::StackRoots;
 
@@ -69,7 +70,7 @@ impl<T: Reflectable> Drop for Temporary<T> {
     fn drop(&mut self) {
         let cx = cx_for_dom_object(&self.inner);
         unsafe {
-            JS_RemoveObjectRoot(cx, self.inner.mut_reflector().rootable());
+            RemoveObjectRoot(cx, self.inner.mut_reflector().rootable());
         }
     }
 }
@@ -79,7 +80,7 @@ impl<T: Reflectable> Temporary<T> {
     pub fn new(mut inner: JS<T>) -> Temporary<T> {
         let cx = cx_for_dom_object(&inner);
         unsafe {
-            JS_AddObjectRoot(cx, inner.mut_reflector().rootable());
+            AddObjectRoot(cx, inner.mut_reflector().rootable());
         }
         Temporary {
             inner: inner,

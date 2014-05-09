@@ -9,7 +9,7 @@ use dom::window::Window;
 
 use js::jsapi::{JSContext, JSBool};
 use js::jsapi::{JS_IsExceptionPending, JS_SetPendingException};
-use js::jsapi::{JS_ReportErrorNumber, JSErrorFormatString, JSEXN_TYPEERR};
+use js::jsapi::{JS_ReportErrorNumber, JSErrorFormatString, Struct_JSErrorFormatString, JSEXN_TYPEERR};
 use js::glue::{ReportError};
 
 use libc;
@@ -60,7 +60,7 @@ static ERROR_FORMAT_STRING_STRING: [libc::c_char, ..4] = [
     0 as libc::c_char,
 ];
 
-static ERROR_FORMAT_STRING: JSErrorFormatString = JSErrorFormatString {
+static ERROR_FORMAT_STRING: JSErrorFormatString = Struct_JSErrorFormatString {
     format: &ERROR_FORMAT_STRING_STRING as *libc::c_char,
     argCount: 1,
     exnType: JSEXN_TYPEERR as i16,
