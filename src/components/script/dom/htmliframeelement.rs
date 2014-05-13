@@ -14,6 +14,7 @@ use dom::htmlelement::HTMLElement;
 use dom::node::{Node, ElementNodeTypeId, window_from_node};
 use dom::virtualmethods::VirtualMethods;
 use dom::window::Window;
+use script_task::IterablePage;
 use servo_msg::constellation_msg::{PipelineId, SubpageId};
 use servo_msg::constellation_msg::{IFrameSandboxed, IFrameUnsandboxed};
 use servo_msg::constellation_msg::{ConstellationChan, LoadIframeUrlMsg};
@@ -184,7 +185,25 @@ impl<'a> HTMLIFrameElementMethods for JSRef<'a, HTMLIFrameElement> {
     }
 
     fn GetContentWindow(&self) -> Option<Temporary<Window>> {
-        None
+        match self.size {
+            Some(size) => {
+                let window = window_from_node(self).root();
+                let page = window.deref().page.clone();
+                let children = &*page.children.deref().borrow();
+                let child = children.iter().find(|child| {
+                    child.subpage_id.unwrap() == size.subpage_id
+                }).clone();
+                match child {
+                    Some(page) => {
+                        page.frame.deref().borrow().as_ref().map(|frame| {
+                            Temporary::new(frame.window.clone())
+                        })
+                    }
+                    None => None,
+                }
+            }
+            None => None,
+        }
     }
 
     fn Align(&self) -> DOMString {
