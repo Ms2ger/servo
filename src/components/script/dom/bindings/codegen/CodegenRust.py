@@ -744,7 +744,7 @@ def getJSToNativeConversionTemplate(type, descriptorProvider, failureCode=None,
     if type.isVoid():
         # This one only happens for return values, and its easy: Just
         # ignore the jsval.
-        return ("", None, False)
+        return ("()", None, False)
 
     if not type.isPrimitive():
         raise TypeError("Need conversion for argument type '%s'" % str(type))
@@ -4785,7 +4785,7 @@ class CallbackMember(CGNativeMember):
                                 jsObjectsArePtr=True)
         # We have to do all the generation of our body now, because
         # the caller relies on us throwing if we can't manage it.
-        self.exceptionCode= "return Err(FailureUnknown);\n"
+        self.exceptionCode= "return Err(FailureUnknown);"
         self.body = self.getImpl()
 
     def getImpl(self):
@@ -4822,10 +4822,6 @@ class CallbackMember(CGNativeMember):
         ], "\n").define()
 
     def getResultConversion(self):
-        replacements = {
-            "val": "rval",
-        }
-
         if isJSImplementedDescriptor(self.descriptorProvider):
             isCallbackReturnValue = "JSImpl"
         else:
@@ -4838,13 +4834,9 @@ class CallbackMember(CGNativeMember):
             # XXXbz we should try to do better here
             sourceDescription="return value")
 
-        convertType = instantiateJSToNativeConversionTemplate(
-            template, replacements, declType, "rvalDecl", needsRooting)
-
-        assignRetval = string.Template(
-            self.getRetvalInfo(self.retvalType,
-                               False)[1]).substitute(replacements)
-        return convertType.define() + "\n" + assignRetval + "\n"
+        return "Ok(" + string.Template(template).substitute({
+            "val": "rval",
+        }) + ")\n"
 
     def getArgConversions(self):
         # Just reget the arglist from self.originalSig, because our superclasses
@@ -5027,7 +5019,7 @@ class CallbackOperationBase(CallbackMethod):
                 '  Ok(callable) => callable,\n'
                 '}').substitute(replacements)
         if not self.singleOperation:
-            return 'JS::Rooted<JS::Value> callable(cx);\n' + getCallableFromProp
+            return 'let callable = ' + getCallableFromProp + ';'
         return (
             'let isCallable = unsafe { JS_ObjectIsCallable(cx, self.parent.callback) != 0 };\n'
             'let callable =\n' +
