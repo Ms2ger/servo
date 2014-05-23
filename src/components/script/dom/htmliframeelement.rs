@@ -39,7 +39,8 @@ enum SandboxAllowance {
 pub struct HTMLIFrameElement {
     pub htmlelement: HTMLElement,
     pub size: Option<IFrameSize>,
-    pub sandbox: Option<u8>
+    pub sandbox: Option<u8>,
+    browser_context: RefCell<BrowserContext>,
 }
 
 impl HTMLIFrameElementDerived for EventTarget {
@@ -57,6 +58,7 @@ pub struct IFrameSize {
 pub trait HTMLIFrameElementHelpers {
     fn is_sandboxed(&self) -> bool;
     fn get_url(&self) -> Option<Url>;
+    fn process_the_iframe_attributes(&self);
 }
 
 impl<'a> HTMLIFrameElementHelpers for JSRef<'a, HTMLIFrameElement> {
@@ -71,6 +73,34 @@ impl<'a> HTMLIFrameElementHelpers for JSRef<'a, HTMLIFrameElement> {
             try_parse_url(src.deref().value_ref(),
                           Some(window.deref().page().get_url())).ok()
         })
+    }
+
+    fn process_the_iframe_attributes(&self, first_time: bool) {
+        // Case 1: srcdoc.
+        match self.get_attribute(Null, "src").root() {
+            // Case 2.
+            None if first_time => {
+                // Queue a task to run the iframe load event steps.
+                // The task source for this task is the DOM manipulation task source.
+            }
+            // Case 3.
+            attr => {
+                // Step 1.
+                let url = attr.and_then(|attr| {
+                    let window = window_from_node(self).root();
+                    try_parse_url(src.deref().value_ref(),
+                                  Some(window.deref().page().get_url())).ok()
+                }).unwrap_or("about:blank");
+
+                // Step 2.
+                // If there exists an ancestor browsing context whose active
+                // document's address, ignoring fragment identifiers, is equal
+                // to url, then abort these steps.
+
+                // Step 3.
+                // Navigate(self.browser_context, url).
+            }
+        }
     }
 }
 
@@ -299,6 +329,9 @@ impl<'a> VirtualMethods for JSRef<'a, HTMLIFrameElement> {
             Some(ref mut s) => s.bind_to_tree(),
             _ => (),
         }
+
+        *self.browser_context.borrow_mut() = BrowserContext::new();
+        self.process_the_iframe_attributes(true);
 
         match self.get_url() {
             Some(url) => {
