@@ -64,9 +64,31 @@ impl BrowserContext {
         wrapper
     }
 
+    fn is_allowed_to_navigate(&self, victim: &BrowserContext) {
+        // http://www.whatwg.org/html/#allowed-to-navigate
+        true
+    }
+
     // http://www.whatwg.org/html/#navigate
-    pub fn navigate(&self, source: &BrowserContext, url: Url) -> ErrorResult {
+    pub fn navigate(&self, source: &BrowserContext, url: Url,
+                    replacement_enabled: bool) -> ErrorResult {
         // Step 1: Release the storage mutex.
+
+        // Step 2.
+        if !source.is_allowed_to_navigate(self) {
+            return Err(Security);
+        }
+
+        // Step 3: seamless iframes.
+        // Step 4.
+        // If there is a preexisting attempt to navigate the browsing context,
+        // and the source browsing context is the same as the browsing context
+        // being navigated, and that attempt is currently running the unload a
+        // document algorithm, and the origin of the URL of the resource being
+        // loaded in that navigation is not the same origin as the origin of
+        // the URL of the resource being loaded in this navigation, then abort
+        // these steps without affecting the preexisting attempt to navigate
+        // the browsing context.
     }
 }
 
