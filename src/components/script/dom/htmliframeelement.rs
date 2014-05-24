@@ -20,7 +20,7 @@ use servo_msg::constellation_msg::{IFrameSandboxed, IFrameUnsandboxed};
 use servo_msg::constellation_msg::{ConstellationChan, LoadIframeUrlMsg};
 use servo_util::namespace::Null;
 use servo_util::str::DOMString;
-use servo_util::url::try_parse_url;
+use servo_util::url::{try_parse_url, parse_url};
 
 use std::ascii::StrAsciiExt;
 use url::Url;
@@ -40,7 +40,7 @@ pub struct HTMLIFrameElement {
     pub htmlelement: HTMLElement,
     pub size: Option<IFrameSize>,
     pub sandbox: Option<u8>,
-    browser_context: RefCell<BrowserContext>,
+    browser_context: Option<BrowserContext>,
 }
 
 impl HTMLIFrameElementDerived for EventTarget {
@@ -90,15 +90,22 @@ impl<'a> HTMLIFrameElementHelpers for JSRef<'a, HTMLIFrameElement> {
                     let window = window_from_node(self).root();
                     try_parse_url(src.deref().value_ref(),
                                   Some(window.deref().page().get_url())).ok()
-                }).unwrap_or("about:blank");
+                }).unwrap_or(|| parse_url("about:blank"));
 
                 // Step 2.
                 // If there exists an ancestor browsing context whose active
                 // document's address, ignoring fragment identifiers, is equal
                 // to url, then abort these steps.
 
+                let replacement_enabled =
+                    !self.browser_context.unwrap().active_document().root().completely_loaded() ||
+                    self.browser_context.unwrap().contains_only_initial_about_blank_document();
+                let source_browsing_context = document_from_node(self).root().browsing_context().unwrap();
                 // Step 3.
-                // Navigate(self.browser_context, url).
+                let _ = self.browser_context.unwrap().navigate(
+                    source_browsing_context,
+                    url,
+                    replacement_enabled);
             }
         }
     }
@@ -330,7 +337,7 @@ impl<'a> VirtualMethods for JSRef<'a, HTMLIFrameElement> {
             _ => (),
         }
 
-        *self.browser_context.borrow_mut() = BrowserContext::new();
+        self.browser_context = Some(BrowserContext::new());
         self.process_the_iframe_attributes(true);
 
         match self.get_url() {

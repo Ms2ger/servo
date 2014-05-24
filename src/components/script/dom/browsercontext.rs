@@ -63,6 +63,11 @@ impl BrowserContext {
         assert!(wrapper.is_not_null());
         wrapper
     }
+
+    // http://www.whatwg.org/html/#navigate
+    pub fn navigate(&self, source: &BrowserContext, url: Url) -> ErrorResult {
+        // Step 1: Release the storage mutex.
+    }
 }
 
 #[deriving(Encodable)]
