@@ -297,7 +297,7 @@ fn CreateInterfaceObject(cx: *mut JSContext, global: *mut JSObject, receiver: *m
         }
 
         let constructorhandle = Handle {
-            unnamed_field1: ObjectValue(&**constructor.unnamed_field1),
+            unnamed_field1: &ObjectValue(&**constructor.unnamed_field1),
         };
         if alreadyDefined == 0 &&
             JS_DefineProperty(cx, receiver, name, constructorhandle, 0, None, None) == 0 {
@@ -325,7 +325,7 @@ fn DefineConstants(cx: *mut JSContext, obj: JSHandleObject, constants: *Constant
                 VoidVal => UndefinedValue(),
             };
             let jsval = Handle {
-                unnamed_field1: jsval,
+                unnamed_field1: &jsval,
             };
             if JS_DefineProperty(cx, obj, spec.name, jsval,
                                  JSPROP_ENUMERATE | JSPROP_READONLY | JSPROP_PERMANENT,
@@ -459,19 +459,17 @@ pub fn GetPropertyOnPrototype(cx: *mut JSContext, proxy: JSHandleObject, id: JSH
           return false;
       }
       *found = hasProp != 0;
-      let no_output = (*vp.unnamed_field1).is_null();
-      if hasProp == 0 || no_output {
-          return true;
+      match vp {
+          None | Some(_) if hasProp == 0 => true,
+          Some(vp) => JS_ForwardGetPropertyTo(cx, proto.immut(), id, proxy, vp) != 0,
       }
-
-      JS_ForwardGetPropertyTo(cx, proto.immut(), id, proxy, vp) != 0
   }
 }
 
 pub fn GetArrayIndexFromId(_cx: *mut JSContext, id: JSHandleId) -> Option<u32> {
     unsafe {
-        if RUST_JSID_IS_INT(id) != 0 {
-            return Some(RUST_JSID_TO_INT(id) as u32);
+        if RUST_JSID_IS_INT(*id) != 0 {
+            return Some(RUST_JSID_TO_INT(*id) as u32);
         }
         return None;
     }
@@ -522,7 +520,7 @@ pub fn FindEnumStringIndex(cx: *mut JSContext,
                            values: &[&'static str]) -> Result<Option<uint>, ()> {
     unsafe {
         let v = Handle {
-            unnamed_field1: v,
+            unnamed_field1: &v,
         };
         let jsstr = ToString(cx, v);
         if jsstr.is_null() {
@@ -657,7 +655,7 @@ pub fn global_object_for_js_object(obj: *mut JSObject) -> JS<window::Window> {
         unnamed_field1: &obj
     };
     unsafe {
-        let global = GetGlobalForObjectCrossCompartment(obj);
+        let global = GetGlobalForObjectCrossCompartment(*obj);
         let clasp = JS_GetClass(global);
         assert!(((*clasp).flags & (JSCLASS_IS_DOMJSCLASS | JSCLASS_IS_GLOBAL)) != 0);
         FromJSValConvertible::from_jsval(ptr::mut_null(), ObjectOrNullValue(global), ())
@@ -769,6 +767,6 @@ pub fn id_handle<'a>(id: &'a jsid) -> JSHandleId<'a> {
 
 pub fn value_handle<'a>(val: &'a JSVal) -> JSHandleValue<'a> {
     Handle {
-        unnamed_field1: unsafe { *val }
+        unnamed_field1: val
     }
 }

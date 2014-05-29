@@ -64,7 +64,7 @@ unsafe fn convert_from_jsval<T: Default>(
     convert_fn: extern "C" unsafe fn(*mut JSContext, JSHandleValue, *mut T) -> bool) -> Result<T, ()> {
     let mut ret = Default::default();
     let value = Handle {
-        unnamed_field1: value,
+        unnamed_field1: &value,
     };
     if !convert_fn(cx, value, &mut ret) {
         Err(())
@@ -83,7 +83,7 @@ impl ToJSValConvertible for bool {
 impl FromJSValConvertible<()> for bool {
     fn from_jsval(_cx: *mut JSContext, val: JSVal, _option: ()) -> Result<bool, ()> {
         let val = Handle {
-            unnamed_field1: val,
+            unnamed_field1: &val,
         };
         Ok(unsafe { ToBoolean(val) })
     }
@@ -252,7 +252,7 @@ impl FromJSValConvertible<StringificationBehavior> for DOMString {
             Ok("".to_owned())
         } else {
             let valhandle = Handle {
-                unnamed_field1: value
+                unnamed_field1: &value
             };
             let jsstr = unsafe { ToString(cx, valhandle) };
             if jsstr.is_null() {
@@ -283,7 +283,7 @@ impl FromJSValConvertible<()> for ByteString {
     fn from_jsval(cx: *mut JSContext, value: JSVal, _option: ()) -> Result<ByteString, ()> {
         unsafe {
             let valhandle = Handle {
-                unnamed_field1: value
+                unnamed_field1: &value
             };
             let string = ToString(cx, valhandle);
             if string.is_null() {
@@ -371,10 +371,6 @@ impl<X: Default, T: FromJSValConvertible<X>> FromJSValConvertible<()> for Option
 
 impl ToJSValConvertible for *mut JSObject {
     fn to_jsval(&self, cx: *mut JSContext) -> JSVal {
-        let mut wrapped = ObjectOrNullValue(*self);
-        unsafe {
-            assert!(JS_WrapValue(cx, &mut wrapped) != 0);
-        }
-        wrapped
+        ObjectOrNullValue(*self).to_jsval(cx)
     }
 }

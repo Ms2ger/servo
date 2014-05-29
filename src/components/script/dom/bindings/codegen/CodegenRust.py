@@ -5201,11 +5201,12 @@ let rval = MutableHandle { unnamed_field1: &mut rval, };\n"""
                 "let ok = unsafe {\n"
                 "  CallFunctionValue(cx, object_handle(&${thisObj}),\n"
                 "                    value_handle(&callable),\n"
-                "                    ${argc} as libc::size_t, ${argv}, &mut rval)\n"
+                "                    ${argc} as libc::size_t, ${argv}, rval)\n"
                 "};\n"
                 "if !ok {\n"
                 "  return Err(FailureUnknown);\n"
-                "}\n").substitute(replacements)
+                "}\n"
+                "let rval = *rval;\n").substitute(replacements)
 
 class CallCallback(CallbackMethod):
     def __init__(self, callback, descriptorProvider):
