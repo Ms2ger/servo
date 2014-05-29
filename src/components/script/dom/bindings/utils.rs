@@ -34,7 +34,7 @@ use js::jsapi::{JS_GetReservedSlot, JS_SetReservedSlot};
 use js::jsapi::{JSContext, JSObject, JSBool, jsid, JSClass, JSNative};
 use js::jsapi::{JSFunctionSpec, JSPropertySpec, JSHandleId};
 use js::jsapi::{JS_InitStandardClasses};
-use js::jsapi::{JSString};
+use js::jsapi::{JSString, Handle, MutableHandle};
 use js::jsfriendapi::JS_ObjectToOuterObject;
 use js::jsfriendapi::bindgen::JS_NewObjectWithUniqueType;
 use js::jsval::JSVal;
@@ -256,7 +256,7 @@ fn CreateInterfaceObject(cx: *mut JSContext, global: *mut JSObject, receiver: *m
                          constants: Option<&'static [ConstantSpec]>,
                          name: *libc::c_char) -> *mut JSObject {
     unsafe {
-        let globalhandle = JSHandleObject {
+        let globalhandle = Handle {
             unnamed_field1: &global,
         };
         let fun = JS_NewFunction(cx, constructorNative, ctorNargs,
@@ -268,7 +268,7 @@ fn CreateInterfaceObject(cx: *mut JSContext, global: *mut JSObject, receiver: *m
         let constructor = JS_GetFunctionObject(fun);
         assert!(constructor.is_not_null());
 
-        let constructor = JSHandleObject {
+        let constructor = Handle {
             unnamed_field1: &constructor,
         };
         match staticMethods {
@@ -289,7 +289,7 @@ fn CreateInterfaceObject(cx: *mut JSContext, global: *mut JSObject, receiver: *m
             _ => (),
         }
 
-        let protohandle = JSHandleObject {
+        let protohandle = Handle {
             unnamed_field1: &proto,
         };
         if proto.is_not_null() && JS_LinkConstructorAndPrototype(cx, constructor, protohandle) == 0 {
@@ -297,14 +297,14 @@ fn CreateInterfaceObject(cx: *mut JSContext, global: *mut JSObject, receiver: *m
         }
 
         let mut alreadyDefined = 0;
-        let receiver = JSHandleObject {
+        let receiver = Handle {
             unnamed_field1: &receiver,
         };
         if JS_AlreadyHasOwnProperty(cx, receiver, name, &mut alreadyDefined) == 0 {
             return ptr::mut_null();
         }
 
-        let constructorhandle = JSHandleValue {
+        let constructorhandle = Handle {
             unnamed_field1: ObjectValue(&**constructor.unnamed_field1),
         };
         if alreadyDefined == 0 &&
@@ -326,7 +326,7 @@ fn DefineConstants(cx: *mut JSContext, obj: *mut JSObject, constants: &'static [
             BoolVal(b) => BooleanValue(b),
             VoidVal => UndefinedValue(),
         };
-        let jsval = JSHandleValue {
+        let jsval = Handle {
             unnamed_field1: jsval,
         };
         unsafe {
@@ -360,7 +360,7 @@ fn CreateInterfacePrototypeObject(cx: *mut JSContext, global: JSHandleObject,
             return ptr::mut_null();
         }
 
-        let ourProto = JSHandleObject {
+        let ourProto = Handle {
             unnamed_field1: &ourProto,
         };
 
@@ -456,11 +456,11 @@ impl Reflector {
 }
 
 pub fn GetPropertyOnPrototype(cx: *mut JSContext, proxy: JSHandleObject, id: JSHandleId, found: *mut bool,
-                              vp: JSMutableHandleValue) -> bool {
+                              vp: Option<JSMutableHandleValue>) -> bool {
     unsafe {
       //let proto = GetObjectProto(proxy);
       let mut proto = ptr::mut_null();
-      let proto = JSMutableHandleObject {
+      let proto = MutableHandle {
           unnamed_field1: &mut proto,
       };
       if JS_GetPrototype(cx, proxy, proto) == 0 {
@@ -537,7 +537,7 @@ pub fn FindEnumStringIndex(cx: *mut JSContext,
                            v: JSVal,
                            values: &[&'static str]) -> Result<Option<uint>, ()> {
     unsafe {
-        let v = JSHandleValue {
+        let v = Handle {
             unnamed_field1: v,
         };
         let jsstr = ToString(cx, v);
@@ -596,7 +596,7 @@ pub fn get_dictionary_property(cx: *mut JSContext,
     }
 
     let mut value = NullValue();
-    let value = JSMutableHandleValue {
+    let value = MutableHandle {
         unnamed_field1: &mut value,
     };
     if !get_property(cx, object, &property, value) {
@@ -611,15 +611,12 @@ pub fn get_dictionary_property(cx: *mut JSContext,
 pub fn HasPropertyOnPrototype(cx: *mut JSContext, proxy: JSHandleObject, id: JSHandleId) -> bool {
     //  MOZ_ASSERT(js::IsProxy(proxy) && js::GetProxyHandler(proxy) == handler);
     let mut found = false;
-    let handle = JSMutableHandleValue {
-        unnamed_field1: ptr::mut_null()
-    };
-    return !GetPropertyOnPrototype(cx, proxy, id, &mut found, handle) || found;
+    return !GetPropertyOnPrototype(cx, proxy, id, &mut found, None) || found;
 }
 
 pub fn IsConvertibleToCallbackInterface(cx: *mut JSContext, obj: *mut JSObject) -> bool {
     unsafe {
-        let obj = JSHandleObject {
+        let obj = Handle {
             unnamed_field1: &obj,
         };
         JS_ObjectIsDate(cx, obj) == 0 && JS_ObjectIsRegExp(cx, obj) == 0
@@ -633,7 +630,7 @@ pub fn CreateDOMGlobal(cx: *mut JSContext, class: *JSClass) -> *mut JSObject {
             return ptr::mut_null();
         }
         with_compartment(cx, obj, || {
-            let globhandle = JSHandleObject {
+            let globhandle = Handle {
                 unnamed_field1: &obj,
             };
             JS_InitStandardClasses(cx, globhandle);
@@ -672,7 +669,7 @@ pub extern fn outerize_global(_cx: *mut JSContext, obj: JSHandleObject) -> *mut 
 
 /// Returns the global object of the realm that the given JS object was created in.
 pub fn global_object_for_js_object(obj: *mut JSObject) -> JS<window::Window> {
-    let obj = JSHandleObject {
+    let obj = Handle {
         unnamed_field1: &obj
     };
     unsafe {
@@ -774,20 +771,20 @@ pub fn xml_name_type(name: &str) -> XMLName {
     }
 }
 
-pub fn object_handle(obj: **mut JSObject) -> JSHandleObject {
-    JSHandleObject {
+pub fn object_handle<'a>(obj: &'a *mut JSObject) -> JSHandleObject<'a> {
+    Handle {
         unnamed_field1: obj
     }
 }
 
-pub fn id_handle(id: &jsid) -> JSHandleId {
-    JSHandleId {
+pub fn id_handle<'a>(id: &'a jsid) -> JSHandleId<'a> {
+    Handle {
         unnamed_field1: id
     }
 }
 
-pub fn value_handle(val: *JSVal) -> JSHandleValue {
-    JSHandleValue {
+pub fn value_handle<'a>(val: &'a JSVal) -> JSHandleValue<'a> {
+    Handle {
         unnamed_field1: unsafe { *val }
     }
 }
