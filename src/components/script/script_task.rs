@@ -37,7 +37,7 @@ use geom::point::Point2D;
 use geom::size::Size2D;
 use js::glue::CallFunctionValue;
 use js::jsapi::{/*JS_SetWrapObjectCallbacks,*/ JS_SetGCZeal, JS_GC};
-use js::jsapi::{JSContext, JSRuntime, JSMutableHandleValue};
+use js::jsapi::{JSContext, JSRuntime, MutableHandle};
 use js::jsval::NullValue;
 use js::rust::{Cx, RtUtils};
 use js::rust::with_compartment;
@@ -837,7 +837,7 @@ impl ScriptTask {
                 let cx = self.get_cx();
                 with_compartment(cx, this_value, || {
                     let mut rval = NullValue();
-                    let rval = JSMutableHandleValue {
+                    let rval = MutableHandle {
                         unnamed_field1: &mut rval,
                     };
                     unsafe {

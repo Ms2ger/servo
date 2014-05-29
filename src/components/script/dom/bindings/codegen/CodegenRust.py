@@ -3619,7 +3619,7 @@ class CGDOMJSProxyHandler_getOwnPropertyDescriptor(CGAbstractExternMethod):
     def __init__(self, descriptor):
         args = [Argument('*mut JSContext', 'cx'), Argument('JSHandleObject', 'proxy'),
                 Argument('JSHandleId', 'id'),
-                Argument('JSMutableHandle<JSPropertyDescriptor>', 'desc'),
+                Argument('MutableHandle<JSPropertyDescriptor>', 'desc'),
                 Argument('u32', 'flags')]
         CGAbstractExternMethod.__init__(self, descriptor, "getOwnPropertyDescriptor",
                                         "JSBool", args)
@@ -3717,7 +3717,7 @@ class CGDOMJSProxyHandler_defineProperty(CGAbstractExternMethod):
     def __init__(self, descriptor):
         args = [Argument('*mut JSContext', 'cx'), Argument('JSHandleObject', 'proxy'),
                 Argument('JSHandleId', 'id'),
-                Argument('JSMutableHandle<JSPropertyDescriptor>', 'desc')]
+                Argument('MutableHandle<JSPropertyDescriptor>', 'desc')]
         CGAbstractExternMethod.__init__(self, descriptor, "defineProperty", "JSBool", args)
         self.descriptor = descriptor
     def getBody(self):
@@ -3882,7 +3882,7 @@ if expando.is_not_null() {
 
 %s
 let mut found = false;
-if !GetPropertyOnPrototype(cx, proxy, id, &mut found, vp) {
+if !GetPropertyOnPrototype(cx, proxy, id, &mut found, Some(vp)) {
   return 0;
 }
 
@@ -4413,7 +4413,7 @@ class CGBindingRoot(CGThing):
             'js::jsapi::{Struct_JSStrictPropertyOpWrapper, Struct_JSPropertyOpWrapper}',
             'js::jsapi::{JSStrictPropertyOpWrapper, JSString, JSTracer, JS_ConvertStub}',
             'js::jsapi::{JS_StrictPropertyStub, JS_EnumerateStub, JS_ResolveStub}',
-            'js::jsapi::{JSMutableHandleValue, JS_DeletePropertyStub}',
+            'js::jsapi::{JSMutableHandleValue, JS_DeletePropertyStub, MutableHandle}',
             'js::jsfriendapi::{Getter, Setter, Method}',
             'js::jsval::{JSVal, JSVAL_TYPE_DOUBLE, JSVAL_TYPE_INT32, JSVAL_TYPE_UNDEFINED}',
             'js::jsval::{JSVAL_TYPE_BOOLEAN, JSVAL_TYPE_MAGIC, JSVAL_TYPE_STRING}',
@@ -4421,7 +4421,7 @@ class CGBindingRoot(CGThing):
             'js::jsval::{ObjectValue, ObjectOrNullValue, PrivateValue}',
             'js::jsval::{NullValue, UndefinedValue}',
             'js::glue::{CallJitMethodOp, CallJitGetterOp, CreateProxyHandler}',
-            'js::glue::{GetProxyPrivate, NewProxyObject, ProxyTraps, JSMutableHandle}',
+            'js::glue::{GetProxyPrivate, NewProxyObject, ProxyTraps}',
             'js::glue::{RUST_FUNCTION_VALUE_TO_JITINFO, CallJitSetterOp}',
             'js::glue::{RUST_JS_NumberValue, RUST_JSID_IS_STRING, CallFunctionValue}',
             'js::glue::{proxy_LookupGeneric, proxy_LookupProperty, proxy_LookupElement}',
@@ -5184,7 +5184,7 @@ class CallbackMethod(CallbackMember):
                                 needThisHandling, rethrowContentException)
     def getRvalDecl(self):
         return """let mut rval = UndefinedValue();\n
-let rval = JSMutableHandleValue { unnamed_field1: &mut rval, };\n"""
+let rval = MutableHandle { unnamed_field1: &mut rval, };\n"""
 
     def getCall(self):
         replacements = {

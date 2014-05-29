@@ -9,7 +9,7 @@ use dom::bindings::utils::jsstring_to_str;
 use dom::bindings::utils::unwrap_jsmanaged;
 use servo_util::str::DOMString;
 
-use js::jsapi::{JSContext, JSHandleValue, JSMutableHandleValue, JSObject};
+use js::jsapi::{JSContext, JSHandleValue, Handle, MutableHandle, JSObject};
 use js::jsapi::{JS_GetStringCharsAndLength};
 use js::jsapi::{JS_NewUCStringCopyN, JS_NewStringCopyN};
 use js::jsapi::{JS_WrapValue};
@@ -49,7 +49,7 @@ impl ToJSValConvertible for () {
 impl ToJSValConvertible for JSVal {
     fn to_jsval(&self, cx: *mut JSContext) -> JSVal {
         let mut value = *self;
-        let handle = JSMutableHandleValue {
+        let handle = MutableHandle {
             unnamed_field1: &mut value,
         };
         if unsafe { JS_WrapValue(cx, handle) } == 0 {
@@ -63,7 +63,7 @@ unsafe fn convert_from_jsval<T: Default>(
     cx: *mut JSContext, value: JSVal,
     convert_fn: extern "C" unsafe fn(*mut JSContext, JSHandleValue, *mut T) -> bool) -> Result<T, ()> {
     let mut ret = Default::default();
-    let value = JSHandleValue {
+    let value = Handle {
         unnamed_field1: value,
     };
     if !convert_fn(cx, value, &mut ret) {
@@ -82,7 +82,7 @@ impl ToJSValConvertible for bool {
 
 impl FromJSValConvertible<()> for bool {
     fn from_jsval(_cx: *mut JSContext, val: JSVal, _option: ()) -> Result<bool, ()> {
-        let val = JSHandleValue {
+        let val = Handle {
             unnamed_field1: val,
         };
         Ok(unsafe { ToBoolean(val) })
@@ -251,7 +251,7 @@ impl FromJSValConvertible<StringificationBehavior> for DOMString {
         if nullBehavior == Empty && value.is_null() {
             Ok("".to_owned())
         } else {
-            let valhandle = JSHandleValue {
+            let valhandle = Handle {
                 unnamed_field1: value
             };
             let jsstr = unsafe { ToString(cx, valhandle) };
@@ -282,7 +282,7 @@ impl ToJSValConvertible for ByteString {
 impl FromJSValConvertible<()> for ByteString {
     fn from_jsval(cx: *mut JSContext, value: JSVal, _option: ()) -> Result<ByteString, ()> {
         unsafe {
-            let valhandle = JSHandleValue {
+            let valhandle = Handle {
                 unnamed_field1: value
             };
             let string = ToString(cx, valhandle);
@@ -309,7 +309,7 @@ impl ToJSValConvertible for Reflector {
     fn to_jsval(&self, cx: *mut JSContext) -> JSVal {
         let obj = self.get_jsobject();
         assert!(obj.is_not_null());
-        let value = JSMutableHandleValue {
+        let value = MutableHandle {
             unnamed_field1: &mut ObjectValue(unsafe { &*obj }),
         };
         if unsafe { JS_WrapValue(cx, value) } == 0 {

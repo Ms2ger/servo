@@ -6,9 +6,9 @@ use dom::bindings::utils::object_handle;
 use js::jsapi::{JSContext, JSPropertyDescriptor, JSObject, JSString, jschar};
 use js::jsapi::{JS_GetPropertyDescriptorById, JS_NewUCString, JS_malloc, JS_free};
 use js::jsapi::{JSBool, JS_DefinePropertyById, JS_NewObjectWithGivenProto};
-use js::jsapi::{JS_StrictPropertyStub, JSHandleObject, JSHandleId, JSMutableHandleObject};
+use js::jsapi::{JS_StrictPropertyStub, JSHandleObject, JSHandleId, JSMutableHandleObject, MutableHandle};
 use js::jsval::ObjectValue;
-use js::glue::{GetProxyExtra, JSMutableHandle};
+use js::glue::GetProxyExtra;
 use js::glue::{GetObjectProto, GetObjectParent, SetProxyExtra, GetProxyHandler};
 use js::glue::InvokeGetOwnPropertyDescriptor;
 use js::{JSPROP_GETTER, JSPROP_ENUMERATE, JSPROP_READONLY, JSRESOLVE_QUALIFIED};
@@ -22,7 +22,7 @@ use std::mem::size_of;
 static JSPROXYSLOT_EXPANDO: u32 = 0;
 
 pub extern fn getPropertyDescriptor(cx: *mut JSContext, proxy: JSHandleObject, id: JSHandleId,
-                                    desc: JSMutableHandle<JSPropertyDescriptor>, flags: u32) -> libc::c_int {
+                                    desc: MutableHandle<JSPropertyDescriptor>, flags: u32) -> libc::c_int {
   unsafe {
     let handler = GetProxyHandler(proxy);
     if InvokeGetOwnPropertyDescriptor(handler, cx, proxy, id, desc, flags) == 0 {
@@ -33,7 +33,7 @@ pub extern fn getPropertyDescriptor(cx: *mut JSContext, proxy: JSHandleObject, i
     }
 
     //let proto = JS_GetPrototype(proxy);
-    let proto = JSMutableHandleObject {
+    let proto = MutableHandle {
         unnamed_field1: &mut ptr::mut_null(),
     };
     assert!(GetObjectProto(cx, proxy, proto) != 0);
@@ -47,7 +47,7 @@ pub extern fn getPropertyDescriptor(cx: *mut JSContext, proxy: JSHandleObject, i
 }
 
 pub fn defineProperty_(cx: *mut JSContext, proxy: JSHandleObject, id: JSHandleId,
-                       desc: JSMutableHandle<JSPropertyDescriptor>) -> JSBool {
+                       desc: MutableHandle<JSPropertyDescriptor>) -> JSBool {
     unsafe {
         //FIXME: Workaround for https://github.com/mozilla/rust/issues/13385
         let setter: *libc::c_void = cast::transmute((**desc.unnamed_field1).setter);
@@ -75,7 +75,7 @@ pub fn defineProperty_(cx: *mut JSContext, proxy: JSHandleObject, id: JSHandleId
 }
 
 pub extern fn defineProperty(cx: *mut JSContext, proxy: JSHandleObject, id: JSHandleId,
-                             desc: JSMutableHandle<JSPropertyDescriptor>) -> JSBool {
+                             desc: MutableHandle<JSPropertyDescriptor>) -> JSBool {
     defineProperty_(cx, proxy, id, desc)
 }
 

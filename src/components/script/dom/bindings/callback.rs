@@ -7,7 +7,7 @@ use dom::bindings::trace::Traceable;
 use dom::bindings::utils::{Reflectable, global_object_for_js_object};
 use js::jsapi::{JSContext, JSObject, JS_WrapObject, JS_ObjectIsCallable};
 use js::jsapi::JS_GetProperty;
-use js::jsapi::{JSMutableHandleValue, JSHandleObject, JSMutableHandleObject};
+use js::jsapi::{JSMutableHandleValue, JSHandleObject, JSMutableHandleObject, Handle, MutableHandle};
 use js::jsval::{JSVal, UndefinedValue};
 
 use std::ptr;
@@ -79,10 +79,10 @@ impl CallbackInterface {
     pub fn GetCallableProperty(&self, cx: *mut JSContext, name: &str) -> Result<JSVal, ()> {
         let mut callable = UndefinedValue();
         unsafe {
-            let callback = JSHandleObject {
+            let callback = Handle {
                 unnamed_field1: &self.callback(), // XXX unrooted
             };
-            let callablehandle = JSMutableHandleValue {
+            let callablehandle = MutableHandle {
                 unnamed_field1: &mut callable,
             };
             if name.to_c_str().with_ref(|name| JS_GetProperty(cx, callback, name, callablehandle)) == 0 {
@@ -104,7 +104,7 @@ pub fn WrapCallThisObject<T: Reflectable>(cx: *mut JSContext,
     let mut obj = p.reflector().get_jsobject();
     assert!(obj.is_not_null());
 
-    let obj = JSMutableHandleObject {
+    let obj = MutableHandle {
         unnamed_field1: &mut obj,
     };
     unsafe {
