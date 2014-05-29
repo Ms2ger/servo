@@ -9,13 +9,13 @@ use dom::bindings::utils::jsstring_to_str;
 use dom::bindings::utils::unwrap_jsmanaged;
 use servo_util::str::DOMString;
 
-use js::jsapi::{JSContext, JSHandleValue, JSMutableHandleValue};
+use js::jsapi::{JSContext, JSHandleValue, JSMutableHandleValue, JSObject};
 use js::jsapi::{JS_GetStringCharsAndLength};
 use js::jsapi::{JS_NewUCStringCopyN, JS_NewStringCopyN};
 use js::jsapi::{JS_WrapValue};
 use js::jsval::JSVal;
 use js::jsval::{UndefinedValue, NullValue, BooleanValue, Int32Value, UInt32Value};
-use js::jsval::{StringValue, ObjectValue};
+use js::jsval::{StringValue, ObjectValue, ObjectOrNullValue};
 use js::glue::{RUST_JS_NumberValue, ToString, ToBoolean, ToNumber, ToUint16, ToInt32};
 use js::glue::{ToUint32, ToInt64, ToUint64};
 use libc;

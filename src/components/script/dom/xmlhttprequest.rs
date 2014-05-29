@@ -33,7 +33,7 @@ use http::headers::request::Header;
 use http::method::{Method, Get, Head, Post, Connect, Trace};
 use http::status::Status;
 
-use js::jsapi::{JS_AddObjectRoot, JS_ParseJSON, JS_RemoveObjectRoot, JSContext};
+use js::jsapi::{/*JS_AddObjectRoot,*/ JS_ParseJSON, /*JS_RemoveObjectRoot,*/ JSContext};
 use js::jsval::{JSVal, NullValue, UndefinedValue};
 
 use libc;
@@ -606,14 +606,14 @@ impl<'a> PrivateXMLHttpRequestHelpers for JSRef<'a, XMLHttpRequest> {
     unsafe fn to_trusted(&mut self) -> TrustedXHRAddress {
         assert!(self.pinned == false);
         self.pinned = true;
-        JS_AddObjectRoot(self.global.root().get_cx(), self.mut_reflector().rootable());
+        //JS_AddObjectRoot(self.global.root().get_cx(), self.mut_reflector().rootable());
         TrustedXHRAddress(self.deref() as *XMLHttpRequest as *libc::c_void)
     }
 
     fn release(&mut self) {
         assert!(self.pinned);
         unsafe {
-            JS_RemoveObjectRoot(self.global.root().get_cx(), self.mut_reflector().rootable());
+            //JS_RemoveObjectRoot(self.global.root().get_cx(), self.mut_reflector().rootable());
         }
         self.pinned = false;
     }
