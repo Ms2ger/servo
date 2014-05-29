@@ -13,9 +13,12 @@ use dom::eventdispatcher::dispatch_event;
 use dom::node::NodeTypeId;
 use dom::xmlhttprequest::XMLHttpRequestId;
 use dom::virtualmethods::VirtualMethods;
-use js::jsapi::{JS_CompileUCFunction, JS_GetFunctionObject, JS_CloneFunctionObject};
-use js::jsapi::{JSContext, JSObject};
 use servo_util::str::DOMString;
+
+use js::jsapi::{JS_CloneFunctionObject};
+use js::jsapi::{JSContext, JSObject};
+use js::glue::CompileEventHandler;
+
 use libc::{c_char, size_t};
 use std::ptr;
 use url::Url;
@@ -175,12 +178,13 @@ impl<'a> EventTargetHelpers for JSRef<'a, EventTarget> {
         let handler =
             name.with_ref(|name| {
             url.with_ref(|url| { unsafe {
-                let fun = JS_CompileUCFunction(cx, ptr::mut_null(), name,
-                                               nargs, &arg_names as **i8 as *mut *i8, source.as_ptr(),
-                                               source.len() as size_t,
-                                               url, lineno);
+                let fun = CompileEventHandler(cx, name,
+                                              nargs, arg_names.as_ptr(),
+                                              source.as_ptr(),
+                                              source.len() as size_t,
+                                              url, lineno);
                 assert!(fun.is_not_null());
-                JS_GetFunctionObject(fun)
+                fun
             }})});
         let funobj = unsafe { JS_CloneFunctionObject(cx, handler, scope) };
         assert!(funobj.is_not_null());

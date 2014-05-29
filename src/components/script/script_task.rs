@@ -57,6 +57,7 @@ use std::cast;
 use std::cell::{Cell, RefCell, Ref, RefMut};
 use std::comm::{channel, Sender, Receiver, Empty, Disconnected};
 use std::mem::replace;
+use std::ptr;
 use std::rc::Rc;
 use std::task::TaskBuilder;
 use url::Url;
@@ -842,7 +843,7 @@ impl ScriptTask {
                     unsafe {
                         CallFunctionValue(cx, object_handle(&this_value),
                                           value_handle(&*timer_handle.data.funval),
-                                          rval);
+                                          0, ptr::null(), rval);
                     }
                 });
 

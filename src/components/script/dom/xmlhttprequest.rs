@@ -15,7 +15,7 @@ use dom::bindings::conversions::ToJSValConvertible;
 use dom::bindings::error::Fallible;
 use dom::bindings::js::{JS, JSRef, Temporary, OptionalSettable};
 use dom::bindings::trace::Untraceable;
-use js::jsapi::{JS_AddObjectRoot, JS_RemoveObjectRoot, JSContext};
+use js::jsapi::{/*JS_AddObjectRoot, JS_RemoveObjectRoot, */JSContext};
 use js::jsval::{JSVal, NullValue};
 use dom::bindings::utils::{Reflectable, Reflector, reflect_dom_object};
 use dom::window::Window;
@@ -513,14 +513,14 @@ impl<'a> PrivateXMLHttpRequestHelpers for JSRef<'a, XMLHttpRequest> {
     unsafe fn to_trusted(&mut self) -> TrustedXHRAddress {
         assert!(self.pinned == false);
         self.pinned = true;
-        JS_AddObjectRoot(self.global.root().get_cx(), self.mut_reflector().rootable());
+        //JS_AddObjectRoot(self.global.root().get_cx(), self.mut_reflector().rootable());
         TrustedXHRAddress(self.deref() as *XMLHttpRequest as *libc::c_void)
     }
 
     fn release(&mut self) {
         assert!(self.pinned);
         unsafe {
-            JS_RemoveObjectRoot(self.global.root().get_cx(), self.mut_reflector().rootable());
+            //JS_RemoveObjectRoot(self.global.root().get_cx(), self.mut_reflector().rootable());
         }
         self.pinned = false;
     }

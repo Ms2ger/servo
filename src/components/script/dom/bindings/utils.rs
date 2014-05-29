@@ -145,8 +145,8 @@ pub fn jsstring_to_str(cx: *mut JSContext, s: *mut JSString) -> DOMString {
 
 pub fn jsid_to_str(cx: *mut JSContext, id: JSHandleId) -> DOMString {
     unsafe {
-        assert!(RUST_JSID_IS_STRING(id) != 0);
-        jsstring_to_str(cx, RUST_JSID_TO_STRING(id))
+        assert!(RUST_JSID_IS_STRING(*id) != 0);
+        jsstring_to_str(cx, RUST_JSID_TO_STRING(*id))
     }
 }
 
