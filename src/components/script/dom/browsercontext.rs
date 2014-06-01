@@ -56,7 +56,7 @@ impl BrowserContext {
         assert!(handler.deref().is_not_null());
 
         let parent = win.deref().reflector().get_jsobject();
-        let cx = js_info.get_ref().js_context.deref().deref().ptr;
+        let cx = win.deref().get_cx();
         let wrapper = with_compartment(cx, parent, || unsafe {
             WrapperNew(cx, parent, *handler.deref())
         });

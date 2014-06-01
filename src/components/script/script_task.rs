@@ -36,12 +36,10 @@ use layout_interface;
 use geom::point::Point2D;
 use geom::size::Size2D;
 use js::jsapi::JS_CallFunctionValue;
-use js::jsapi::{JS_SetWrapObjectCallbacks, JS_SetGCZeal, JS_DEFAULT_ZEAL_FREQ, JS_GC};
-use js::jsapi::{JSContext, JSRuntime};
+use js::jsapi::{JSContext, JSRuntime, JS_GC};
 use js::jsval::NullValue;
-use js::rust::{Cx, RtUtils};
+use js::rust::runtime;
 use js::rust::with_compartment;
-use js;
 use servo_msg::compositor_msg::{FinishedLoading, LayerId, Loading, PerformingLayout};
 use servo_msg::compositor_msg::{ScriptListener};
 use servo_msg::constellation_msg::{ConstellationChan, LoadCompleteMsg, LoadUrlMsg, NavigationDirection};
@@ -204,10 +202,10 @@ impl Page {
            layout_chan: LayoutChan,
            window_size: Size2D<uint>, resource_task: ResourceTask,
            constellation_chan: ConstellationChan,
-           js_context: Rc<Cx>) -> Page {
+           js_runtime: runtime) -> Page {
         let js_info = JSPageInfo {
             dom_static: GlobalStaticData(),
-            js_context: Untraceable::new(js_context),
+            js_runtime: Untraceable::new(js_runtime),
         };
         Page {
             id: id,
@@ -516,8 +514,8 @@ pub struct Frame {
 pub struct JSPageInfo {
     /// Global static data related to the DOM.
     pub dom_static: GlobalStaticData,
-    /// The JavaScript context.
-    pub js_context: Untraceable<Rc<Cx>>,
+    /// The JavaScript runtime.
+    pub js_runtime: Untraceable<runtime>,
 }
 
 struct StackRootTLS;
@@ -559,9 +557,7 @@ pub struct ScriptTask {
     compositor: Box<ScriptListener>,
 
     /// The JavaScript runtime.
-    js_runtime: js::rust::rt,
-    /// The JSContext.
-    js_context: RefCell<Option<Rc<Cx>>>,
+    js_runtime: runtime,
 
     mouse_over_targets: RefCell<Option<Vec<JS<Node>>>>
 }
@@ -595,7 +591,6 @@ impl<'a> Drop for ScriptMemoryFailsafe<'a> {
                 for page in page.iter() {
                     *page.mut_js_info() = None;
                 }
-                *owner.js_context.borrow_mut() = None;
             }
             None => (),
         }
@@ -614,11 +609,11 @@ impl ScriptTask {
                img_cache_task: ImageCacheTask,
                window_size: Size2D<uint>)
                -> Rc<ScriptTask> {
-        let (js_runtime, js_context) = ScriptTask::new_rt_and_cx();
+        let js_runtime = runtime(Some(wrap_for_same_compartment), Some(pre_wrap));
         let page = Page::new(id, None, layout_chan, window_size,
                              resource_task.clone(),
                              constellation_chan.clone(),
-                             js_context.clone());
+                             js_runtime.clone());
         Rc::new(ScriptTask {
             page: RefCell::new(Rc::new(page)),
 
@@ -631,48 +626,12 @@ impl ScriptTask {
             compositor: compositor,
 
             js_runtime: js_runtime,
-            js_context: RefCell::new(Some(js_context)),
             mouse_over_targets: RefCell::new(None)
         })
     }
 
-    fn new_rt_and_cx() -> (js::rust::rt, Rc<Cx>) {
-        let js_runtime = js::rust::rt();
-        assert!({
-            let ptr: *mut JSRuntime = (*js_runtime).ptr;
-            ptr.is_not_null()
-        });
-        unsafe {
-            // JS_SetWrapObjectCallbacks clobbers the existing wrap callback,
-            // and JSCompartment::wrap crashes if that happens. The only way
-            // to retrieve the default callback is as the result of
-            // JS_SetWrapObjectCallbacks, which is why we call it twice.
-            let callback = JS_SetWrapObjectCallbacks((*js_runtime).ptr,
-                                                     None,
-                                                     Some(wrap_for_same_compartment),
-                                                     None);
-            JS_SetWrapObjectCallbacks((*js_runtime).ptr,
-                                      callback,
-                                      Some(wrap_for_same_compartment),
-                                      Some(pre_wrap));
-        }
-
-        let js_context = js_runtime.cx();
-        assert!({
-            let ptr: *mut JSContext = (*js_context).ptr;
-            ptr.is_not_null()
-        });
-        js_context.set_default_options_and_version();
-        js_context.set_logging_error_reporter();
-        unsafe {
-            JS_SetGCZeal((*js_context).ptr, 0, JS_DEFAULT_ZEAL_FREQ);
-        }
-
-        (js_runtime, js_context)
-    }
-
     pub fn get_cx(&self) -> *mut JSContext {
-        (**self.js_context.borrow().get_ref()).ptr
+        self.js_runtime.context()
     }
 
     /// Starts the script task. After calling this method, the script task will loop receiving
@@ -809,7 +768,7 @@ impl ScriptTask {
             Page::new(new_pipeline_id, Some(subpage_id), layout_chan, window_size,
                       parent_page.resource_task.deref().clone(),
                       self.constellation_chan.clone(),
-                      self.js_context.borrow().get_ref().clone())
+                      self.js_runtime.clone())
         };
         parent_page.children.deref().borrow_mut().push(Rc::new(new_page));
     }
@@ -904,15 +863,14 @@ impl ScriptTask {
         let mut page = self.page.borrow_mut();
         if page.id == id {
             debug!("shutting down layout for root page {:?}", id);
-            *self.js_context.borrow_mut() = None;
-            shut_down_layout(&*page, (*self.js_runtime).ptr);
+            shut_down_layout(&*page, self.js_runtime.runtime());
             return true
         }
 
         // otherwise find just the matching page and exit all sub-pages
         match page.remove(id) {
             Some(ref mut page) => {
-                shut_down_layout(&*page, (*self.js_runtime).ptr);
+                shut_down_layout(&*page, self.js_runtime.runtime());
                 false
             }
             // TODO(tkuehn): pipeline closing is currently duplicated across
@@ -946,10 +904,9 @@ impl ScriptTask {
             _ => (),
         }
 
-        let cx = self.js_context.borrow();
-        let cx = cx.get_ref();
+        let cx = self.js_runtime.context();
         // Create the window and document objects.
-        let mut window = Window::new(cx.deref().ptr,
+        let mut window = Window::new(cx,
                                      page.clone(),
                                      self.chan.clone(),
                                      self.compositor.dup(),
@@ -957,7 +914,7 @@ impl ScriptTask {
         let mut document = Document::new(&*window, Some(url.clone()), HTMLDocument, None).root();
         window.deref_mut().init_browser_context(&*document);
 
-        with_compartment((**cx).ptr, window.reflector().get_jsobject(), || {
+        with_compartment(cx, window.reflector().get_jsobject(), || {
             let mut js_info = page.mut_js_info();
             RegisterBindings::Register(&window.unrooted(), js_info.get_mut_ref());
         });
@@ -1020,13 +977,13 @@ impl ScriptTask {
         let js_scripts = js_scripts.take_unwrap();
         debug!("js_scripts: {:?}", js_scripts);
 
-        with_compartment((**cx).ptr, window.reflector().get_jsobject(), || {
+        with_compartment(cx, window.reflector().get_jsobject(), || {
             // Evaluate every script in the document.
             for file in js_scripts.iter() {
                 let global_obj = window.reflector().get_jsobject();
                 //FIXME: this should have some kind of error handling, or explicitly
                 //       drop an exception on the floor.
-                match cx.evaluate_script(global_obj, file.data.clone(), file.url.to_str(), 1) {
+                match self.js_runtime.evaluate_script(global_obj, file.data.clone(), file.url.to_str(), 1) {
                     Ok(_) => (),
                     Err(_) => println!("evaluate_script failed")
                 }
@@ -1124,7 +1081,7 @@ impl ScriptTask {
 
                         let temp_node =
                                 node::from_untrusted_node_address(
-                                    self.js_runtime.deref().ptr, node_address);
+                                    self.js_runtime.runtime(), node_address);
 
                         let maybe_node = temp_node.root().ancestors().find(|node| node.is_element());
                         match maybe_node {
@@ -1175,7 +1132,7 @@ impl ScriptTask {
 
                             let temp_node =
                                 node::from_untrusted_node_address(
-                                    self.js_runtime.deref().ptr, *node_address);
+                                    self.js_runtime.runtime(), *node_address);
 
                             let maybe_node = temp_node.root().ancestors().find(|node| node.is_element());
                             match maybe_node {

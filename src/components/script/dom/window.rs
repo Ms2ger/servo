@@ -87,7 +87,7 @@ pub struct Window {
 impl Window {
     pub fn get_cx(&self) -> *mut JSContext {
         let js_info = self.page().js_info();
-        (**js_info.get_ref().js_context).ptr
+        js_info.get_ref().js_runtime.deref().context()
     }
 
     pub fn page<'a>(&'a self) -> &'a Page {

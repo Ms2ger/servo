@@ -2108,7 +2108,7 @@ class CGDefineDOMInterfaceMethod(CGAbstractMethod):
        TRACE_HOOK_NAME,
        self.descriptor.name)
 
-        return (body + """  let cx = (**js_info.js_context).ptr;
+        return (body + """  let cx = js_info.js_runtime.context();
   let global = window.reflector().get_jsobject();
   assert!(global.is_not_null());
   assert!(%s(cx, global, global).is_not_null());""" % (getter))
