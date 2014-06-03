@@ -4123,9 +4123,6 @@ class CGDictionary(CGThing):
         return declType.define()
 
     def getMemberConversion(self, memberInfo):
-        def indent(s):
-            return CGIndenter(CGGeneric(s), 8).define()
-
         member, (templateBody, default, declType, _) = memberInfo
         replacements = { "val": "value" }
         conversion = string.Template(templateBody).substitute(replacements)
@@ -4135,18 +4132,11 @@ class CGDictionary(CGThing):
             default = "None"
             conversion = "Some(%s)" % conversion
 
-        conversion = (
-            "match get_dictionary_property(cx, object, \"%s\") {\n"
-            "    Err(()) => return Err(()),\n"
-            "    Ok(Some(value)) => {\n"
-            "%s\n"
-            "    },\n"
-            "    Ok(None) => {\n"
-            "%s\n"
-            "    },\n"
-            "}") % (member.identifier.name, indent(conversion), indent(default))
-
-        return CGGeneric(conversion)
+        return CGSwitch("get_dictionary_property(cx, object, \"%s\")" % member.identifier.name, [
+            CGCase("Err(())", CGGeneric("return Err(());")),
+            CGCase("Ok(Some(value))", CGGeneric(conversion)),
+            CGCase("Ok(None)", CGGeneric(default)),
+        ])
 
     @staticmethod
     def makeIdName(name):
