@@ -4058,11 +4058,13 @@ class CGDictionary(CGThing):
     def impl(self):
         d = self.dictionary
         if d.parent:
-            initParent = ("parent: match %s::%s::new(cx, val) {\n"
-                          "  Ok(parent) => parent,\n"
-                          "  Err(_) => return Err(()),\n"
-                          "},\n") % (self.makeModuleName(d.parent),
+            parentType = "%s::%s" % (self.makeModuleName(d.parent),
                                      self.makeClassName(d.parent))
+            match = CGSwitch("%s::new(cx, val)" % parentType, [
+                CGCase("Ok(parent)", CGGeneric("parent")),
+                CGCase("Err(_)", CGGeneric("return Err(());")),
+            ])
+            initParent = "parent: %s,\n" % match.define()
         else:
             initParent = ""
 
