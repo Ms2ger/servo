@@ -2195,17 +2195,16 @@ class CGCallGenerator(CGThing):
             if static:
                 glob = ""
             else:
-                glob = "        let global = global_object_for_js_object(this.reflector().get_jsobject()).root();\n"
+                glob = "let global = global_object_for_js_object(this.reflector().get_jsobject()).root();\n"
 
-            self.cgRoot.append(CGGeneric(
-                "let result = match result {\n"
-                "    Ok(result) => result,\n"
-                "    Err(e) => {\n"
-                "%s"
-                "        throw_dom_exception(cx, &*global, e);\n"
-                "        return%s;\n"
-                "    },\n"
-                "};\n" % (glob, errorResult)))
+            match = CGSwitch("result", [
+                CGCase("Ok(result)", CGGeneric("result")),
+                CGCase("Err(e)", CGGeneric(
+                    "%s"
+                    "throw_dom_exception(cx, &*global, e);\n"
+                    "return%s;" % (glob, errorResult))),
+            ])
+            self.cgRoot.append(CGWrapper(match, pre="let result = ", post=";\n"))
 
         if typeRetValNeedsRooting(returnType):
             self.cgRoot.append(CGGeneric("let result = result.root();"))
