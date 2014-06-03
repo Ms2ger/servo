@@ -2758,22 +2758,20 @@ class CGUnionStruct(CGThing):
         enumValues = [
             "    e%s(%s)," % (v["name"], v["typeName"]) for v in templateVars
         ]
-        enumConversions = [
-            "            e%s(ref inner) => inner.to_jsval(cx)," % v["name"] for v in templateVars
-        ]
+        toJsval = CGSwitch("*self", (
+            CGCase("e%s(ref inner)" % v["name"], CGGeneric("inner.to_jsval(cx)")) for v in templateVars
+        ))
         return ("""pub enum %s {
 %s
 }
 
 impl ToJSValConvertible for %s {
     fn to_jsval(&self, cx: *mut JSContext) -> JSVal {
-        match *self {
 %s
-        }
   }
 }
 """) % (self.type, "\n".join(enumValues),
-        self.type, "\n".join(enumConversions))
+        self.type, CGIndenter(toJsval, 8).define())
 
 
 class CGUnionConversionStruct(CGThing):
