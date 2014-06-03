@@ -2797,15 +2797,14 @@ class CGUnionConversionStruct(CGThing):
                 return memberType.name
 
             def get_match(name):
-                return (
-                    "match %s::TryConvertTo%s(cx, value) {\n"
-                    "    Err(_) => return Err(()),\n"
-                    "    Ok(Some(value)) => return Ok(e%s(value)),\n"
-                    "    Ok(None) => (),\n"
-                    "}\n") % (self.type, name, name)
+                return CGSwitch("%s::TryConvertTo%s(cx, value)" % (self.type, name), [
+                    CGCase("Err(_)", CGGeneric("return Err(());")),
+                    CGCase("Ok(Some(value))", CGGeneric("return Ok(e%s(value));" % name)),
+                    CGCase("Ok(None)", None),
+                ])
 
             typeNames = [get_name(memberType) for memberType in interfaceMemberTypes]
-            interfaceObject = CGList(CGGeneric(get_match(typeName)) for typeName in typeNames)
+            interfaceObject = CGList((get_match(typeName) for typeName in typeNames), "\n")
             names.extend(typeNames)
         else:
             interfaceObject = None
@@ -2865,13 +2864,13 @@ class CGUnionConversionStruct(CGThing):
                 name = memberType.inner.identifier.name
             else:
                 name = memberType.name
-            match = (
-                    "match %s::TryConvertTo%s(cx, value) {\n"
-                    "    Err(_) => return Err(()),\n"
-                    "    Ok(Some(value)) => return Ok(e%s(value)),\n"
-                    "    Ok(None) => (),\n"
-                    "}\n") % (self.type, name, name)
-            conversions.append(CGGeneric(match))
+
+            match = CGSwitch("%s::TryConvertTo%s(cx, value)" % (self.type, name), [
+                CGCase("Err(_)", CGGeneric("return Err(());")),
+                CGCase("Ok(Some(value))", CGGeneric("return Ok(e%s(value));" % name)),
+                CGCase("Ok(None)", None),
+            ])
+            conversions.append(match)
             names.append(name)
 
         conversions.append(CGGeneric(
