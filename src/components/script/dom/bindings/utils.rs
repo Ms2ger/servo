@@ -316,7 +316,7 @@ fn CreateInterfaceObject(cx: *mut JSContext, global: *mut JSObject, receiver: *m
     }
 }
 
-fn DefineConstants(cx: *mut JSContext, obj: *mut JSObject, constants: &'static [ConstantSpec]) -> bool {
+fn DefineConstants(cx: *mut JSContext, obj: JSHandleObject, constants: &'static [ConstantSpec]) -> bool {
     constants.iter().all(|spec| {
         let jsval = match spec.value {
             NullVal => NullValue(),
@@ -330,9 +330,9 @@ fn DefineConstants(cx: *mut JSContext, obj: *mut JSObject, constants: &'static [
             unnamed_field1: &jsval,
         };
         unsafe {
-            JS_DefineProperty(cx, obj, spec.name, jsval,
+            JS_DefineProperty(cx, obj, spec.name.as_ptr() as *libc::c_char, jsval,
                               JSPROP_ENUMERATE | JSPROP_READONLY | JSPROP_PERMANENT,
-                              None, None)
+                              None, None) != 0
         }
     })
 }

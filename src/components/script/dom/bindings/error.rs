@@ -7,7 +7,7 @@ use dom::bindings::js::JSRef;
 use dom::domexception::DOMException;
 use dom::window::Window;
 
-use js::jsapi::{JSContext, JSBool};
+use js::jsapi::{JSContext, JSBool, Handle};
 use js::jsapi::{JS_IsExceptionPending, JS_SetPendingException};
 use js::jsapi::{JS_ReportErrorNumber, JSErrorFormatString, Struct_JSErrorFormatString, JSEXN_TYPEERR};
 use js::glue::{ReportError};
@@ -39,6 +39,9 @@ pub fn throw_dom_exception(cx: *mut JSContext, global: &JSRef<Window>,
     assert!(unsafe { JS_IsExceptionPending(cx) } == 0);
     let exception = DOMException::new_from_error(global, result).root();
     let thrown = exception.to_jsval(cx);
+    let thrown = Handle {
+        unnamed_field1: &thrown,
+    };
     unsafe {
         JS_SetPendingException(cx, thrown);
     }
