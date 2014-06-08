@@ -10,7 +10,9 @@ use dom::bindings::trace::{Traceable, Untraceable};
 use dom::bindings::utils::{Reflectable, Reflector};
 use dom::browsercontext::BrowserContext;
 use dom::console::Console;
+use dom::cssstyledeclaration::CSSStyleDeclaration;
 use dom::document::Document;
+use dom::element::Element;
 use dom::eventtarget::{EventTarget, WindowTypeId, EventTargetHelpers};
 use dom::location::Location;
 use dom::navigator::Navigator;
@@ -139,6 +141,7 @@ pub trait WindowMethods {
     fn SetOnerror(&mut self, listener: Option<OnErrorEventHandlerNonNull>);
     fn Debug(&self, message: DOMString);
     fn Gc(&self);
+    fn GetComputedStyle(&self, _: &JSRef<Element>, _: DOMString) -> Temporary<CSSStyleDeclaration>;
 }
 
 impl<'a> WindowMethods for JSRef<'a, Window> {
@@ -267,6 +270,10 @@ impl<'a> WindowMethods for JSRef<'a, Window> {
         unsafe {
             JS_GC(JS_GetRuntime(self.get_cx()));
         }
+    }
+
+    fn GetComputedStyle(&self, _: &JSRef<Element>, _: DOMString) -> Temporary<CSSStyleDeclaration> {
+        CSSStyleDeclaration::new(self)
     }
 }
 
