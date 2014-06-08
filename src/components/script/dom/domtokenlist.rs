@@ -62,6 +62,8 @@ pub trait DOMTokenListMethods {
     fn Length(&self) -> u32;
     fn Item(&self, index: u32) -> Option<DOMString>;
     fn IndexedGetter(&self, index: u32, found: &mut bool) -> Option<DOMString>;
+    fn Add(&self) {}
+    fn Remove(&self) {}
 }
 
 // http://dom.spec.whatwg.org/#domtokenlist
