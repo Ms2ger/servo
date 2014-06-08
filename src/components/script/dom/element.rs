@@ -17,6 +17,7 @@ use dom::bindings::error::{ErrorResult, Fallible, NamespaceError, InvalidCharact
 use dom::bindings::utils::{QName, Name, InvalidXMLName, xml_name_type};
 use dom::clientrect::ClientRect;
 use dom::clientrectlist::ClientRectList;
+use dom::cssstyledeclaration::CSSStyleDeclaration;
 use dom::document::{Document, DocumentHelpers};
 use dom::domtokenlist::DOMTokenList;
 use dom::eventtarget::{EventTarget, NodeTargetTypeId};
@@ -453,6 +454,7 @@ pub trait ElementMethods {
     fn Children(&self) -> Temporary<HTMLCollection>;
     fn QuerySelector(&self, selectors: DOMString) -> Fallible<Option<Temporary<Element>>>;
     fn Remove(&self);
+    fn Style(&self) -> Temporary<CSSStyleDeclaration>;
 }
 
 impl<'a> ElementMethods for JSRef<'a, Element> {
@@ -752,6 +754,11 @@ impl<'a> ElementMethods for JSRef<'a, Element> {
     fn Remove(&self) {
         let node: &JSRef<Node> = NodeCast::from_ref(self);
         node.remove_self();
+    }
+
+    fn Style(&self) -> Temporary<CSSStyleDeclaration> {
+        let window = window_from_node(self).root();
+        CSSStyleDeclaration::new(&*window)
     }
 }
 
