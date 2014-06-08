@@ -6,7 +6,7 @@
 //! and layout tasks.
 
 use dom::bindings::codegen::RegisterBindings;
-use dom::bindings::codegen::InheritTypes::{EventTargetCast, NodeCast, ElementCast, EventCast};
+use dom::bindings::codegen::InheritTypes::{EventTargetCast, NodeCast, ElementCast, EventCast, HTMLIFrameElementCast};
 use dom::bindings::js::{JS, JSRef, RootCollection, Temporary, OptionalSettable};
 use dom::bindings::js::OptionalRootable;
 use dom::bindings::trace::{Traceable, Untraceable};
@@ -18,8 +18,9 @@ use dom::event::{Event_, ResizeEvent, ReflowEvent, ClickEvent, MouseDownEvent, M
 use dom::event::Event;
 use dom::uievent::UIEvent;
 use dom::eventtarget::{EventTarget, EventTargetHelpers};
+use dom::htmliframeelement::HTMLIFrameElement;
 use dom::node;
-use dom::node::{Node, NodeHelpers};
+use dom::node::{Node, NodeHelpers, NodeIterator};
 use dom::window::{TimerId, Window, WindowHelpers};
 use dom::xmlhttprequest::{TrustedXHRAddress, XMLHttpRequest, XHRProgress};
 use html::hubbub_html_parser::HtmlParserResult;
@@ -169,6 +170,8 @@ pub struct Page {
     /// A handle for communicating messages to the constellation task.
     pub constellation_chan: Untraceable<ConstellationChan>,
 
+    parent: Traceable<RefCell<Option<Rc<Page>>>>,
+
     // Child Pages.
     pub children: Traceable<RefCell<Vec<Rc<Page>>>>,
 }
@@ -199,7 +202,8 @@ impl IterablePage for Rc<Page> {
 }
 
 impl Page {
-    fn new(id: PipelineId, subpage_id: Option<SubpageId>,
+    fn new(parent: Option<Rc<Page>>,
+           id: PipelineId, subpage_id: Option<SubpageId>,
            layout_chan: LayoutChan,
            window_size: Size2D<uint>, resource_task: ResourceTask,
            constellation_chan: ConstellationChan,
@@ -224,6 +228,7 @@ impl Page {
             last_reflow_id: Traceable::new(Cell::new(0)),
             resource_task: Untraceable::new(resource_task),
             constellation_chan: Untraceable::new(constellation_chan),
+            parent: Traceable::new(RefCell::new(parent)),
             children: Traceable::new(RefCell::new(vec!())),
         }
     }
@@ -612,7 +617,7 @@ impl ScriptTask {
                window_size: Size2D<uint>)
                -> Rc<ScriptTask> {
         let (js_runtime, js_context) = ScriptTask::new_rt_and_cx();
-        let page = Page::new(id, None, layout_chan, window_size,
+        let page = Page::new(None, id, None, layout_chan, window_size,
                              resource_task.clone(),
                              constellation_chan.clone(),
                              js_context.clone());
@@ -803,7 +808,8 @@ impl ScriptTask {
             task's page tree. This is a bug.");
         let new_page = {
             let window_size = parent_page.window_size.deref().get();
-            Page::new(new_pipeline_id, Some(subpage_id), layout_chan, window_size,
+            Page::new(Some(parent_page.clone()),
+                      new_pipeline_id, Some(subpage_id), layout_chan, window_size,
                       parent_page.resource_task.deref().clone(),
                       self.constellation_chan.clone(),
                       self.js_context.borrow().get_ref().clone())
@@ -1039,6 +1045,28 @@ impl ScriptTask {
         let wintarget: &JSRef<EventTarget> = EventTargetCast::from_ref(&*window);
         let _ = wintarget.dispatch_event_with_target(Some((*doctarget).clone()),
                                                      &mut *event);
+
+        match &*page.parent.deref().borrow() {
+            &Some(ref parent) => {
+                let document = parent.frame().get_ref().document.root();
+                let window = parent.frame().get_ref().window.root();
+                let mut iter = NodeIterator::new(NodeCast::from_ref(&*document), true, true);
+                for ref node in iter {
+                    let iframe: Option<&JSRef<HTMLIFrameElement>> =
+                        HTMLIFrameElementCast::to_ref(node);
+                    match iframe {
+                        Some(iframe) => {
+                            let mut event =
+                                Event::new(&*window, "load".to_string(), false, false).root();
+                            let iframe: &JSRef<EventTarget> = EventTargetCast::from_ref(iframe);
+                            let _ = iframe.dispatch_event_with_target(None, &mut *event);
+                        },
+                        _ => (),
+                    }
+                }
+            },
+            &None => (),
+        }
 
         page.fragment_node.assign(fragment.map_or(None, |fragid| page.find_fragment_node(fragid)));
 
