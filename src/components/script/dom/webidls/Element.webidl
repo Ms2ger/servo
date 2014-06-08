@@ -68,3 +68,7 @@ partial interface Element {
 
 Element implements ChildNode;
 Element implements ParentNode;
+
+partial interface Element {
+  readonly attribute CSSStyleDeclaration style;
+};

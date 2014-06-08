@@ -85,6 +85,7 @@ pub mod dom {
     pub mod clientrectlist;
     pub mod comment;
     pub mod console;
+    pub mod cssstyledeclaration;
     pub mod customevent;
     pub mod dedicatedworkerglobalscope;
     pub mod document;
