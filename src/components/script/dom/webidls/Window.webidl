@@ -117,3 +117,7 @@ partial interface Window {
   void gc();
 };
 Window implements OnErrorEventHandlerForWindow;
+
+partial interface Window {
+  CSSStyleDeclaration getComputedStyle(Element elt, optional DOMString pseudoElt = "");
+};
