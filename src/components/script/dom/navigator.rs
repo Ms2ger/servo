@@ -33,6 +33,7 @@ pub trait NavigatorMethods {
     fn AppName(&self) -> DOMString;
     fn AppCodeName(&self) -> DOMString;
     fn Platform(&self) -> DOMString;
+    fn UserAgent(&self) -> DOMString;
 }
 
 impl<'a> NavigatorMethods for JSRef<'a, Navigator> {
@@ -53,6 +54,10 @@ impl<'a> NavigatorMethods for JSRef<'a, Navigator> {
     }
 
     fn Platform(&self) -> DOMString {
+        "".to_string()
+    }
+
+    fn UserAgent(&self) -> DOMString {
         "".to_string()
     }
 }
