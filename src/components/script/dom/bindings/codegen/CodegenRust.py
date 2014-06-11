@@ -214,14 +214,14 @@ class CGMethodCall(CGThing):
             # Doesn't matter which of the possible signatures we use, since
             # they all have the same types up to that point; just use
             # possibleSignatures[0]
-            caseBody = [CGGeneric("let argv_start = JS_ARGV(cx, vp);")]
+            caseBody = [CGGeneric("let argv_start = args.args();")]
             caseBody.extend([ CGArgumentConverter(possibleSignatures[0][1][i],
                                                   i, "argv_start", "argc",
                                                   descriptor) for i in
                               range(0, distinguishingIndex) ])
 
             # Select the right overload from our set.
-            distinguishingArg = "(*argv_start.offset(%d))" % distinguishingIndex
+            distinguishingArg = "(argv_start[%d])" % distinguishingIndex
 
             def pickFirstSignature(condition, filterLambda):
                 sigs = filter(filterLambda, possibleSignatures)
@@ -896,7 +896,7 @@ class CGArgumentConverter(CGThing):
         condition = string.Template("${index} < ${argc}").substitute(replacer)
 
         replacementVariables = {
-            "val": string.Template("(*${argv}.offset(${index}))").substitute(replacer),
+            "val": string.Template("(${argv}[${index}])").substitute(replacer),
         }
 
         template, default, declType, needsRooting = getJSToNativeConversionTemplate(
@@ -932,7 +932,7 @@ class CGArgumentConverter(CGThing):
         else:
             assert argument.optional
             variadicConversion = {
-                "val": string.Template("(*${argv}.offset(variadicArg as int))").substitute(replacer),
+                "val": string.Template("(${argv}[variadicArg as uint])").substitute(replacer),
             }
             innerConverter = instantiateJSToNativeConversionTemplate(
                 template, variadicConversion, declType, "slot",
@@ -2271,15 +2271,12 @@ class CGPerSignatureCall(CGThing):
         self.argsPre = argsPre
         self.arguments = arguments
         self.argCount = len(arguments)
-        if self.argCount > argConversionStartsAt:
-            # Insert our argv in there
-            cgThings = [CGGeneric(self.getArgvDecl())]
-        else:
-            cgThings = []
-        cgThings.extend([CGArgumentConverter(arguments[i], i, self.getArgv(),
-                                             self.getArgc(), self.descriptor,
-                                             invalidEnumValueFatal=not setter) for
-                         i in range(argConversionStartsAt, self.argCount)])
+        cgThings = [
+            CGArgumentConverter(arguments[i], i, self.getArgv(),
+                                self.getArgc(), self.descriptor,
+                                invalidEnumValueFatal=not setter)
+            for i in range(argConversionStartsAt, self.argCount)
+        ]
 
         cgThings.append(CGCallGenerator(
                     ' false as JSBool' if self.isFallible() else None,
@@ -2290,8 +2287,6 @@ class CGPerSignatureCall(CGThing):
 
     def getArgv(self):
         return "argv" if self.argCount > 0 else ""
-    def getArgvDecl(self):
-        return "\nlet argv = JS_ARGV(cx, vp);\n"
     def getArgc(self):
         return "argc"
     def getArguments(self):
@@ -2399,9 +2394,6 @@ class CGSetterCall(CGPerSignatureCall):
         return "\nreturn 1;"
     def getArgc(self):
         return "1"
-    def getArgvDecl(self):
-        # We just get our stuff from our last arg no matter what
-        return ""
 
 class CGAbstractBindingMethod(CGAbstractExternMethod):
     """
@@ -2471,7 +2463,9 @@ class CGSpecializedMethod(CGAbstractExternMethod):
         return CGWrapper(CGMethodCall([], MakeNativeName(name), self.method.isStatic(),
                                       self.descriptor, self.method),
                          pre="  let this = JS::from_raw(this);\n" +
-                             "  let mut this = this.root();\n").define()
+                             "  let mut this = this.root();\n"
+                             "  let args = CallArgs::new(vp.offset(2), argc);\n"
+                             "  let argv = args.args();\n").define()
 
 class CGGenericGetter(CGAbstractBindingMethod):
     """
@@ -2522,7 +2516,9 @@ class CGSpecializedGetter(CGAbstractExternMethod):
         return CGWrapper(CGIndenter(CGGetterCall([], self.attr.type, nativeName,
                                                  self.descriptor, self.attr)),
                          pre="  let this = JS::from_raw(this);\n" +
-                             "  let mut this = this.root();\n").define()
+                             "  let mut this = this.root();\n"
+                             "  let args = CallArgs::new(ptr::mut_null(), 0);\n"
+                             "  let argv = args.args();\n").define()
 
 class CGGenericSetter(CGAbstractBindingMethod):
     """
@@ -2573,7 +2569,9 @@ class CGSpecializedSetter(CGAbstractExternMethod):
                                                  "Set" + MakeNativeName(name),
                                                  self.descriptor, self.attr)),
                          pre="  let this = JS::from_raw(this);\n" +
-                             "  let mut this = this.root();\n").define()
+                             "  let mut this = this.root();\n"
+                             "  let args = CallArgs::new(argv, 1);\n"
+                             "  let argv = args.args();\n").define()
 
 
 class CGMemberJITInfo(CGThing):
@@ -3857,6 +3855,8 @@ class CGClassConstructHook(CGAbstractExternMethod):
 
     def generate_code(self):
         preamble = """
+  let args = CallArgs::new(vp.offset(2), argc);
+  let argv = args.args();
   let global = global_object_for_js_object(JS_CALLEE(cx, vp).to_object()).root();
   let obj = global.deref().reflector().get_jsobject();
 """
@@ -4321,6 +4321,7 @@ class CGBindingRoot(CGThing):
             'dom::bindings::utils::{ThrowingConstructor,  unwrap, unwrap_jsmanaged}',
             'dom::bindings::utils::VoidVal',
             'dom::bindings::utils::get_dictionary_property',
+            'dom::bindings::utils::CallArgs',
             'dom::bindings::trace::JSTraceable',
             'dom::bindings::callback::{CallbackContainer,CallbackInterface,CallbackFunction}',
             'dom::bindings::callback::{CallSetup,ExceptionHandling}',

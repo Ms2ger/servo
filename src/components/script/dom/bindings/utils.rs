@@ -18,6 +18,7 @@ use std::mem;
 use std::cmp::Eq;
 use std::ptr;
 use std::ptr::null;
+use std::raw;
 use std::slice;
 use std::str;
 use js::glue::{js_IsObjectProxyClass, js_IsFunctionProxyClass, IsProxyHandlerFamily};
@@ -658,6 +659,34 @@ fn cx_for_dom_reflector(obj: *mut JSObject) -> *mut JSContext {
 
 pub fn cx_for_dom_object<T: Reflectable>(obj: &T) -> *mut JSContext {
     cx_for_dom_reflector(obj.reflector().get_jsobject())
+}
+
+pub struct CallArgs {
+    args: *mut JSVal,
+    argc: c_uint,
+}
+
+impl CallArgs {
+    pub fn new(args: *mut JSVal, argc: c_uint) -> CallArgs {
+        assert!(args.is_not_null() || argc == 0);
+        CallArgs {
+            args: args,
+            argc: argc,
+        }
+    }
+
+    pub fn args<'b>(&'b self) -> &'b [JSVal] {
+        if self.args.is_null() {
+            &[]
+        } else {
+            unsafe {
+                mem::transmute(raw::Slice {
+                    data: self.args as *JSVal,
+                    len: self.argc as uint,
+                })
+            }
+        }
+    }
 }
 
 /// Check if an element name is valid. See http://www.w3.org/TR/xml/#NT-Name
