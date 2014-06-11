@@ -972,7 +972,7 @@ def wrapForType(jsvalRef, result='result', successCode='return 1;'):
       * 'result': the name of the variable in which the Rust value is stored;
       * 'successCode': the code to run once we have done the conversion.
     """
-    return "%s = (%s).to_jsval(cx);\n%s" % (jsvalRef, result, successCode)
+    return "unsafe { %s = (%s).to_jsval(cx) };\n%s" % (jsvalRef, result, successCode)
 
 
 def typeNeedsCx(type, retVal=False):
@@ -1732,7 +1732,7 @@ class CGAbstractMethod(CGThing):
     template arguments, and the function will be templatized using those
     arguments.
     """
-    def __init__(self, descriptor, name, returnType, args, inline=False, alwaysInline=False, extern=False, pub=False, templateArgs=None, unsafe=True):
+    def __init__(self, descriptor, name, returnType, args, inline=False, alwaysInline=False, extern=False, pub=False, templateArgs=None, unsafe=False):
         CGThing.__init__(self)
         self.descriptor = descriptor
         self.name = name
@@ -1824,7 +1824,7 @@ class CGWrapMethod(CGAbstractMethod):
             args = [Argument('*mut JSContext', 'aCx'),
                     Argument("Box<%s>" % descriptor.concreteType, 'aObject', mutable=True)]
         retval = 'JS<%s>' % descriptor.concreteType
-        CGAbstractMethod.__init__(self, descriptor, 'Wrap', retval, args, pub=True)
+        CGAbstractMethod.__init__(self, descriptor, 'Wrap', retval, args, pub=True, unsafe=True)
 
     def definition_body(self):
         if not self.descriptor.createGlobal:
@@ -1882,9 +1882,9 @@ class CGAbstractExternMethod(CGAbstractMethod):
     Abstract base class for codegen of implementation-only (no
     declaration) static methods.
     """
-    def __init__(self, descriptor, name, returnType, args):
+    def __init__(self, descriptor, name, returnType, args, unsafe=False):
         CGAbstractMethod.__init__(self, descriptor, name, returnType, args,
-                                  inline=False, extern=True)
+                                  inline=False, extern=True, unsafe=unsafe)
 
 class PropertyArrays():
     def __init__(self, descriptor):
@@ -1930,7 +1930,7 @@ class CGCreateInterfaceObjectsMethod(CGAbstractMethod):
     def definition_body(self):
         protoChain = self.descriptor.prototypeChain
         if len(protoChain) == 1:
-            getParentProto = "JS_GetObjectPrototype(aCx, aGlobal)"
+            getParentProto = "unsafe { JS_GetObjectPrototype(aCx, aGlobal) }"
         else:
             parentProtoName = self.descriptor.prototypeChain[-2]
             getParentProto = ("%s::GetProtoObject(aCx, aGlobal, aReceiver)" %
@@ -2023,7 +2023,7 @@ class CGGetPerInterfaceObject(CGAbstractMethod):
         args = [Argument('*mut JSContext', 'aCx'), Argument('*mut JSObject', 'aGlobal'),
                 Argument('*mut JSObject', 'aReceiver')]
         CGAbstractMethod.__init__(self, descriptor, name,
-                                  '*mut JSObject', args, pub=pub)
+                                  '*mut JSObject', args, pub=pub, unsafe=True)
         self.id = idPrefix + "id::" + self.descriptor.name
     def definition_body(self):
         return """
@@ -2129,7 +2129,7 @@ class CGDefineDOMInterfaceMethod(CGAbstractMethod):
     trace: Some(%s)
   };
   js_info.dom_static.proxy_handlers.insert(PrototypeList::id::%s as uint,
-                                           CreateProxyHandler(&traps, &Class as *_ as *_));
+                                           unsafe { CreateProxyHandler(&traps, &Class as *_ as *_) });
 
 """ % (FINALIZE_HOOK_NAME,
        TRACE_HOOK_NAME,
@@ -2404,7 +2404,7 @@ class CGAbstractBindingMethod(CGAbstractExternMethod):
     CGThing which is already properly indented.
     """
     def __init__(self, descriptor, name, args, unwrapFailureCode=None):
-        CGAbstractExternMethod.__init__(self, descriptor, name, "JSBool", args)
+        CGAbstractExternMethod.__init__(self, descriptor, name, "JSBool", args, unsafe=True)
 
         if unwrapFailureCode is None:
             self.unwrapFailureCode = "return 0; //XXXjdm return Throw(cx, rv);"
@@ -2462,9 +2462,9 @@ class CGSpecializedMethod(CGAbstractExternMethod):
         name = self.method.identifier.name
         return CGWrapper(CGMethodCall([], MakeNativeName(name), self.method.isStatic(),
                                       self.descriptor, self.method),
-                         pre="  let this = JS::from_raw(this);\n" +
+                         pre="  let this = unsafe { JS::from_raw(this) };\n" +
                              "  let mut this = this.root();\n"
-                             "  let args = CallArgs::new(vp.offset(2), argc);\n"
+                             "  let args = CallArgs::new(unsafe { vp.offset(2) }, argc);\n"
                              "  let argv = args.args();\n").define()
 
 class CGGenericGetter(CGAbstractBindingMethod):
@@ -2515,7 +2515,7 @@ class CGSpecializedGetter(CGAbstractExternMethod):
             nativeName = "Get" + nativeName
         return CGWrapper(CGIndenter(CGGetterCall([], self.attr.type, nativeName,
                                                  self.descriptor, self.attr)),
-                         pre="  let this = JS::from_raw(this);\n" +
+                         pre="  let this = unsafe { JS::from_raw(this) };\n" +
                              "  let mut this = this.root();\n"
                              "  let args = CallArgs::new(ptr::mut_null(), 0);\n"
                              "  let argv = args.args();\n").define()
@@ -2568,7 +2568,7 @@ class CGSpecializedSetter(CGAbstractExternMethod):
         return CGWrapper(CGIndenter(CGSetterCall([], self.attr.type,
                                                  "Set" + MakeNativeName(name),
                                                  self.descriptor, self.attr)),
-                         pre="  let this = JS::from_raw(this);\n" +
+                         pre="  let this = unsafe { JS::from_raw(this) };\n" +
                              "  let mut this = this.root();\n"
                              "  let args = CallArgs::new(argv, 1);\n"
                              "  let argv = args.args();\n").define()
@@ -3480,7 +3480,7 @@ class CGProxyUnwrap(CGAbstractMethod):
     obj = js::UnwrapObject(obj);
   }*/
   //MOZ_ASSERT(IsProxy(obj));
-  let box_ = GetProxyPrivate(obj).to_private() as *%s;
+  let box_ = unsafe { GetProxyPrivate(obj).to_private() as *%s };
   return box_;""" % (self.descriptor.concreteType)
 
 class CGDOMJSProxyHandler_getOwnPropertyDescriptor(CGAbstractExternMethod):
@@ -3489,7 +3489,7 @@ class CGDOMJSProxyHandler_getOwnPropertyDescriptor(CGAbstractExternMethod):
                 Argument('jsid', 'id'), Argument('JSBool', 'set'),
                 Argument('*mut JSPropertyDescriptor', 'desc')]
         CGAbstractExternMethod.__init__(self, descriptor, "getOwnPropertyDescriptor",
-                                        "JSBool", args)
+                                        "JSBool", args, unsafe=True)
         self.descriptor = descriptor
     def getBody(self):
         indexedGetter = self.descriptor.operations['IndexedGetter']
@@ -3642,7 +3642,7 @@ class CGDOMJSProxyHandler_hasOwn(CGAbstractExternMethod):
     def __init__(self, descriptor):
         args = [Argument('*mut JSContext', 'cx'), Argument('*mut JSObject', 'proxy'),
                 Argument('jsid', 'id'), Argument('*mut JSBool', 'bp')]
-        CGAbstractExternMethod.__init__(self, descriptor, "hasOwn", "JSBool", args)
+        CGAbstractExternMethod.__init__(self, descriptor, "hasOwn", "JSBool", args, unsafe=True)
         self.descriptor = descriptor
     def getBody(self):
         indexedGetter = self.descriptor.operations['IndexedGetter']
@@ -3696,7 +3696,7 @@ class CGDOMJSProxyHandler_get(CGAbstractExternMethod):
         args = [Argument('*mut JSContext', 'cx'), Argument('*mut JSObject', 'proxy'),
                 Argument('*mut JSObject', 'receiver'), Argument('jsid', 'id'),
                 Argument('*mut JSVal', 'vp')]
-        CGAbstractExternMethod.__init__(self, descriptor, "get", "JSBool", args)
+        CGAbstractExternMethod.__init__(self, descriptor, "get", "JSBool", args, unsafe=True)
         self.descriptor = descriptor
     def getBody(self):
         getFromExpando = """let expando = GetExpandoObject(proxy);
@@ -3802,7 +3802,7 @@ class CGAbstractClassHook(CGAbstractExternMethod):
     """
     def __init__(self, descriptor, name, returnType, args):
         CGAbstractExternMethod.__init__(self, descriptor, name, returnType,
-                                        args)
+                                        args, unsafe=True)
 
     def definition_body_prologue(self):
         return """
@@ -3855,9 +3855,9 @@ class CGClassConstructHook(CGAbstractExternMethod):
 
     def generate_code(self):
         preamble = """
-  let args = CallArgs::new(vp.offset(2), argc);
+  let args = CallArgs::new(unsafe { vp.offset(2) }, argc);
   let argv = args.args();
-  let global = global_object_for_js_object(JS_CALLEE(cx, vp).to_object()).root();
+  let global = global_object_for_js_object(unsafe { JS_CALLEE(cx, vp).to_object() }).root();
   let obj = global.deref().reflector().get_jsobject();
 """
         nativeName = MakeNativeName(self._ctor.identifier.name)
