@@ -1300,7 +1300,6 @@ class CGImports(CGWrapper):
             'unused_unsafe',
             'unused_mut',
             'dead_assignment',
-            'dead_code',
         ]
 
         for d in descriptors:
