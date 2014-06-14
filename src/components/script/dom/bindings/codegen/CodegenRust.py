@@ -1293,7 +1293,6 @@ class CGImports(CGWrapper):
             # sometimes produces two 'break's in a row. See for example
             # CallbackMember.getArgConversions.
             'unreachable_code',
-            'non_uppercase_statics',
             'unused_imports',
             'unused_variable',
             'unused_unsafe',
