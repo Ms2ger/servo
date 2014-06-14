@@ -5,7 +5,7 @@
 use dom::bindings::codegen::Bindings::EventHandlerBinding::EventHandlerNonNull;
 use dom::bindings::codegen::Bindings::XMLHttpRequestBinding;
 use dom::bindings::codegen::Bindings::XMLHttpRequestBinding::XMLHttpRequestResponseType;
-use dom::bindings::codegen::Bindings::XMLHttpRequestBinding::XMLHttpRequestResponseTypeValues::{_empty, Json, Text};
+use dom::bindings::codegen::Bindings::XMLHttpRequestBinding::XMLHttpRequestResponseTypeValues::{Empty, Json, Text};
 use dom::bindings::codegen::InheritTypes::{EventCast, EventTargetCast, XMLHttpRequestDerived};
 use dom::bindings::conversions::ToJSValConvertible;
 use dom::bindings::error::{ErrorResult, Fallible, InvalidState, InvalidAccess, Network, Syntax, Security};
@@ -141,7 +141,7 @@ impl XMLHttpRequest {
             status: 0,
             status_text: ByteString::new(vec!()),
             response: ByteString::new(vec!()),
-            response_type: _empty,
+            response_type: Empty,
             response_xml: Cell::new(None),
             response_headers: Untraceable::new(ResponseHeaderCollection::new()),
 
@@ -301,7 +301,7 @@ impl<'a> XMLHttpRequestMethods<'a> for JSRef<'a, XMLHttpRequest> {
                 // XXXManishearth Do some handling of username/passwords
                 if self.sync {
                     // FIXME: This should only happen if the global environment is a document environment
-                    if self.timeout != 0 || self.with_credentials || self.response_type != _empty {
+                    if self.timeout != 0 || self.with_credentials || self.response_type != Empty {
                         return Err(InvalidAccess)
                     }
                 }
@@ -536,7 +536,7 @@ impl<'a> XMLHttpRequestMethods<'a> for JSRef<'a, XMLHttpRequest> {
     }
     fn Response(&self, cx: *mut JSContext) -> JSVal {
          match self.response_type {
-            _empty | Text => {
+            Empty | Text => {
                 if self.ready_state == XHRDone || self.ready_state == Loading {
                     self.text_response().to_jsval(cx)
                 } else {
@@ -560,7 +560,7 @@ impl<'a> XMLHttpRequestMethods<'a> for JSRef<'a, XMLHttpRequest> {
     }
     fn GetResponseText(&self) -> Fallible<DOMString> {
         match self.response_type {
-            _empty | Text => {
+            Empty | Text => {
                 match self.ready_state {
                     Loading | XHRDone => Ok(self.text_response()),
                     _ => Ok("".to_string())

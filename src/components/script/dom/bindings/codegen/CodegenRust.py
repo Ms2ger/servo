@@ -1293,7 +1293,6 @@ class CGImports(CGWrapper):
             # sometimes produces two 'break's in a row. See for example
             # CallbackMember.getArgConversions.
             'unreachable_code',
-            'non_camel_case_types',
             'non_uppercase_statics',
             'unused_imports',
             'unused_variable',
@@ -2543,24 +2542,14 @@ class CGMemberJITInfo(CGThing):
         raise TypeError("Illegal member type to CGPropertyJITInfo")
 
 def getEnumValueName(value):
-    # Some enum values can be empty strings.  Others might have weird
-    # characters in them.  Deal with the former by returning "_empty",
-    # deal with possible name collisions from that by throwing if the
-    # enum value is actually "_empty", and throw on any value
-    # containing non-ASCII chars for now. Replace all chars other than
-    # [0-9A-Za-z_] with '_'.
     if re.match("[^\x20-\x7E]", value):
         raise SyntaxError('Enum value "' + value + '" contains non-ASCII characters')
     if re.match("^[0-9]", value):
         raise SyntaxError('Enum value "' + value + '" starts with a digit')
-    value = re.sub(r'[^0-9A-Za-z_]', '_', value)
-    if re.match("^_[A-Z]|__", value):
-        raise SyntaxError('Enum value "' + value + '" is reserved by the C++ spec')
-    if value == "_empty":
-        raise SyntaxError('"_empty" is not an IDL enum value we support yet')
-    if value == "":
-        return "_empty"
-    return MakeNativeName(value)
+    if not value:
+        return "Empty"
+    values = re.split(r'[^0-9A-Za-z]', value)
+    return "".join(MakeNativeName(s) for s in values)
 
 class CGEnum(CGThing):
     def __init__(self, enum):
@@ -2572,7 +2561,7 @@ use js::jsval::JSVal;
 
 #[repr(uint)]
 #[deriving(Encodable, Eq)]
-pub enum valuelist {
+pub enum ValueList {
   %s
 }
 
@@ -2580,7 +2569,7 @@ pub static strings: &'static [&'static str] = &[
   %s,
 ];
 
-impl ToJSValConvertible for valuelist {
+impl ToJSValConvertible for ValueList {
   fn to_jsval(&self, cx: *mut JSContext) -> JSVal {
     strings[*self as uint].to_string().to_jsval(cx)
   }
@@ -2591,7 +2580,7 @@ impl ToJSValConvertible for valuelist {
         self.cgRoot = CGList([
             CGNamespace.build([enum.identifier.name + "Values"],
                               CGIndenter(CGGeneric(inner)), public=True),
-            CGGeneric("pub type %s = self::%sValues::valuelist;\n" %
+            CGGeneric("pub type %s = self::%sValues::ValueList;\n" %
                                       (enum.identifier.name, enum.identifier.name)),
         ])
 

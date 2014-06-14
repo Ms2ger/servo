@@ -3,7 +3,7 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 use dom::bindings::codegen::Bindings::DOMParserBinding;
-use dom::bindings::codegen::Bindings::DOMParserBinding::SupportedTypeValues::{Text_html, Text_xml};
+use dom::bindings::codegen::Bindings::DOMParserBinding::SupportedTypeValues::{TextHtml, TextXml};
 use dom::bindings::js::{JS, JSRef, Temporary};
 use dom::bindings::utils::{Reflector, Reflectable, reflect_dom_object};
 use dom::bindings::error::{Fallible, FailureUnknown};
@@ -47,10 +47,10 @@ impl<'a> DOMParserMethods for JSRef<'a, DOMParser> {
                        -> Fallible<Temporary<Document>> {
         let owner = self.owner.root();
         match ty {
-            Text_html => {
+            TextHtml => {
                 Ok(Document::new(&owner.root_ref(), None, HTMLDocument, Some("text/html".to_string())))
             }
-            Text_xml => {
+            TextXml => {
                 Ok(Document::new(&owner.root_ref(), None, NonHTMLDocument, Some("text/xml".to_string())))
             }
             _ => {
