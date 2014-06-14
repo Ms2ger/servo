@@ -1298,7 +1298,6 @@ class CGImports(CGWrapper):
             'unused_variable',
             'unused_unsafe',
             'unused_mut',
-            'dead_assignment',
         ]
 
         for d in descriptors:
