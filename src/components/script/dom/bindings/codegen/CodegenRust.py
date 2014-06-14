@@ -221,7 +221,7 @@ class CGMethodCall(CGThing):
                               range(0, distinguishingIndex) ])
 
             # Select the right overload from our set.
-            distinguishingArg = "(*argv_start.offset(%d))" % distinguishingIndex
+            distinguishingArg = "*argv_start.offset(%d)" % distinguishingIndex
 
             def pickFirstSignature(condition, filterLambda):
                 sigs = filter(filterLambda, possibleSignatures)
@@ -717,14 +717,14 @@ def getJSToNativeConversionTemplate(type, descriptorProvider, failureCode=None,
 
         if allowTreatNonObjectAsNull and type.treatNonObjectAsNull():
             if not isDefinitelyObject:
-                haveObject = "${val}.is_object()"
+                haveObject = "(${val}).is_object()"
                 template = CGIfElseWrapper(haveObject,
                                            conversion,
                                            CGGeneric("None")).define()
             else:
                 template = conversion
         else:
-            template = CGIfElseWrapper("JS_ObjectIsCallable(cx, ${val}.to_object()) != 0",
+            template = CGIfElseWrapper("JS_ObjectIsCallable(cx, (${val}).to_object()) != 0",
                                        conversion,
                                        onFailureNotCallable(failureCode)).define()
             template = wrapObjectTemplate(
@@ -896,7 +896,7 @@ class CGArgumentConverter(CGThing):
         condition = string.Template("${index} < ${argc}").substitute(replacer)
 
         replacementVariables = {
-            "val": string.Template("(*${argv}.offset(${index}))").substitute(replacer),
+            "val": string.Template("*${argv}.offset(${index})").substitute(replacer),
         }
 
         template, default, declType, needsRooting = getJSToNativeConversionTemplate(
@@ -932,7 +932,7 @@ class CGArgumentConverter(CGThing):
         else:
             assert argument.optional
             variadicConversion = {
-                "val": string.Template("(*${argv}.offset(variadicArg as int))").substitute(replacer),
+                "val": string.Template("*${argv}.offset(variadicArg as int)").substitute(replacer),
             }
             innerConverter = instantiateJSToNativeConversionTemplate(
                 template, variadicConversion, declType, "slot",
@@ -1295,7 +1295,6 @@ class CGImports(CGWrapper):
             'unreachable_code',
             'non_camel_case_types',
             'non_uppercase_statics',
-            'unnecessary_parens',
             'unused_imports',
             'unused_variable',
             'unused_unsafe',
@@ -1555,7 +1554,7 @@ class CGCallbackTempRoot(CGGeneric):
     def __init__(self, name):
         val = "%s::new(tempRoot)" % name
         define = """{
-  let tempRoot = ${val}.to_object();
+  let tempRoot = (${val}).to_object();
   %s
 }""" % val
         CGGeneric.__init__(self, define)
@@ -4894,7 +4893,7 @@ class CallbackMember(CGNativeMember):
             conversion = (
                 CGIfWrapper(CGGeneric(conversion),
                             "%s.is_some()" % arg.identifier.name).define() +
-                " else if (argc == %d) {\n"
+                " else if argc == %d {\n"
                 "  // This is our current trailing argument; reduce argc\n"
                 "  argc -= 1;\n"
                 "} else {\n"
