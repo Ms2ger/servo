@@ -2684,10 +2684,10 @@ class CGUnionStruct(CGThing):
         templateVars = map(lambda t: getUnionTypeTemplateVars(t, self.descriptorProvider),
                            self.type.flatMemberTypes)
         enumValues = [
-            "    e%s(%s)," % (v["name"], v["typeName"]) for v in templateVars
+            "    %s(%s)," % (v["name"], v["typeName"]) for v in templateVars
         ]
         enumConversions = [
-            "            e%s(ref inner) => inner.to_jsval(cx)," % v["name"] for v in templateVars
+            "            %s(ref inner) => inner.to_jsval(cx)," % v["name"] for v in templateVars
         ]
         return ("""pub enum %s {
 %s
@@ -2730,7 +2730,7 @@ class CGUnionConversionStruct(CGThing):
                 return (
                     "match %s::TryConvertTo%s(cx, value) {\n"
                     "    Err(_) => return Err(()),\n"
-                    "    Ok(Some(value)) => return Ok(e%s(value)),\n"
+                    "    Ok(Some(value)) => return Ok(%s(value)),\n"
                     "    Ok(None) => (),\n"
                     "}\n") % (self.type, name, name)
 
@@ -2798,7 +2798,7 @@ class CGUnionConversionStruct(CGThing):
             match = (
                     "match %s::TryConvertTo%s(cx, value) {\n"
                     "    Err(_) => return Err(()),\n"
-                    "    Ok(Some(value)) => return Ok(e%s(value)),\n"
+                    "    Ok(Some(value)) => return Ok(%s(value)),\n"
                     "    Ok(None) => (),\n"
                     "}\n") % (self.type, name, name)
             conversions.append(CGGeneric(match))

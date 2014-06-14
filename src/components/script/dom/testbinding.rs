@@ -5,9 +5,9 @@
 use dom::bindings::js::{JS, JSRef, Temporary};
 use dom::bindings::codegen::Bindings::TestBindingBinding::TestEnum;
 use dom::bindings::codegen::Bindings::TestBindingBinding::TestEnumValues::_empty;
-use dom::bindings::codegen::UnionTypes::BlobOrString::BlobOrString;
-use dom::bindings::codegen::UnionTypes::EventOrString::{EventOrString, eString};
-use dom::bindings::codegen::UnionTypes::HTMLElementOrLong::{HTMLElementOrLong, eLong};
+use dom::bindings::codegen::UnionTypes::BlobOrString::{BlobOrString, Blob};
+use dom::bindings::codegen::UnionTypes::EventOrString::{EventOrString, String};
+use dom::bindings::codegen::UnionTypes::HTMLElementOrLong::{HTMLElementOrLong, Long};
 use dom::bindings::str::ByteString;
 use dom::bindings::utils::{Reflector, Reflectable};
 use dom::blob::Blob;
@@ -56,9 +56,9 @@ pub trait TestBindingMethods {
     fn SetEnumAttribute(&self, _: TestEnum) {}
     fn InterfaceAttribute(&self) -> Temporary<Blob>;
     fn SetInterfaceAttribute(&self, _: &JSRef<Blob>) {}
-    fn UnionAttribute(&self) -> HTMLElementOrLong { eLong(0) }
+    fn UnionAttribute(&self) -> HTMLElementOrLong { Long(0) }
     fn SetUnionAttribute(&self, _: HTMLElementOrLong) {}
-    fn Union2Attribute(&self) -> EventOrString { eString("".to_string()) }
+    fn Union2Attribute(&self) -> EventOrString { String("".to_string()) }
     fn SetUnion2Attribute(&self, _: EventOrString) {}
     fn AnyAttribute(&self, _: *mut JSContext) -> JSVal { NullValue() }
     fn SetAnyAttribute(&self, _: *mut JSContext, _: JSVal) {}
@@ -92,9 +92,9 @@ pub trait TestBindingMethods {
     fn GetEnumAttributeNullable(&self) -> Option<TestEnum> { Some(_empty) }
     fn GetInterfaceAttributeNullable(&self) -> Option<Temporary<Blob>>;
     fn SetInterfaceAttributeNullable(&self, _: Option<JSRef<Blob>>) {}
-    fn GetUnionAttributeNullable(&self) -> Option<HTMLElementOrLong> { Some(eLong(0)) }
+    fn GetUnionAttributeNullable(&self) -> Option<HTMLElementOrLong> { Some(Long(0)) }
     fn SetUnionAttributeNullable(&self, _: Option<HTMLElementOrLong>) {}
-    fn GetUnion2AttributeNullable(&self) -> Option<EventOrString> { Some(eString("".to_string())) }
+    fn GetUnion2AttributeNullable(&self) -> Option<EventOrString> { Some(String("".to_string())) }
     fn SetUnion2AttributeNullable(&self, _: Option<EventOrString>) {}
     fn ReceiveVoid(&self) -> () {}
     fn ReceiveBoolean(&self) -> bool { false }
@@ -113,8 +113,9 @@ pub trait TestBindingMethods {
     fn ReceiveEnum(&self) -> TestEnum { _empty }
     fn ReceiveInterface(&self) -> Temporary<Blob>;
     fn ReceiveAny(&self, _: *mut JSContext) -> JSVal { NullValue() }
-    fn ReceiveUnion(&self) -> HTMLElementOrLong { eLong(0) }
-    fn ReceiveUnion2(&self) -> EventOrString { eString("".to_string()) }
+    fn ReceiveUnion(&self) -> HTMLElementOrLong { Long(0) }
+    fn ReceiveUnion2(&self) -> EventOrString { String("".to_string()) }
+    fn ReceiveUnion3(&self) -> BlobOrString;
 
     fn ReceiveNullableBoolean(&self) -> Option<bool> { Some(false) }
     fn ReceiveNullableByte(&self) -> Option<i8> { Some(0) }
@@ -132,8 +133,8 @@ pub trait TestBindingMethods {
     fn ReceiveNullableEnum(&self) -> Option<TestEnum> { Some(_empty) }
     fn ReceiveNullableInterface(&self) -> Option<Temporary<Blob>>;
     fn ReceiveNullableAny(&self, _: *mut JSContext) -> Option<JSVal> { Some(NullValue()) }
-    fn ReceiveNullableUnion(&self) -> Option<HTMLElementOrLong> { Some(eLong(0)) }
-    fn ReceiveNullableUnion2(&self) -> Option<EventOrString> { Some(eString("".to_string())) }
+    fn ReceiveNullableUnion(&self) -> Option<HTMLElementOrLong> { Some(Long(0)) }
+    fn ReceiveNullableUnion2(&self) -> Option<EventOrString> { Some(String("".to_string())) }
 
     fn PassBoolean(&self, _: bool) {}
     fn PassByte(&self, _: i8) {}
@@ -289,6 +290,10 @@ impl<'a> TestBindingMethods for JSRef<'a, TestBinding> {
     fn ReceiveInterface(&self) -> Temporary<Blob> {
         let window = self.window.get().root();
         Blob::new(&*window)
+    }
+    fn ReceiveUnion3(&self) -> BlobOrString {
+        let window = self.window.get().root();
+        Blob(JS::from_rooted(&Blob::new(&*window)))
     }
     fn ReceiveNullableInterface(&self) -> Option<Temporary<Blob>> {
         let window = self.window.get().root();

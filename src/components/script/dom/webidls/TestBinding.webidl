@@ -108,6 +108,7 @@ interface TestBinding {
   any receiveAny();
   (HTMLElement or long) receiveUnion();
   (Event or DOMString) receiveUnion2();
+  (Blob or DOMString) receiveUnion3();
 
   byte? receiveNullableByte();
   boolean? receiveNullableBoolean();
