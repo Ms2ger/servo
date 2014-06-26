@@ -4530,7 +4530,7 @@ class CGBindingRoot(CGThing):
             'dom::bindings::conversions::{FromJSValConvertible, ToJSValConvertible}',
             'dom::bindings::conversions::IDLInterface',
             'dom::bindings::conversions::{Default, Empty}',
-            'dom::bindings::codegen::*',
+            'dom::bindings::codegen::PrototypeList',
             'dom::bindings::codegen::Bindings::*',
             'dom::bindings::codegen::RegisterBindings',
             'dom::bindings::codegen::UnionTypes::*',
