@@ -6,6 +6,9 @@
 
 use dom::bindings::conversions::is_dom_proxy;
 use dom::bindings::utils::delete_property_by_id;
+
+use servo_util::ptr::MutNonNull;
+
 use js::jsapi::{JSContext, jsid, JSPropertyDescriptor, JSObject, JSString};
 use js::jsapi::{JS_GetPropertyDescriptorById, JS_NewStringCopyN};
 use js::jsapi::{JS_DefinePropertyById, JS_NewObjectWithGivenProto};
@@ -67,7 +70,7 @@ pub unsafe extern fn defineProperty_(cx: *mut JSContext, proxy: *mut JSObject, i
         return false;
     }
 
-    return JS_DefinePropertyById(cx, expando, id, (*desc).value, (*desc).getter,
+    return JS_DefinePropertyById(cx, *expando, id, (*desc).value, (*desc).getter,
                                  (*desc).setter, (*desc).attrs) != 0;
 }
 
@@ -78,7 +81,7 @@ pub unsafe extern fn delete_(cx: *mut JSContext, proxy: *mut JSObject, id: jsid,
         return false;
     }
 
-    return delete_property_by_id(cx, expando, id, &mut *bp);
+    return delete_property_by_id(cx, *expando, id, &mut *bp);
 }
 
 pub fn _obj_toString(cx: *mut JSContext, name: &str) -> *mut JSString {
@@ -106,7 +109,7 @@ pub fn GetExpandoObject(obj: *mut JSObject) -> *mut JSObject {
     }
 }
 
-pub fn EnsureExpandoObject(cx: *mut JSContext, obj: *mut JSObject) -> *mut JSObject {
+pub fn EnsureExpandoObject(cx: *mut JSContext, obj: *mut JSObject) -> MutNonNull<JSObject> {
     unsafe {
         assert!(is_dom_proxy(obj));
         let mut expando = GetExpandoObject(obj);
@@ -114,13 +117,10 @@ pub fn EnsureExpandoObject(cx: *mut JSContext, obj: *mut JSObject) -> *mut JSObj
             expando = JS_NewObjectWithGivenProto(cx, ptr::null_mut(),
                                                  ptr::null_mut(),
                                                  GetObjectParent(obj));
-            if expando.is_null() {
-                return ptr::null_mut();
-            }
-
+            assert!(expando.is_not_null());
             SetProxyExtra(obj, JSPROXYSLOT_EXPANDO, ObjectValue(&*expando));
         }
-        return expando;
+        MutNonNull::new(expando)
     }
 }
 

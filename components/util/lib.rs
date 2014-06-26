@@ -48,6 +48,7 @@ pub mod memory;
 pub mod namespace;
 pub mod opts;
 pub mod persistent_list;
+pub mod ptr;
 pub mod range;
 pub mod resource_files;
 pub mod rtinstrument;
