@@ -15,6 +15,8 @@ use dom::bindings::js::{Temporary, Root};
 use dom::browsercontext;
 use dom::window;
 
+use servo_util::ptr::MutNonNull;
+
 use libc;
 use libc::c_uint;
 use std::cell::Cell;
@@ -182,12 +184,12 @@ pub fn CreateInterfaceObjects2(cx: *mut JSContext, global: *mut JSObject, receiv
                                protoClass: &'static JSClass,
                                constructor: Option<(NonNullJSNative, &'static str, u32)>,
                                domClass: *const DOMClass,
-                               members: &'static NativeProperties) -> *mut JSObject {
+                               members: &'static NativeProperties) -> MutNonNull<JSObject> {
     let proto = CreateInterfacePrototypeObject(cx, global, protoProto,
                                                protoClass, members);
 
     unsafe {
-        JS_SetReservedSlot(proto, DOM_PROTO_INSTANCE_CLASS_SLOT,
+        JS_SetReservedSlot(*proto, DOM_PROTO_INSTANCE_CLASS_SLOT,
                            PrivateValue(domClass as *const libc::c_void));
     }
 
@@ -195,7 +197,7 @@ pub fn CreateInterfaceObjects2(cx: *mut JSContext, global: *mut JSObject, receiv
         Some((native, name, nargs)) => {
             let s = name.to_c_str();
             CreateInterfaceObject(cx, global, receiver,
-                                  native, nargs, proto,
+                                  native, nargs, *proto,
                                   members, s.as_ptr())
         },
         None => (),
@@ -285,23 +287,23 @@ fn DefineProperties(cx: *mut JSContext, obj: *mut JSObject, properties: &'static
 fn CreateInterfacePrototypeObject(cx: *mut JSContext, global: *mut JSObject,
                                   parentProto: *mut JSObject,
                                   protoClass: &'static JSClass,
-                                  members: &'static NativeProperties) -> *mut JSObject {
+                                  members: &'static NativeProperties) -> MutNonNull<JSObject> {
     unsafe {
-        let ourProto = JS_NewObjectWithUniqueType(cx, protoClass, &*parentProto, &*global);
-        assert!(!ourProto.is_null());
+        let ourProto = MutNonNull::new(
+            JS_NewObjectWithUniqueType(cx, protoClass, &*parentProto, &*global));
 
         match members.methods {
-            Some(methods) => DefineMethods(cx, ourProto, methods),
+            Some(methods) => DefineMethods(cx, *ourProto, methods),
             _ => (),
         }
 
         match members.attrs {
-            Some(properties) => DefineProperties(cx, ourProto, properties),
+            Some(properties) => DefineProperties(cx, *ourProto, properties),
             _ => (),
         }
 
         match members.consts {
-            Some(constants) => DefineConstants(cx, ourProto, constants),
+            Some(constants) => DefineConstants(cx, *ourProto, constants),
             _ => (),
         }
 

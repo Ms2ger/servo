@@ -1999,10 +1999,10 @@ class CGCreateInterfaceObjectsMethod(CGAbstractMethod):
             constructor = 'None'
 
         call = """\
-return CreateInterfaceObjects2(aCx, aGlobal, aReceiver, parentProto,
-                               &PrototypeClass, %s,
-                               %s,
-                               &sNativeProperties);""" % (constructor, domClass)
+return *CreateInterfaceObjects2(aCx, aGlobal, aReceiver, parentProto,
+                                &PrototypeClass, %s,
+                                %s,
+                                &sNativeProperties);""" % (constructor, domClass)
 
         return CGList([
             CGGeneric(getParentProto),
