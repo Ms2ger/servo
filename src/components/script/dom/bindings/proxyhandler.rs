@@ -5,6 +5,9 @@
 ///! Utilities for the implementation of JSAPI proxy handlers.
 
 use dom::bindings::utils::is_dom_proxy;
+
+use servo_util::ptr::MutNonNull;
+
 use js::jsapi::{JSContext, jsid, JSPropertyDescriptor, JSObject, JSString, jschar};
 use js::jsapi::{JS_GetPropertyDescriptorById, JS_NewUCString, JS_malloc, JS_free};
 use js::jsapi::{JSBool, JS_DefinePropertyById, JS_NewObjectWithGivenProto};
@@ -65,11 +68,7 @@ pub fn defineProperty_(cx: *mut JSContext, proxy: *mut JSObject, id: jsid,
         }
 
         let expando = EnsureExpandoObject(cx, proxy);
-        if expando.is_null() {
-            return 0;
-        }
-
-        return JS_DefinePropertyById(cx, expando, id, (*desc).value, (*desc).getter,
+        return JS_DefinePropertyById(cx, *expando, id, (*desc).value, (*desc).getter,
                                      (*desc).setter, (*desc).attrs);
     }
 }
@@ -132,7 +131,7 @@ pub fn GetExpandoObject(obj: *mut JSObject) -> *mut JSObject {
     }
 }
 
-pub fn EnsureExpandoObject(cx: *mut JSContext, obj: *mut JSObject) -> *mut JSObject {
+pub fn EnsureExpandoObject(cx: *mut JSContext, obj: *mut JSObject) -> MutNonNull<JSObject> {
     unsafe {
         assert!(is_dom_proxy(obj));
         let mut expando = GetExpandoObject(obj);
@@ -140,13 +139,10 @@ pub fn EnsureExpandoObject(cx: *mut JSContext, obj: *mut JSObject) -> *mut JSObj
             expando = JS_NewObjectWithGivenProto(cx, ptr::mut_null(),
                                                  ptr::mut_null(),
                                                  GetObjectParent(obj));
-            if expando.is_null() {
-                return ptr::mut_null();
-            }
-
+            assert!(expando.is_not_null());
             SetProxyExtra(obj, JSPROXYSLOT_EXPANDO, ObjectValue(&*expando));
         }
-        return expando;
+        MutNonNull::new(expando)
     }
 }
 

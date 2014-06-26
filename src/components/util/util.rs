@@ -37,6 +37,7 @@ pub mod logical_geometry;
 pub mod memory;
 pub mod namespace;
 pub mod opts;
+pub mod ptr;
 pub mod range;
 pub mod smallvec;
 pub mod sort;
