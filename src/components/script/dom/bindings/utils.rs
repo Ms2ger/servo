@@ -12,6 +12,7 @@ use dom::bindings::js::{JS, Temporary, Root};
 use dom::bindings::trace::Untraceable;
 use dom::browsercontext;
 use dom::window;
+use servo_util::ptr::MutNonNull;
 use servo_util::str::DOMString;
 
 use libc;
@@ -264,12 +265,12 @@ pub fn CreateInterfaceObjects2(cx: *mut JSContext, global: *mut JSObject, receiv
                                protoClass: &'static JSClass,
                                constructor: Option<(NonNullJSNative, &'static str, u32)>,
                                domClass: *const DOMClass,
-                               members: &'static NativeProperties) -> *mut JSObject {
+                               members: &'static NativeProperties) -> MutNonNull<JSObject> {
     let proto = CreateInterfacePrototypeObject(cx, global, protoProto,
                                                protoClass, members);
 
     unsafe {
-        JS_SetReservedSlot(proto, DOM_PROTO_INSTANCE_CLASS_SLOT,
+        JS_SetReservedSlot(*proto, DOM_PROTO_INSTANCE_CLASS_SLOT,
                            PrivateValue(domClass as *const libc::c_void));
     }
 
@@ -290,7 +291,7 @@ pub fn CreateInterfaceObjects2(cx: *mut JSContext, global: *mut JSObject, receiv
 /// Fails on JSAPI failure.
 fn CreateInterfaceObject(cx: *mut JSContext, global: *mut JSObject, receiver: *mut JSObject,
                          constructorNative: NonNullJSNative,
-                         ctorNargs: u32, proto: *mut JSObject,
+                         ctorNargs: u32, proto: MutNonNull<JSObject>,
                          members: &'static NativeProperties,
                          name: *const libc::c_char) {
     unsafe {
@@ -300,6 +301,7 @@ fn CreateInterfaceObject(cx: *mut JSContext, global: *mut JSObject, receiver: *m
 
         let constructor = JS_GetFunctionObject(fun);
         assert!(constructor.is_not_null());
+        let constructor = MutNonNull::new(constructor);
 
         match members.staticMethods {
             Some(staticMethods) => DefineMethods(cx, constructor, staticMethods),
@@ -316,16 +318,14 @@ fn CreateInterfaceObject(cx: *mut JSContext, global: *mut JSObject, receiver: *m
             _ => (),
         }
 
-        if proto.is_not_null() {
-            assert!(JS_LinkConstructorAndPrototype(cx, constructor, proto) != 0);
-        }
+        assert!(JS_LinkConstructorAndPrototype(cx, *constructor, *proto) != 0);
 
         let mut alreadyDefined = 0;
         assert!(JS_AlreadyHasOwnProperty(cx, receiver, name, &mut alreadyDefined) != 0);
 
         if alreadyDefined == 0 {
             assert!(JS_DefineProperty(cx, receiver, name,
-                                      ObjectValue(&*constructor),
+                                      ObjectValue(&**constructor),
                                       None, None, 0) != 0);
         }
     }
@@ -333,7 +333,7 @@ fn CreateInterfaceObject(cx: *mut JSContext, global: *mut JSObject, receiver: *m
 
 /// Defines constants on `obj`.
 /// Fails on JSAPI failure.
-fn DefineConstants(cx: *mut JSContext, obj: *mut JSObject, constants: &'static [ConstantSpec]) {
+fn DefineConstants(cx: *mut JSContext, obj: MutNonNull<JSObject>, constants: &'static [ConstantSpec]) {
     for spec in constants.iter() {
         let jsval = match spec.value {
             NullVal => NullValue(),
@@ -344,7 +344,7 @@ fn DefineConstants(cx: *mut JSContext, obj: *mut JSObject, constants: &'static [
             VoidVal => UndefinedValue(),
         };
         unsafe {
-            assert!(JS_DefineProperty(cx, obj, spec.name.as_ptr() as *const libc::c_char,
+            assert!(JS_DefineProperty(cx, *obj, spec.name.as_ptr() as *const libc::c_char,
                                       jsval, None, None,
                                       JSPROP_ENUMERATE | JSPROP_READONLY |
                                       JSPROP_PERMANENT) != 0);
@@ -355,18 +355,18 @@ fn DefineConstants(cx: *mut JSContext, obj: *mut JSObject, constants: &'static [
 /// Defines methods on `obj`. The last entry of `methods` must contain zeroed
 /// memory.
 /// Fails on JSAPI failure.
-fn DefineMethods(cx: *mut JSContext, obj: *mut JSObject, methods: &'static [JSFunctionSpec]) {
+fn DefineMethods(cx: *mut JSContext, obj: MutNonNull<JSObject>, methods: &'static [JSFunctionSpec]) {
     unsafe {
-        assert!(JS_DefineFunctions(cx, obj, methods.as_ptr()) != 0);
+        assert!(JS_DefineFunctions(cx, *obj, methods.as_ptr()) != 0);
     }
 }
 
 /// Defines attributes on `obj`. The last entry of `properties` must contain
 /// zeroed memory.
 /// Fails on JSAPI failure.
-fn DefineProperties(cx: *mut JSContext, obj: *mut JSObject, properties: &'static [JSPropertySpec]) {
+fn DefineProperties(cx: *mut JSContext, obj: MutNonNull<JSObject>, properties: &'static [JSPropertySpec]) {
     unsafe {
-        assert!(JS_DefineProperties(cx, obj, properties.as_ptr()) != 0);
+        assert!(JS_DefineProperties(cx, *obj, properties.as_ptr()) != 0);
     }
 }
 
@@ -375,10 +375,11 @@ fn DefineProperties(cx: *mut JSContext, obj: *mut JSObject, properties: &'static
 fn CreateInterfacePrototypeObject(cx: *mut JSContext, global: *mut JSObject,
                                   parentProto: *mut JSObject,
                                   protoClass: &'static JSClass,
-                                  members: &'static NativeProperties) -> *mut JSObject {
+                                  members: &'static NativeProperties) -> MutNonNull<JSObject> {
     unsafe {
         let ourProto = JS_NewObjectWithUniqueType(cx, protoClass, &*parentProto, &*global);
         assert!(ourProto.is_not_null());
+        let ourProto = MutNonNull::new(ourProto);
 
         match members.methods {
             Some(methods) => DefineMethods(cx, ourProto, methods),
@@ -395,7 +396,7 @@ fn CreateInterfacePrototypeObject(cx: *mut JSContext, global: *mut JSObject,
             _ => (),
         }
 
-        return ourProto;
+        ourProto
     }
 }
 
