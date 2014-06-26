@@ -1962,7 +1962,7 @@ class CGCreateInterfaceObjectsMethod(CGAbstractMethod):
         assert not descriptor.interface.isCallback()
         args = [Argument('*mut JSContext', 'aCx'), Argument('*mut JSObject', 'aGlobal'),
                 Argument('*mut JSObject', 'aReceiver')]
-        CGAbstractMethod.__init__(self, descriptor, 'CreateInterfaceObjects', '*mut JSObject', args)
+        CGAbstractMethod.__init__(self, descriptor, 'CreateInterfaceObjects', 'MutNonNull<JSObject>', args)
         self.properties = properties
     def definition_body(self):
         protoChain = self.descriptor.prototypeChain
@@ -1999,10 +1999,10 @@ class CGCreateInterfaceObjectsMethod(CGAbstractMethod):
             constructor = 'None'
 
         call = """\
-return *CreateInterfaceObjects2(aCx, aGlobal, aReceiver, parentProto,
-                                &PrototypeClass, %s,
-                                %s,
-                                &sNativeProperties);""" % (constructor, domClass)
+return CreateInterfaceObjects2(aCx, aGlobal, aReceiver, parentProto,
+                               &PrototypeClass, %s,
+                               %s,
+                               &sNativeProperties);""" % (constructor, domClass)
 
         return CGList([
             CGGeneric(getParentProto),
@@ -2035,10 +2035,9 @@ assert!(((*JS_GetClass(aGlobal)).flags & JSCLASS_DOM_GLOBAL) != 0);
 let protoOrIfaceArray = GetProtoOrIfaceArray(aGlobal);
 let cachedObject: *mut JSObject = *protoOrIfaceArray.offset(%s as int);
 if cachedObject.is_null() {
-    let tmp: *mut JSObject = CreateInterfaceObjects(aCx, aGlobal, aReceiver);
-    assert!(!tmp.is_null());
-    *protoOrIfaceArray.offset(%s as int) = tmp;
-    tmp
+    let tmp = CreateInterfaceObjects(aCx, aGlobal, aReceiver);
+    *protoOrIfaceArray.offset(%s as int) = *tmp;
+    *tmp
 } else {
     cachedObject
 }""" % (self.id, self.id))
@@ -4582,6 +4581,7 @@ class CGBindingRoot(CGThing):
             'dom::bindings::str::ByteString',
             'page::JSPageInfo',
             'libc',
+            'servo_util::ptr::MutNonNull',
             'servo_util::str::DOMString',
             'std::mem',
             'std::cmp',
