@@ -82,6 +82,7 @@ pub mod dom {
     pub mod domparser;
     pub mod domtokenlist;
     pub mod element;
+    #[path="events/event.rs"]
     pub mod event;
     pub mod eventdispatcher;
     pub mod eventtarget;
