@@ -508,7 +508,12 @@ pub mod tests {
         v.push("there".to_string());
         v.push("burma".to_string());
         v.push("shave".to_string());
-        assert_eq!(v.as_slice(), &["hello".to_string(), "there".to_string(), "burma".to_string(), "shave".to_string()]);
+        assert_eq!(v.as_slice(), &[
+            "hello".to_string(),
+            "there".to_string(),
+            "burma".to_string(),
+            "shave".to_string()
+        ]);
     }
 
     #[test]
@@ -523,7 +528,14 @@ pub mod tests {
         v.push("burma".to_string());
         v.push("shave".to_string());
         assert_eq!(v.as_slice(), &[
-            "hello".to_string(), "there".to_string(), "burma".to_string(), "shave".to_string(), "hello".to_string(), "there".to_string(), "burma".to_string(), "shave".to_string(),
+            "hello".to_string(),
+            "there".to_string(),
+            "burma".to_string(),
+            "shave".to_string(),
+            "hello".to_string(),
+            "there".to_string(),
+            "burma".to_string(),
+            "shave".to_string(),
         ]);
     }
 }

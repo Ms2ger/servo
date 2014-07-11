@@ -142,7 +142,11 @@ pub enum ElementTypeId {
 //
 
 impl Element {
-    pub fn new_inherited(type_id: ElementTypeId, local_name: DOMString, namespace: Namespace, prefix: Option<DOMString>, document: &JSRef<Document>) -> Element {
+    pub fn new_inherited(type_id: ElementTypeId,
+                         local_name: DOMString,
+                         namespace: Namespace,
+                         prefix: Option<DOMString>,
+                         document: &JSRef<Document>) -> Element {
         Element {
             node: Node::new_inherited(ElementNodeTypeId(type_id), document),
             local_name: local_name,
@@ -155,7 +159,10 @@ impl Element {
         }
     }
 
-    pub fn new(local_name: DOMString, namespace: Namespace, prefix: Option<DOMString>, document: &JSRef<Document>) -> Temporary<Element> {
+    pub fn new(local_name: DOMString,
+               namespace: Namespace,
+               prefix: Option<DOMString>,
+               document: &JSRef<Document>) -> Temporary<Element> {
         let element = Element::new_inherited(ElementTypeId, local_name, namespace, prefix, document);
         Node::reflect_node(box element, document, ElementBinding::Wrap)
     }

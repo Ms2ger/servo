@@ -44,6 +44,12 @@ def do_whitespace_check(name, contents):
             report_error_name_no(name, idx + 1, "CR on line")
 
 
+def do_line_length_check(name, contents):
+    for idx, line in enumerate(contents):
+        if len(line) > 140:
+            report_error_name_no(name, idx + 1, "overlong line")
+
+
 exceptions = [
     # Upstream
     "src/support",
@@ -85,5 +91,6 @@ for path in file_names:
         lines = fp.readlines()
         do_license_check(path, "".join(lines))
         do_whitespace_check(path, lines)
+        do_line_length_check(path, lines)
 
 sys.exit(err)

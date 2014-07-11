@@ -1170,7 +1170,9 @@ pub struct cef_browser_process_handler {
   // opportunity to modify the child process command line. Do not keep a
   // reference to |command_line| outside of this function.
   ///
-  pub on_before_child_process_launch: extern "C" fn(browser_handler: *mut cef_browser_process_handler, command_line: *mut cef_command_line),
+  pub on_before_child_process_launch: extern "C" fn(
+      browser_handler: *mut cef_browser_process_handler,
+      command_line: *mut cef_command_line),
 
   ///
   // Called on the browser process IO thread after the main thread has been
@@ -1179,7 +1181,9 @@ pub struct cef_browser_process_handler {
   // cef_render_process_handler_t::on_render_thread_created() in the render
   // process. Do not keep a reference to |extra_info| outside of this function.
   ///
-  pub on_render_process_thread_created: extern "C" fn(browser_handler: *mut cef_browser_process_handler, extra_info: *mut cef_list_value),
+  pub on_render_process_thread_created: extern "C" fn(
+      browser_handler: *mut cef_browser_process_handler,
+      extra_info: *mut cef_list_value),
 }
 
 
@@ -1711,7 +1715,10 @@ pub struct cef_app {
   // modify command-line arguments for non-browser processes as this may result
   // in undefined behavior including crashes.
   ///
-  pub on_before_command_line_processing: extern "C" fn(app: *mut cef_app_t, process_type: *cef_string_t, command_line: *mut cef_command_line),
+  pub on_before_command_line_processing: extern "C" fn(
+      app: *mut cef_app_t,
+      process_type: *cef_string_t,
+      command_line: *mut cef_command_line),
 
   ///
   // Provides an opportunity to register custom schemes. Do not keep a reference

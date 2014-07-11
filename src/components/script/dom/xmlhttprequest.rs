@@ -309,7 +309,9 @@ impl<'a> XMLHttpRequestMethods<'a> for JSRef<'a, XMLHttpRequest> {
                 // XXXManishearth Do some handling of username/passwords
                 if self.sync.deref().get() {
                     // FIXME: This should only happen if the global environment is a document environment
-                    if self.timeout.deref().get() != 0 || self.with_credentials.deref().get() || self.response_type.deref().get() != _empty {
+                    if self.timeout.deref().get() != 0 ||
+                       self.with_credentials.deref().get() ||
+                       self.response_type.deref().get() != _empty {
                         return Err(InvalidAccess)
                     }
                 }

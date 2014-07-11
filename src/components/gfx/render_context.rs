@@ -136,7 +136,10 @@ impl<'a> RenderContext<'a>  {
         self.draw_target.fill_rect(&rect, &pattern, Some(&draw_options));
     }
 
-    fn draw_border_segment(&self, direction: Direction, bounds: &Rect<Au>, border: SideOffsets2D<f32>, color: SideOffsets2D<Color>, style: SideOffsets2D<border_style::T>) {
+    fn draw_border_segment(&self, direction: Direction, bounds: &Rect<Au>,
+                           border: SideOffsets2D<f32>,
+                           color: SideOffsets2D<Color>,
+                           style: SideOffsets2D<border_style::T>) {
         let (style_select, color_select) = match direction {
             Top => (style.top, color.top),
             Left => (style.left, color.left),

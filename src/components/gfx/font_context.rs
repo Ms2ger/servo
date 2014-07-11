@@ -129,7 +129,11 @@ impl FontContext {
 
     /// Create a render font for use with azure. May return a cached
     /// reference if already used by this font context.
-    pub fn get_render_font_from_template(&mut self, template: &Arc<FontTemplateData>, pt_size: f64, backend: BackendType) -> Rc<RefCell<ScaledFont>> {
+    pub fn get_render_font_from_template(&mut self,
+                                         template: &Arc<FontTemplateData>,
+                                         pt_size: f64,
+                                         backend: BackendType)
+                                         -> Rc<RefCell<ScaledFont>> {
         for cached_font in self.render_font_cache.iter() {
             if cached_font.pt_size == pt_size &&
                cached_font.identifier == template.identifier {

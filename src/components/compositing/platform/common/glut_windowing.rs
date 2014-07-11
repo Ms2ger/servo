@@ -85,7 +85,8 @@ impl WindowMethods<Application> for Window {
 
         // Register event handlers.
 
-        //Added dummy display callback to freeglut. According to freeglut ref, we should register some kind of display callback after freeglut 3.0.
+        // Added dummy display callback to freeglut. According to freeglut ref,
+        // we should register some kind of display callback after freeglut 3.0.
 
         struct DisplayCallbackState;
         impl glut::DisplayCallback for DisplayCallbackState {
