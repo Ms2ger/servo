@@ -74,6 +74,7 @@ pub mod dom {
     pub mod comment;
     pub mod console;
     pub mod customevent;
+    pub mod dedicatedworkerglobalscope;
     pub mod document;
     pub mod documentfragment;
     pub mod documenttype;
@@ -172,6 +173,7 @@ pub mod dom {
     pub mod validitystate;
     pub mod virtualmethods;
     pub mod window;
+    pub mod workerglobalscope;
     pub mod xmlhttprequest;
     pub mod xmlhttprequesteventtarget;
     pub mod xmlhttprequestupload;
