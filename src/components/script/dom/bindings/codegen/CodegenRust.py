@@ -2174,12 +2174,16 @@ class CGCallGenerator(CGThing):
             self.cgRoot.append(CGGeneric(
                 "let result = match result {\n"
                 "    Ok(result) => result,\n"
+                "    Err(JSFailed) => {\n"
+                "        assert!(unsafe { JS_IsExceptionPending(cx) } != 0);\n"
+                "        return%s;\n"
+                "    },\n"
                 "    Err(e) => {\n"
                 "%s"
                 "        throw_dom_exception(cx, &*global, e);\n"
                 "        return%s;\n"
                 "    },\n"
-                "};\n" % (glob, errorResult)))
+                "};\n" % (errorResult, glob, errorResult)))
 
         if typeRetValNeedsRooting(returnType):
             self.cgRoot.append(CGGeneric("let result = result.root();"))
@@ -4395,6 +4399,7 @@ class CGBindingRoot(CGThing):
             'dom::bindings::codegen::Bindings::*',
             'dom::bindings::codegen::UnionTypes::*',
             'dom::bindings::error::{FailureUnknown, Fallible, Error, ErrorResult}',
+            'dom::bindings::error::JSFailed',
             'dom::bindings::error::throw_dom_exception',
             'dom::bindings::error::throw_type_error',
             'dom::bindings::proxyhandler',

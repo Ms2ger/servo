@@ -54,6 +54,7 @@ impl DOMErrorName {
             error::Abort => AbortError,
             error::Timeout => TimeoutError,
             error::FailureUnknown => fail!(),
+            error::JSFailed => fail!(),
         }
     }
 }

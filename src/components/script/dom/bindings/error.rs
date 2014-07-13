@@ -30,7 +30,10 @@ pub enum Error {
     Security,
     Network,
     Abort,
-    Timeout
+    Timeout,
+    /// Indicates that JS threw an exception. Use only if
+    /// JS_IsExceptionPending(cx) is true.
+    JSFailed,
 }
 
 pub type Fallible<T> = Result<T, Error>;
