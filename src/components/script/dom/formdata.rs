@@ -6,6 +6,7 @@ use dom::bindings::codegen::Bindings::FormDataBinding;
 use dom::bindings::codegen::InheritTypes::FileCast;
 use dom::bindings::codegen::UnionTypes::FileOrString::{FileOrString, eFile, eString};
 use dom::bindings::error::{Fallible};
+use dom::bindings::global::GlobalRef;
 use dom::bindings::js::{JS, JSRef, Temporary};
 use dom::bindings::trace::Traceable;
 use dom::bindings::utils::{Reflectable, Reflector, reflect_dom_object};
@@ -45,8 +46,8 @@ impl FormData {
         reflect_dom_object(box FormData::new_inherited(form, window), window, FormDataBinding::Wrap)
     }
 
-    pub fn Constructor(window: &JSRef<Window>, form: Option<JSRef<HTMLFormElement>>) -> Fallible<Temporary<FormData>> {
-        Ok(FormData::new(form, window))
+    pub fn Constructor(global: &GlobalRef, form: Option<JSRef<HTMLFormElement>>) -> Fallible<Temporary<FormData>> {
+        Ok(FormData::new(form, global.as_window()))
     }
 }
 

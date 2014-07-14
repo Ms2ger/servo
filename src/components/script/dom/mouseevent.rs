@@ -5,7 +5,7 @@
 use dom::bindings::codegen::Bindings::MouseEventBinding;
 use dom::bindings::codegen::InheritTypes::{UIEventCast, MouseEventDerived};
 use dom::bindings::error::Fallible;
-use dom::bindings::global::GlobalRef;
+use dom::bindings::global::{GlobalRef, Window};
 use dom::bindings::js::{JS, JSRef, RootedReference, Temporary, OptionalSettable};
 use dom::bindings::trace::Traceable;
 use dom::bindings::utils::{Reflectable, Reflector, reflect_dom_object};
@@ -56,7 +56,7 @@ impl MouseEvent {
 
     pub fn new_uninitialized(window: &JSRef<Window>) -> Temporary<MouseEvent> {
         reflect_dom_object(box MouseEvent::new_inherited(),
-                           window,
+                           &Window(window),
                            MouseEventBinding::Wrap)
     }
 
@@ -84,7 +84,7 @@ impl MouseEvent {
         Temporary::from_rooted(&*ev)
     }
 
-    pub fn Constructor(global: GlobalRef,
+    pub fn Constructor(global: &GlobalRef,
                        type_: DOMString,
                        init: &MouseEventBinding::MouseEventInit) -> Fallible<Temporary<MouseEvent>> {
         let event = MouseEvent::new(global.as_window(), type_,

@@ -36,7 +36,7 @@ pub type Fallible<T> = Result<T, Error>;
 
 pub type ErrorResult = Fallible<()>;
 
-pub fn throw_dom_exception(cx: *mut JSContext, global: GlobalRef,
+pub fn throw_dom_exception(cx: *mut JSContext, global: &GlobalRef,
                            result: Error) {
     assert!(unsafe { JS_IsExceptionPending(cx) } == 0);
     let exception = DOMException::new_from_error(global, result).root();

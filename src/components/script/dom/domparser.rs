@@ -4,9 +4,10 @@
 
 use dom::bindings::codegen::Bindings::DOMParserBinding;
 use dom::bindings::codegen::Bindings::DOMParserBinding::SupportedTypeValues::{Text_html, Text_xml};
+use dom::bindings::error::{Fallible, FailureUnknown};
+use dom::bindings::global::Window;
 use dom::bindings::js::{JS, JSRef, Temporary};
 use dom::bindings::utils::{Reflector, Reflectable, reflect_dom_object};
-use dom::bindings::error::{Fallible, FailureUnknown};
 use dom::document::{Document, HTMLDocument, NonHTMLDocument};
 use dom::window::Window;
 use servo_util::str::DOMString;
@@ -26,7 +27,7 @@ impl DOMParser {
     }
 
     pub fn new(owner: &JSRef<Window>) -> Temporary<DOMParser> {
-        reflect_dom_object(box DOMParser::new_inherited(owner), owner,
+        reflect_dom_object(box DOMParser::new_inherited(owner), &Window(owner),
                            DOMParserBinding::Wrap)
     }
 
