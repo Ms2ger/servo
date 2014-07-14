@@ -8,14 +8,25 @@ use dom::window::Window;
 
 use js::jsapi::JSContext;
 
+//#[deriving(Clone)]
 pub enum GlobalRef<'a, 'b> {
     Window(&'a JSRef<'b, Window>),
     Worker,
 }
+/*
+            impl <'a, 'b> ::std::clone::Clone for GlobalRef<'a, 'b> {
+                #[inline]
+                fn clone(&self) -> GlobalRef<'a, 'b> {
+                    match *self {
+                        Window(r) => Window(r),
+                        Worker => Worker
+                    }
+                }
+            }
+*/
 
-pub enum GlobalRoot<'a, 'b> {
-    WindowRoot(Root<'a, 'b, Window>),
-    WorkerRoot,
+pub struct GlobalRoot<'a, 'b> {
+    global_ref: GlobalRef<'a, 'b>,
 }
 
 #[deriving(Encodable)]
@@ -51,19 +62,13 @@ impl<'a, 'b> Reflectable for GlobalRef<'a, 'b> {
 
 impl<'a, 'b> GlobalRoot<'a, 'b> {
     pub fn root_ref<'c>(&'c self) -> GlobalRef<'c, 'c> {
-        match *self {
-            WindowRoot(ref window) => Window(&window.root_ref()),
-            WorkerRoot => fail!("NYI"),
-        }
+        self.global_ref
     }
 }
 
-impl<'a, 'b, 'c> Deref<GlobalRef<'a, 'a>> for GlobalRoot<'b, 'c> {
+impl<'a, 'b, 'c> Deref<GlobalRef<'a, 'a>> for GlobalRoot<'a, 'a> {
     fn deref<'d>(&'d self) -> &'d GlobalRef<'a, 'a> {
-        match *self {
-            WindowRoot(ref window) => &Window(&**window),
-            WorkerRoot => fail!("NYI"),
-        }
+        &self.global_ref
     }
 }
 

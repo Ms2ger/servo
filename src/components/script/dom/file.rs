@@ -20,7 +20,7 @@ pub struct File {
 impl File {
     pub fn new_inherited(global: &GlobalRef, _file_bits: &JSRef<Blob>, name: DOMString) -> File {
         File {
-            blob: Blob::new_inherited(window),
+            blob: Blob::new_inherited(global),
             name: name,
             type_: FileTypeId
         }
