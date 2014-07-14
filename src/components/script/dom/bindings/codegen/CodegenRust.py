@@ -1792,7 +1792,7 @@ class CGWrapMethod(CGAbstractMethod):
     def __init__(self, descriptor):
         assert descriptor.interface.hasInterfacePrototypeObject()
         if not descriptor.createGlobal:
-            args = [Argument('*mut JSContext', 'aCx'), Argument('&GlobalRef', 'aScope'),
+            args = [Argument('*mut JSContext', 'aCx'), Argument('GlobalRef', 'aScope'),
                     Argument("Box<%s>" % descriptor.concreteType, 'aObject', mutable=True)]
         else:
             args = [Argument('*mut JSContext', 'aCx'),

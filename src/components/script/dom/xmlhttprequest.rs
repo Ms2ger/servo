@@ -130,7 +130,7 @@ pub struct XMLHttpRequest {
 }
 
 impl XMLHttpRequest {
-    pub fn new_inherited(global: &GlobalRef) -> XMLHttpRequest {
+    pub fn new_inherited(global: GlobalRef) -> XMLHttpRequest {
         let xhr = XMLHttpRequest {
             eventtarget: XMLHttpRequestEventTarget::new_inherited(XMLHttpRequestTypeId),
             ready_state: Traceable::new(Cell::new(Unsent)),
@@ -164,12 +164,12 @@ impl XMLHttpRequest {
         };
         xhr
     }
-    pub fn new(global: &GlobalRef) -> Temporary<XMLHttpRequest> {
+    pub fn new(global: GlobalRef) -> Temporary<XMLHttpRequest> {
         reflect_dom_object(box XMLHttpRequest::new_inherited(global),
                            global,
                            XMLHttpRequestBinding::Wrap)
     }
-    pub fn Constructor(global: &GlobalRef) -> Fallible<Temporary<XMLHttpRequest>> {
+    pub fn Constructor(global: GlobalRef) -> Fallible<Temporary<XMLHttpRequest>> {
         Ok(XMLHttpRequest::new(global))
     }
 
