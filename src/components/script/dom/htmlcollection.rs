@@ -47,7 +47,7 @@ impl HTMLCollection {
 
     pub fn new(window: &JSRef<Window>, collection: CollectionTypeId) -> Temporary<HTMLCollection> {
         reflect_dom_object(box HTMLCollection::new_inherited(collection),
-                           &Window(window), HTMLCollectionBinding::Wrap)
+                           &Window(*window), HTMLCollectionBinding::Wrap)
     }
 }
 

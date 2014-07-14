@@ -44,7 +44,7 @@ impl FormData {
 
     pub fn new(form: Option<JSRef<HTMLFormElement>>, window: &JSRef<Window>) -> Temporary<FormData> {
         reflect_dom_object(box FormData::new_inherited(form, window),
-                           &Window(window), FormDataBinding::Wrap)
+                           &Window(*window), FormDataBinding::Wrap)
     }
 
     pub fn Constructor(global: &GlobalRef, form: Option<JSRef<HTMLFormElement>>) -> Fallible<Temporary<FormData>> {
@@ -120,6 +120,6 @@ impl PrivateFormDataHelpers for FormData {
         let global = self.window.root();
         let f: Option<&JSRef<File>> = FileCast::to_ref(value);
         let name = filename.unwrap_or(f.map(|inner| inner.name.clone()).unwrap_or("blob".to_string()));
-        File::new(&Window(&*global), value, name)
+        File::new(&Window(*global), value, name)
     }
 }

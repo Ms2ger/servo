@@ -37,7 +37,7 @@ impl ClientRect {
                top: Au, bottom: Au,
                left: Au, right: Au) -> Temporary<ClientRect> {
         let rect = ClientRect::new_inherited(window, top, bottom, left, right);
-        reflect_dom_object(box rect, &Window(window), ClientRectBinding::Wrap)
+        reflect_dom_object(box rect, &Window(*window), ClientRectBinding::Wrap)
     }
 }
 

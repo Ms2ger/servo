@@ -30,7 +30,7 @@ impl ClientRectList {
     pub fn new(window: &JSRef<Window>,
                rects: Vec<JSRef<ClientRect>>) -> Temporary<ClientRectList> {
         reflect_dom_object(box ClientRectList::new_inherited(window, rects),
-                           &Window(window), ClientRectListBinding::Wrap)
+                           &Window(*window), ClientRectListBinding::Wrap)
     }
 }
 

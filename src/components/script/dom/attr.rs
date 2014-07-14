@@ -95,7 +95,7 @@ impl Attr {
                name: DOMString, namespace: Namespace,
                prefix: Option<DOMString>, owner: &JSRef<Element>) -> Temporary<Attr> {
         let attr = Attr::new_inherited(local_name, value, name, namespace, prefix, owner);
-        reflect_dom_object(box attr, &Window(window), AttrBinding::Wrap)
+        reflect_dom_object(box attr, &Window(*window), AttrBinding::Wrap)
     }
 
     pub fn set_value(&self, set_type: AttrSettingType, value: AttrValue) {

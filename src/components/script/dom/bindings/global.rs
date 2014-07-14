@@ -14,7 +14,7 @@ use script_task::ScriptChan;
 use js::jsapi::JSContext;
 
 pub enum GlobalRef<'a, 'b> {
-    Window(&'a JSRef<'b, Window>),
+    Window(JSRef<'b, Window>),
     Worker,
 }
 
@@ -38,7 +38,7 @@ impl<'a, 'b> GlobalRef<'a, 'b> {
 
     pub fn as_window<'c>(&'c self) -> &'c JSRef<'c, Window> {
         match *self {
-            Window(ref window) => *window,
+            Window(ref window) => window,
             Worker => fail!("NYI"),
         }
     }
@@ -78,7 +78,7 @@ impl<'a, 'b, 'c> Deref<GlobalRef<'a, 'a>> for GlobalRoot<'a, 'a> {
 impl GlobalField {
     pub fn from_rooted(global: &GlobalRef) -> GlobalField {
         match *global {
-            Window(ref window) => WindowField(JS::from_rooted(*window)),
+            Window(ref window) => WindowField(JS::from_rooted(window)),
             Worker => fail!("NYI"),
         }
     }

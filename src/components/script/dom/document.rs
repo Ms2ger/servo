@@ -229,7 +229,7 @@ impl Document {
 
     pub fn new(window: &JSRef<Window>, url: Option<Url>, doctype: IsHTMLDocument, content_type: Option<DOMString>) -> Temporary<Document> {
         let document = Document::new_inherited(window, url, doctype, content_type);
-        let document = reflect_dom_object(box document, &Window(window),
+        let document = reflect_dom_object(box document, &Window(*window),
                                           DocumentBinding::Wrap).root();
 
         let node: &JSRef<Node> = NodeCast::from_ref(&*document);
@@ -541,8 +541,8 @@ impl<'a> DocumentMethods for JSRef<'a, Document> {
             // FIXME: Implement CustomEvent (http://dom.spec.whatwg.org/#customevent)
             "uievents" | "uievent" => Ok(EventCast::from_temporary(UIEvent::new_uninitialized(&*window))),
             "mouseevents" | "mouseevent" => Ok(EventCast::from_temporary(MouseEvent::new_uninitialized(&*window))),
-            "customevent" => Ok(EventCast::from_temporary(CustomEvent::new_uninitialized(&Window(&*window)))),
-            "htmlevents" | "events" | "event" => Ok(Event::new_uninitialized(&Window(&*window))),
+            "customevent" => Ok(EventCast::from_temporary(CustomEvent::new_uninitialized(&Window(*window)))),
+            "htmlevents" | "events" | "event" => Ok(Event::new_uninitialized(&Window(*window))),
             _ => Err(NotSupported)
         }
     }

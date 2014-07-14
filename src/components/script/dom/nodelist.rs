@@ -32,7 +32,7 @@ impl NodeList {
     pub fn new(window: &JSRef<Window>,
                list_type: NodeListType) -> Temporary<NodeList> {
         reflect_dom_object(box NodeList::new_inherited(list_type),
-                           &Window(window), NodeListBinding::Wrap)
+                           &Window(*window), NodeListBinding::Wrap)
     }
 
     pub fn new_simple_list(window: &JSRef<Window>, elements: Vec<JSRef<Node>>) -> Temporary<NodeList> {
