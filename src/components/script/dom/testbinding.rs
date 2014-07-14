@@ -7,12 +7,11 @@ use dom::bindings::codegen::Bindings::TestBindingBinding::TestEnumValues::_empty
 use dom::bindings::codegen::UnionTypes::BlobOrString::BlobOrString;
 use dom::bindings::codegen::UnionTypes::EventOrString::{EventOrString, eString};
 use dom::bindings::codegen::UnionTypes::HTMLElementOrLong::{HTMLElementOrLong, eLong};
-use dom::bindings::global::{GlobalRef, GlobalField};
-use dom::bindings::js::{JS, JSRef, Temporary};
+use dom::bindings::global::GlobalField;
+use dom::bindings::js::{JSRef, Temporary};
 use dom::bindings::str::ByteString;
 use dom::bindings::utils::{Reflector, Reflectable};
 use dom::blob::Blob;
-use dom::window::Window;
 use servo_util::str::DOMString;
 
 use js::jsapi::JSContext;

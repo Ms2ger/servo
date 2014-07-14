@@ -12,7 +12,7 @@ use dom::characterdata::CharacterData;
 use dom::document::Document;
 use dom::eventtarget::{EventTarget, NodeTargetTypeId};
 use dom::node::{Node, TextNodeTypeId};
-use dom::window::{Window, WindowMethods};
+use dom::window::WindowMethods;
 use servo_util::str::DOMString;
 
 /// An HTML text node.

@@ -14,7 +14,7 @@ use dom::eventtarget::{EventTarget, NodeTargetTypeId};
 use dom::htmlcollection::HTMLCollection;
 use dom::node::{DocumentFragmentNodeTypeId, Node, NodeHelpers, window_from_node};
 use dom::nodelist::NodeList;
-use dom::window::{Window, WindowMethods};
+use dom::window::WindowMethods;
 use servo_util::str::DOMString;
 
 #[deriving(Encodable)]

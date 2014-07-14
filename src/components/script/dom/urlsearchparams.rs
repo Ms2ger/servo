@@ -10,7 +10,6 @@ use dom::bindings::global::GlobalRef;
 use dom::bindings::js::{JSRef, Temporary};
 use dom::bindings::trace::Traceable;
 use dom::bindings::utils::{Reflectable, Reflector, reflect_dom_object};
-use dom::window::Window;
 use encoding::all::UTF_8;
 use encoding::types::{Encoding, EncodeReplace};
 use servo_util::str::DOMString;

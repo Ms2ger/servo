@@ -537,7 +537,7 @@ impl<'a> XMLHttpRequestMethods<'a> for JSRef<'a, XMLHttpRequest> {
         } else {
             let builder = TaskBuilder::new().named("XHRTask");
             self.fetch_time.deref().set(time::now().to_timespec().sec);
-            let script_chan = global.deref().script_chan.clone();
+            let script_chan = global.deref().script_chan().clone();
             builder.spawn(proc() {
                 let _ = XMLHttpRequest::fetch(&mut Async(addr.unwrap(), script_chan), resource_task, load_data, terminate_receiver);
             });
@@ -878,7 +878,7 @@ impl<'a> PrivateXMLHttpRequestHelpers for JSRef<'a, XMLHttpRequest> {
         }
         self.timeout_pinned.deref().set(true);
         let global = self.global.root();
-        let script_chan = global.deref().script_chan.clone();
+        let script_chan = global.deref().script_chan().clone();
         let terminate_sender = (*self.terminate_sender.deref().borrow()).clone();
         spawn_named("XHR:Timer", proc () {
             match oneshot.recv_opt() {

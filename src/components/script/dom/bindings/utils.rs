@@ -6,7 +6,7 @@ use dom::bindings::codegen::PrototypeList;
 use dom::bindings::codegen::PrototypeList::MAX_PROTO_CHAIN_LENGTH;
 use dom::bindings::conversions::{FromJSValConvertible, IDLInterface};
 use dom::bindings::global::{GlobalRef, GlobalField, WindowField};
-use dom::bindings::js::{JS, JSRef, Temporary, Root};
+use dom::bindings::js::{JS, Temporary, Root};
 use dom::bindings::trace::Untraceable;
 use dom::browsercontext;
 use dom::window;

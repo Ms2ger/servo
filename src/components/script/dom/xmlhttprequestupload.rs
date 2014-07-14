@@ -5,7 +5,7 @@
 use dom::bindings::codegen::InheritTypes::XMLHttpRequestUploadDerived;
 use dom::bindings::codegen::Bindings::XMLHttpRequestUploadBinding;
 use dom::bindings::global::GlobalRef;
-use dom::bindings::js::{Temporary, JSRef};
+use dom::bindings::js::Temporary;
 use dom::bindings::utils::{Reflectable, Reflector, reflect_dom_object};
 use dom::eventtarget::{EventTarget, XMLHttpRequestTargetTypeId};
 use dom::xmlhttprequest::{XMLHttpRequestUploadTypeId};

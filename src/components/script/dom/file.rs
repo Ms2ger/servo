@@ -7,7 +7,6 @@ use dom::bindings::global::GlobalRef;
 use dom::bindings::js::{JSRef, Temporary};
 use dom::bindings::utils::{Reflectable, Reflector, reflect_dom_object};
 use dom::blob::{Blob, BlobType, FileTypeId};
-use dom::window::Window;
 use servo_util::str::DOMString;
 
 #[deriving(Encodable)]

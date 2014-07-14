@@ -2,28 +2,21 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-use dom::bindings::js::{JS, JSRef, Root};
+use dom::bindings::js::{JS, JSRef};
 use dom::bindings::utils::{Reflectable, Reflector};
 use dom::window::Window;
 
+use page::Page;
+use url::Url;
+use script_task::ScriptChan;
+
+
 use js::jsapi::JSContext;
 
-//#[deriving(Clone)]
 pub enum GlobalRef<'a, 'b> {
     Window(&'a JSRef<'b, Window>),
     Worker,
 }
-/*
-            impl <'a, 'b> ::std::clone::Clone for GlobalRef<'a, 'b> {
-                #[inline]
-                fn clone(&self) -> GlobalRef<'a, 'b> {
-                    match *self {
-                        Window(r) => Window(r),
-                        Worker => Worker
-                    }
-                }
-            }
-*/
 
 pub struct GlobalRoot<'a, 'b> {
     global_ref: GlobalRef<'a, 'b>,
@@ -48,6 +41,16 @@ impl<'a, 'b> GlobalRef<'a, 'b> {
             Window(ref window) => *window,
             Worker => fail!("NYI"),
         }
+    }
+
+    pub fn page<'c>(&'c self) -> &'c Page {
+        self.as_window().page()
+    }
+    pub fn get_url(&self) -> Url {
+        self.as_window().get_url()
+    }
+    pub fn script_chan<'c>(&'c self) -> &'c ScriptChan {
+        &self.as_window().script_chan
     }
 }
 
