@@ -6,6 +6,7 @@ use std::collections::hashmap::HashMap;
 use dom::bindings::codegen::Bindings::URLSearchParamsBinding;
 use dom::bindings::codegen::UnionTypes::StringOrURLSearchParams::{StringOrURLSearchParams, eURLSearchParams, eString};
 use dom::bindings::error::{Fallible};
+use dom::bindings::global::GlobalRef;
 use dom::bindings::js::{JSRef, Temporary};
 use dom::bindings::trace::Traceable;
 use dom::bindings::utils::{Reflectable, Reflector, reflect_dom_object};
@@ -31,12 +32,12 @@ impl URLSearchParams {
         }
     }
 
-    pub fn new(window: &GlobalRef) -> Temporary<URLSearchParams> {
-        reflect_dom_object(box URLSearchParams::new_inherited(), window, URLSearchParamsBinding::Wrap)
+    pub fn new(global: &GlobalRef) -> Temporary<URLSearchParams> {
+        reflect_dom_object(box URLSearchParams::new_inherited(), global, URLSearchParamsBinding::Wrap)
     }
 
-    pub fn Constructor(window: &JSRef<Window>, init: Option<StringOrURLSearchParams>) -> Fallible<Temporary<URLSearchParams>> {
-        let usp = URLSearchParams::new(window).root();
+    pub fn Constructor(global: &GlobalRef, init: Option<StringOrURLSearchParams>) -> Fallible<Temporary<URLSearchParams>> {
+        let usp = URLSearchParams::new(global).root();
         match init {
             Some(eString(_s)) => {
                 // XXXManishearth we need to parse the input here
