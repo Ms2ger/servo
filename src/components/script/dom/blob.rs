@@ -32,7 +32,7 @@ impl Blob {
         }
     }
 
-    pub fn new(window: GlobalRef) -> Temporary<Blob> {
+    pub fn new(window: &GlobalRef) -> Temporary<Blob> {
         reflect_dom_object(box Blob::new_inherited(window),
                            window,
                            BlobBinding::Wrap)

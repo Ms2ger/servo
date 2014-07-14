@@ -40,7 +40,7 @@ impl UIEvent {
 
     pub fn new_uninitialized(window: &JSRef<Window>) -> Temporary<UIEvent> {
         reflect_dom_object(box UIEvent::new_inherited(UIEventTypeId),
-                           Window(window),
+                           &Window(window),
                            UIEventBinding::Wrap)
     }
 

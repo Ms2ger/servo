@@ -32,11 +32,11 @@ impl URLSearchParams {
         }
     }
 
-    pub fn new(global: GlobalRef) -> Temporary<URLSearchParams> {
+    pub fn new(global: &GlobalRef) -> Temporary<URLSearchParams> {
         reflect_dom_object(box URLSearchParams::new_inherited(), global, URLSearchParamsBinding::Wrap)
     }
 
-    pub fn Constructor(global: GlobalRef, init: Option<StringOrURLSearchParams>) -> Fallible<Temporary<URLSearchParams>> {
+    pub fn Constructor(global: &GlobalRef, init: Option<StringOrURLSearchParams>) -> Fallible<Temporary<URLSearchParams>> {
         let usp = URLSearchParams::new(global).root();
         match init {
             Some(eString(_s)) => {

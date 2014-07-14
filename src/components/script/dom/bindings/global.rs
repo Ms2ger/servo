@@ -49,6 +49,23 @@ impl<'a, 'b> Reflectable for GlobalRef<'a, 'b> {
     }
 }
 
+impl<'a, 'b> GlobalRoot<'a, 'b> {
+    pub fn root_ref<'c>(&'c self) -> GlobalRef<'c, 'c> {
+        match *self {
+            WindowRoot(ref window) => Window(window.root_ref()),
+            WorkerRoot => fail!("NYI"),
+        }
+    }
+}
+
+impl<'a, 'b, 'c> Deref<GlobalRef<'a, 'a>> for GlobalRoot<'b, 'c> {
+    fn deref<'d>(&'d self) -> &'d GlobalRef<'a, 'a> {
+        match *self {
+            WindowRoot(ref window) => Window(&**window),
+            WorkerRoot => fail!("NYI"),
+        }
+    }
+}
 
 impl GlobalField {
     pub fn from_rooted(global: &GlobalRef) -> GlobalField {
