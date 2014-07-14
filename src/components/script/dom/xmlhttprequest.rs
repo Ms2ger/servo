@@ -10,6 +10,7 @@ use dom::bindings::codegen::InheritTypes::{EventCast, EventTargetCast, XMLHttpRe
 use dom::bindings::conversions::ToJSValConvertible;
 use dom::bindings::error::{Error, ErrorResult, Fallible, InvalidState, InvalidAccess};
 use dom::bindings::error::{Network, Syntax, Security, Abort, Timeout};
+use dom::bindings::global::{GlobalField, GlobalRef};
 use dom::bindings::js::{JS, JSRef, Temporary, OptionalRootedRootable};
 use dom::bindings::str::ByteString;
 use dom::bindings::trace::{Traceable, Untraceable};
@@ -19,7 +20,6 @@ use dom::event::Event;
 use dom::eventtarget::{EventTarget, EventTargetHelpers, XMLHttpRequestTargetTypeId};
 use dom::progressevent::ProgressEvent;
 use dom::urlsearchparams::URLSearchParamsHelpers;
-use dom::window::Window;
 use dom::xmlhttprequesteventtarget::XMLHttpRequestEventTarget;
 use dom::xmlhttprequestupload::XMLHttpRequestUpload;
 
@@ -121,7 +121,7 @@ pub struct XMLHttpRequest {
     upload_events: Traceable<Cell<bool>>,
     send_flag: Traceable<Cell<bool>>,
 
-    global: JS<Window>,
+    global: GlobalField,
     pinned_count: Traceable<Cell<uint>>,
     timer: Untraceable<RefCell<Timer>>,
     fetch_time: Traceable<Cell<i64>>,
@@ -130,13 +130,13 @@ pub struct XMLHttpRequest {
 }
 
 impl XMLHttpRequest {
-    pub fn new_inherited(owner: &JSRef<Window>) -> XMLHttpRequest {
+    pub fn new_inherited(global: &GlobalRef) -> XMLHttpRequest {
         let xhr = XMLHttpRequest {
             eventtarget: XMLHttpRequestEventTarget::new_inherited(XMLHttpRequestTypeId),
             ready_state: Traceable::new(Cell::new(Unsent)),
             timeout: Traceable::new(Cell::new(0u32)),
             with_credentials: Traceable::new(Cell::new(false)),
-            upload: Cell::new(JS::from_rooted(&XMLHttpRequestUpload::new(owner))),
+            upload: Cell::new(JS::from_rooted(&XMLHttpRequestUpload::new(global))),
             response_url: "".to_string(),
             status: Traceable::new(Cell::new(0)),
             status_text: Traceable::new(RefCell::new(ByteString::new(vec!()))),
@@ -155,7 +155,7 @@ impl XMLHttpRequest {
             upload_complete: Traceable::new(Cell::new(false)),
             upload_events: Traceable::new(Cell::new(false)),
 
-            global: JS::from_rooted(owner),
+            global: GlobalField::from_rooted(global),
             pinned_count: Traceable::new(Cell::new(0)),
             timer: Untraceable::new(RefCell::new(Timer::new().unwrap())),
             fetch_time: Traceable::new(Cell::new(0)),
@@ -164,13 +164,13 @@ impl XMLHttpRequest {
         };
         xhr
     }
-    pub fn new(window: &JSRef<Window>) -> Temporary<XMLHttpRequest> {
-        reflect_dom_object(box XMLHttpRequest::new_inherited(window),
-                           window,
+    pub fn new(global: &GlobalRef) -> Temporary<XMLHttpRequest> {
+        reflect_dom_object(box XMLHttpRequest::new_inherited(global),
+                           global,
                            XMLHttpRequestBinding::Wrap)
     }
-    pub fn Constructor(owner: &JSRef<Window>) -> Fallible<Temporary<XMLHttpRequest>> {
-        Ok(XMLHttpRequest::new(owner))
+    pub fn Constructor(global: &GlobalRef) -> Fallible<Temporary<XMLHttpRequest>> {
+        Ok(XMLHttpRequest::new(global))
     }
 
     pub fn handle_xhr_progress(addr: TrustedXHRAddress, progress: XHRProgress) {

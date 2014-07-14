@@ -31,7 +31,7 @@ impl URLSearchParams {
         }
     }
 
-    pub fn new(window: &JSRef<Window>) -> Temporary<URLSearchParams> {
+    pub fn new(window: &GlobalRef) -> Temporary<URLSearchParams> {
         reflect_dom_object(box URLSearchParams::new_inherited(), window, URLSearchParamsBinding::Wrap)
     }
 

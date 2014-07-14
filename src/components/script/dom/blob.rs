@@ -18,7 +18,7 @@ pub enum BlobType {
 #[deriving(Encodable)]
 pub struct Blob {
     reflector_: Reflector,
-    window: JS<Window>,
+    global: GlobalField,
     type_: BlobType
 }
 
@@ -31,7 +31,7 @@ impl Blob {
         }
     }
 
-    pub fn new(window: &JSRef<Window>) -> Temporary<Blob> {
+    pub fn new(window: &GlobalRef) -> Temporary<Blob> {
         reflect_dom_object(box Blob::new_inherited(window),
                            window,
                            BlobBinding::Wrap)
