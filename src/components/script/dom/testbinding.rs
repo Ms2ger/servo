@@ -2,12 +2,13 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-use dom::bindings::js::{JS, JSRef, Temporary};
 use dom::bindings::codegen::Bindings::TestBindingBinding::TestEnum;
 use dom::bindings::codegen::Bindings::TestBindingBinding::TestEnumValues::_empty;
 use dom::bindings::codegen::UnionTypes::BlobOrString::BlobOrString;
 use dom::bindings::codegen::UnionTypes::EventOrString::{EventOrString, eString};
 use dom::bindings::codegen::UnionTypes::HTMLElementOrLong::{HTMLElementOrLong, eLong};
+use dom::bindings::global::{GlobalRef, GlobalField};
+use dom::bindings::js::{JS, JSRef, Temporary};
 use dom::bindings::str::ByteString;
 use dom::bindings::utils::{Reflector, Reflectable};
 use dom::blob::Blob;
@@ -17,12 +18,10 @@ use servo_util::str::DOMString;
 use js::jsapi::JSContext;
 use js::jsval::{JSVal, NullValue};
 
-use std::cell::Cell;
-
 #[deriving(Encodable)]
 pub struct TestBinding {
     pub reflector: Reflector,
-    pub window: Cell<JS<Window>>,
+    pub global: GlobalField,
 }
 
 pub trait TestBindingMethods {
@@ -279,20 +278,20 @@ pub trait TestBindingMethods {
 
 impl<'a> TestBindingMethods for JSRef<'a, TestBinding> {
     fn InterfaceAttribute(&self) -> Temporary<Blob> {
-        let window = self.window.get().root();
-        Blob::new(&*window)
+        let global = self.global.root();
+        Blob::new(&*global)
     }
     fn GetInterfaceAttributeNullable(&self) -> Option<Temporary<Blob>> {
-        let window = self.window.get().root();
-        Some(Blob::new(&*window))
+        let global = self.global.root();
+        Some(Blob::new(&*global))
     }
     fn ReceiveInterface(&self) -> Temporary<Blob> {
-        let window = self.window.get().root();
-        Blob::new(&*window)
+        let global = self.global.root();
+        Blob::new(&*global)
     }
     fn ReceiveNullableInterface(&self) -> Option<Temporary<Blob>> {
-        let window = self.window.get().root();
-        Some(Blob::new(&*window))
+        let global = self.global.root();
+        Some(Blob::new(&*global))
     }
 }
 

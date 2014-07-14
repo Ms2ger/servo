@@ -2,18 +2,19 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
+use dom::bindings::codegen::Bindings::DocumentBinding;
 use dom::bindings::codegen::Bindings::EventHandlerBinding::EventHandlerNonNull;
 use dom::bindings::codegen::InheritTypes::{DocumentDerived, EventCast, HTMLElementCast};
-use dom::bindings::codegen::InheritTypes::{HTMLHeadElementCast, TextCast, ElementCast};
 use dom::bindings::codegen::InheritTypes::{DocumentTypeCast, HTMLHtmlElementCast, NodeCast};
 use dom::bindings::codegen::InheritTypes::EventTargetCast;
-use dom::bindings::codegen::Bindings::DocumentBinding;
+use dom::bindings::codegen::InheritTypes::{HTMLHeadElementCast, TextCast, ElementCast};
+use dom::bindings::error::{ErrorResult, Fallible, NotSupported, InvalidCharacter};
+use dom::bindings::error::{HierarchyRequest, NamespaceError};
+use dom::bindings::global::Window;
 use dom::bindings::js::{JS, JSRef, Temporary, OptionalSettable, TemporaryPushable};
 use dom::bindings::js::OptionalRootable;
 use dom::bindings::trace::{Traceable, Untraceable};
 use dom::bindings::utils::{Reflectable, Reflector, reflect_dom_object};
-use dom::bindings::error::{ErrorResult, Fallible, NotSupported, InvalidCharacter};
-use dom::bindings::error::{HierarchyRequest, NamespaceError};
 use dom::bindings::utils::{xml_name_type, InvalidXMLName, Name, QName};
 use dom::comment::Comment;
 use dom::customevent::CustomEvent;
@@ -228,7 +229,7 @@ impl Document {
 
     pub fn new(window: &JSRef<Window>, url: Option<Url>, doctype: IsHTMLDocument, content_type: Option<DOMString>) -> Temporary<Document> {
         let document = Document::new_inherited(window, url, doctype, content_type);
-        let document = reflect_dom_object(box document, window,
+        let document = reflect_dom_object(box document, Window(window),
                                           DocumentBinding::Wrap).root();
 
         let node: &JSRef<Node> = NodeCast::from_ref(&*document);

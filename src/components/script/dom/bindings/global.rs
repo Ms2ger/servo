@@ -3,6 +3,7 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 use dom::bindings::js::{JS, JSRef};
+use dom::bindings::utils::{Reflectable, Reflector};
 use dom::window::Window;
 
 use js::jsapi::JSContext;
@@ -27,11 +28,24 @@ impl<'a> GlobalRef<'a> {
     }
 }
 
+impl<'a> Reflectable for GlobalRef<'a> {
+    fn reflector<'b>(&'b self) -> &'b Reflector {
+        match *self {
+            Window(ref window) => window.reflector(),
+            Worker => fail!("NYI"),
+        }
+    }
+}
+
 impl GlobalField {
     pub fn from_rooted(global: &GlobalRef) -> GlobalField {
         match *global {
-            Window(window) => JS::from_rooted(window),
+            Window(ref window) => WindowField(JS::from_rooted(window)),
             Worker => fail!("NYI"),
         }
+    }
+
+    pub fn root(&self) -> ! {
+        fail!("NYI")
     }
 }
