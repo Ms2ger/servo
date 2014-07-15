@@ -72,12 +72,6 @@ impl<'a, 'b> GlobalRoot<'a, 'b> {
     }
 }
 
-impl<'a, 'b, 'c> Deref<GlobalRef<'a, 'a>> for GlobalRoot<'a, 'a> {
-    fn deref<'d>(&'d self) -> &'d GlobalRef<'a, 'a> {
-        fail!()
-    }
-}
-
 impl GlobalField {
     pub fn from_rooted(global: &GlobalRef) -> GlobalField {
         match *global {

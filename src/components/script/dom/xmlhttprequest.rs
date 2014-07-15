@@ -293,7 +293,7 @@ impl<'a> XMLHttpRequestMethods<'a> for JSRef<'a, XMLHttpRequest> {
             Method::from_str_or_new(s.as_slice())
         });
         // Step 2
-        let base: Option<Url> = Some(self.global.root().get_url());
+        let base: Option<Url> = Some(self.global.root().root_ref().get_url());
         match maybe_method {
             // Step 4
             Some(Connect) | Some(Trace) => Err(Security),
@@ -486,7 +486,7 @@ impl<'a> XMLHttpRequestMethods<'a> for JSRef<'a, XMLHttpRequest> {
         }
 
         let global = self.global.root();
-        let resource_task = global.deref().page().resource_task.deref().clone();
+        let resource_task = global.root_ref().page().resource_task.deref().clone();
         let mut load_data = LoadData::new(self.request_url.deref().borrow().clone());
         load_data.data = extracted;
 
@@ -516,7 +516,7 @@ impl<'a> XMLHttpRequestMethods<'a> for JSRef<'a, XMLHttpRequest> {
         }
 
         // XXXManishearth this is to be replaced with Origin for CORS (with no path)
-        let referer_url = self.global.root().get_url();
+        let referer_url = self.global.root().root_ref().get_url();
         let mut buf = String::new();
         buf.push_str(referer_url.scheme.as_slice());
         buf.push_str("://".as_slice());
@@ -537,7 +537,7 @@ impl<'a> XMLHttpRequestMethods<'a> for JSRef<'a, XMLHttpRequest> {
         } else {
             let builder = TaskBuilder::new().named("XHRTask");
             self.fetch_time.deref().set(time::now().to_timespec().sec);
-            let script_chan = global.deref().script_chan().clone();
+            let script_chan = global.root_ref().script_chan().clone();
             builder.spawn(proc() {
                 let _ = XMLHttpRequest::fetch(&mut Async(addr.unwrap(), script_chan), resource_task, load_data, terminate_receiver);
             });
@@ -692,7 +692,7 @@ impl<'a> PrivateXMLHttpRequestHelpers for JSRef<'a, XMLHttpRequest> {
     // Creates a trusted address to the object, and roots it. Always pair this with a release()
     unsafe fn to_trusted(&self) -> TrustedXHRAddress {
         if self.pinned_count.deref().get() == 0 {
-            JS_AddObjectRoot(self.global.root().get_cx(), self.reflector().rootable());
+            JS_AddObjectRoot(self.global.root().root_ref().get_cx(), self.reflector().rootable());
         }
         let pinned_count = self.pinned_count.deref().get();
         self.pinned_count.deref().set(pinned_count + 1);
@@ -711,7 +711,7 @@ impl<'a> PrivateXMLHttpRequestHelpers for JSRef<'a, XMLHttpRequest> {
         self.pinned_count.deref().set(pinned_count - 1);
         if self.pinned_count.deref().get() == 0 {
             unsafe {
-                JS_RemoveObjectRoot(self.global.root().get_cx(), self.reflector().rootable());
+                JS_RemoveObjectRoot(self.global.root().root_ref().get_cx(), self.reflector().rootable());
             }
         }
     }
@@ -719,9 +719,10 @@ impl<'a> PrivateXMLHttpRequestHelpers for JSRef<'a, XMLHttpRequest> {
     fn change_ready_state(&self, rs: XMLHttpRequestState) {
         assert!(self.ready_state.deref().get() != rs)
         self.ready_state.deref().set(rs);
-        let win = &*self.global.root();
-        let event =
-            Event::new(win, "readystatechange".to_string(), false, true).root();
+        let global = self.global.root();
+        let event = Event::new(&global.root_ref(),
+                               "readystatechange".to_string(),
+                               false, true).root();
         let target: &JSRef<EventTarget> = EventTargetCast::from_ref(self);
         target.dispatch_event_with_target(None, &*event).ok();
     }
@@ -839,9 +840,10 @@ impl<'a> PrivateXMLHttpRequestHelpers for JSRef<'a, XMLHttpRequest> {
     }
 
     fn dispatch_progress_event(&self, upload: bool, type_: DOMString, loaded: u64, total: Option<u64>) {
-        let win = &*self.global.root();
+        let global = self.global.root();
         let upload_target = &*self.upload.get().root();
-        let progressevent = ProgressEvent::new(win, type_, false, false,
+        let progressevent = ProgressEvent::new(&global.root_ref(),
+                                               type_, false, false,
                                                total.is_some(), loaded,
                                                total.unwrap_or(0)).root();
         let target: &JSRef<EventTarget> = if upload {
@@ -878,7 +880,7 @@ impl<'a> PrivateXMLHttpRequestHelpers for JSRef<'a, XMLHttpRequest> {
         }
         self.timeout_pinned.deref().set(true);
         let global = self.global.root();
-        let script_chan = global.deref().script_chan().clone();
+        let script_chan = global.root_ref().script_chan().clone();
         let terminate_sender = (*self.terminate_sender.deref().borrow()).clone();
         spawn_named("XHR:Timer", proc () {
             match oneshot.recv_opt() {

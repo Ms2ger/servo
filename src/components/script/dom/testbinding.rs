@@ -278,19 +278,19 @@ pub trait TestBindingMethods {
 impl<'a> TestBindingMethods for JSRef<'a, TestBinding> {
     fn InterfaceAttribute(&self) -> Temporary<Blob> {
         let global = self.global.root();
-        Blob::new(&*global)
+        Blob::new(&global.root_ref())
     }
     fn GetInterfaceAttributeNullable(&self) -> Option<Temporary<Blob>> {
         let global = self.global.root();
-        Some(Blob::new(&*global))
+        Some(Blob::new(&global.root_ref()))
     }
     fn ReceiveInterface(&self) -> Temporary<Blob> {
         let global = self.global.root();
-        Blob::new(&*global)
+        Blob::new(&global.root_ref())
     }
     fn ReceiveNullableInterface(&self) -> Option<Temporary<Blob>> {
         let global = self.global.root();
-        Some(Blob::new(&*global))
+        Some(Blob::new(&global.root_ref()))
     }
 }
 

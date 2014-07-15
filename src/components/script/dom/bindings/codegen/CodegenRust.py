@@ -2184,7 +2184,7 @@ class CGCallGenerator(CGThing):
                 "    Ok(result) => result,\n"
                 "    Err(e) => {\n"
                 "%s"
-                "        throw_dom_exception(cx, &*global, e);\n"
+                "        throw_dom_exception(cx, &global.root_ref(), e);\n"
                 "        return%s;\n"
                 "    },\n"
                 "};\n" % (glob, errorResult)))
