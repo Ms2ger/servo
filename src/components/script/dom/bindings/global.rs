@@ -2,14 +2,13 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-use dom::bindings::js::{JS, JSRef};
+use dom::bindings::js::{JS, JSRef, Root};
 use dom::bindings::utils::{Reflectable, Reflector};
 use dom::window::Window;
 
 use page::Page;
 use url::Url;
 use script_task::ScriptChan;
-
 
 use js::jsapi::JSContext;
 
@@ -18,8 +17,9 @@ pub enum GlobalRef<'a, 'b> {
     Worker,
 }
 
-pub struct GlobalRoot<'a, 'b> {
-    global_ref: GlobalRef<'a, 'b>,
+pub enum GlobalRoot<'a, 'b> {
+    WindowRoot(Root<'a, 'b, Window>),
+    WorkerRoot,
 }
 
 #[deriving(Encodable)]
@@ -65,13 +65,16 @@ impl<'a, 'b> Reflectable for GlobalRef<'a, 'b> {
 
 impl<'a, 'b> GlobalRoot<'a, 'b> {
     pub fn root_ref<'c>(&'c self) -> GlobalRef<'c, 'c> {
-        self.global_ref
+        match *self {
+            WindowRoot(ref window) => Window(window.root_ref()),
+            WorkerRoot => fail!("NYI"),
+        }
     }
 }
 
 impl<'a, 'b, 'c> Deref<GlobalRef<'a, 'a>> for GlobalRoot<'a, 'a> {
     fn deref<'d>(&'d self) -> &'d GlobalRef<'a, 'a> {
-        &self.global_ref
+        fail!()
     }
 }
 
@@ -84,6 +87,9 @@ impl GlobalField {
     }
 
     pub fn root(&self) -> GlobalRoot {
-        fail!("NYI")
+        match *self {
+            WindowField(ref window) => WindowRoot(window.root()),
+            WorkerField => fail!("NYI"),
+        }
     }
 }
