@@ -110,8 +110,7 @@ impl DedicatedWorkerGlobalScope {
             loop {
                 loop {
                     match global.control_receiver.try_recv() {
-                        Ok(Shutdown(sender)) => {
-                            sender.send();
+                        Ok(Shutdown) => {
                             return;
                         },
                         Err(Empty) => break,

@@ -20,6 +20,7 @@ use dom::workerglobalscope::{ControlMessage, Shutdown};
 #[deriving(Encodable)]
 pub struct Worker {
     eventtarget: EventTarget,
+    control_sender: Untraceable<Sender<ControlMessage>>,
     sender: Untraceable<Sender<DOMString>>,
 }
 
@@ -28,6 +29,7 @@ impl Worker {
                          sender: Sender<DOMString>) -> Worker {
         Worker {
             eventtarget: EventTarget::new_inherited(WorkerTypeId),
+            control_sender: Untraceable::new(control_sender),
             sender: Untraceable::new(sender),
         }
     }
@@ -35,7 +37,7 @@ impl Worker {
     pub fn new(global: &GlobalRef,
                control_sender: Sender<ControlMessage>,
                sender: Sender<DOMString>) -> Temporary<Worker> {
-        reflect_dom_object(box Worker::new_inherited(sender),
+        reflect_dom_object(box Worker::new_inherited(control_sender, sender),
                            global,
                            WorkerBinding::Wrap)
     }
@@ -59,10 +61,15 @@ impl Worker {
 }
 
 pub trait WorkerMethods {
+    fn Terminate(&self);
     fn PostMessage(&self, message: DOMString);
 }
 
 impl<'a> WorkerMethods for JSRef<'a, Worker> {
+    fn Terminate(&self) {
+        self.control_sender.send(Shutdown);
+    }
+
     fn PostMessage(&self, message: DOMString) {
         self.sender.send(message);
     }
