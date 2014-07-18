@@ -108,6 +108,18 @@ impl DedicatedWorkerGlobalScope {
     }
 }
 
+#[unsafe_destructor]
+impl Drop for DedicatedWorkerGlobalScope {
+    fn drop(&mut self) {
+        /*
+        let ScriptChan(ref sender) = *self.workerglobalscope.script_chan();
+        let (shutdown_sender, shutdown_receiver) = channel();
+        self.shutdown_sender.send(WorkerShutdown(shutdown_sender));
+        shutdown_receiver.recv();
+        */
+    }
+}
+
 pub trait DedicatedWorkerGlobalScopeMethods {
 }
 
