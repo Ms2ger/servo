@@ -12,9 +12,10 @@ use dom::bindings::utils::{Reflectable, Reflector};
 use dom::eventtarget::EventTarget;
 use dom::eventtarget::WorkerGlobalScopeTypeId;
 use dom::messageevent::MessageEvent;
+use dom::worker::TrustedWorkerAddress;
 use dom::workerglobalscope::DedicatedGlobalScope;
 use dom::workerglobalscope::WorkerGlobalScope;
-use script_task::{ScriptTask, ScriptChan};
+use script_task::{ScriptTask, ScriptChan, WorkerPostMessage};
 use script_task::StackRootTLS;
 
 use servo_net::resource_task::{ResourceTask, load_whole_resource};
@@ -32,10 +33,12 @@ use url::Url;
 pub struct DedicatedWorkerGlobalScope {
     workerglobalscope: WorkerGlobalScope,
     receiver: Untraceable<Receiver<DOMString>>,
+    worker: Untraceable<TrustedWorkerAddress>,
 }
 
 impl DedicatedWorkerGlobalScope {
     pub fn new_inherited(worker_url: Url,
+                         worker: TrustedWorkerAddress,
                          cx: Rc<Cx>,
                          receiver: Receiver<DOMString>,
                          resource_task: ResourceTask,
@@ -46,23 +49,27 @@ impl DedicatedWorkerGlobalScope {
                 DedicatedGlobalScope, worker_url, cx, resource_task,
                 script_chan),
             receiver: Untraceable::new(receiver),
+            worker: Untraceable::new(worker),
         }
     }
 
     pub fn new(worker_url: Url,
+               worker: TrustedWorkerAddress,
                cx: Rc<Cx>,
                receiver: Receiver<DOMString>,
                resource_task: ResourceTask,
                script_chan: ScriptChan)
                -> Temporary<DedicatedWorkerGlobalScope> {
         let scope = box DedicatedWorkerGlobalScope::new_inherited(
-            worker_url, cx.clone(), receiver, resource_task, script_chan);
+            worker_url, worker, cx.clone(), receiver, resource_task,
+            script_chan);
         DedicatedWorkerGlobalScopeBinding::Wrap(cx.ptr, scope)
     }
 }
 
 impl DedicatedWorkerGlobalScope {
     pub fn run_worker_scope(worker_url: Url,
+                            worker: TrustedWorkerAddress,
                             receiver: Receiver<DOMString>,
                             resource_task: ResourceTask,
                             script_chan: ScriptChan) {
@@ -84,7 +91,7 @@ impl DedicatedWorkerGlobalScope {
 
             let (_js_runtime, js_context) = ScriptTask::new_rt_and_cx();
             let global = DedicatedWorkerGlobalScope::new(
-                worker_url, js_context.clone(), receiver, resource_task,
+                worker_url, worker, js_context.clone(), receiver, resource_task,
                 script_chan).root();
             match js_context.evaluate_script(
                 global.reflector().get_jsobject(), source, filename.to_str(), 1) {
@@ -109,6 +116,16 @@ impl DedicatedWorkerGlobalScope {
 }
 
 pub trait DedicatedWorkerGlobalScopeMethods {
+    fn PostMessage(&self, message: DOMString);
+}
+
+impl<'a> DedicatedWorkerGlobalScopeMethods for JSRef<'a, DedicatedWorkerGlobalScope> {
+    fn PostMessage(&self, message: DOMString) {
+        let scope: &JSRef<WorkerGlobalScope> =
+            WorkerGlobalScopeCast::from_ref(self);
+        let ScriptChan(ref sender) = *scope.script_chan();
+        sender.send(WorkerPostMessage(*self.worker, message));
+    }
 }
 
 impl Reflectable for DedicatedWorkerGlobalScope {

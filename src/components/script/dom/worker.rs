@@ -3,33 +3,41 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 use dom::bindings::codegen::Bindings::WorkerBinding;
+use dom::bindings::codegen::InheritTypes::EventTargetCast;
 use dom::bindings::error::{Fallible, Syntax};
-use dom::bindings::global::GlobalRef;
-use dom::bindings::js::{JSRef, Temporary};
+use dom::bindings::global::{GlobalRef, GlobalField};
+use dom::bindings::js::{JS, JSRef, Temporary};
 use dom::bindings::trace::Untraceable;
 use dom::bindings::utils::{Reflectable, Reflector, reflect_dom_object};
 use dom::dedicatedworkerglobalscope::DedicatedWorkerGlobalScope;
 use dom::eventtarget::{EventTarget, WorkerTypeId};
+use dom::messageevent::MessageEvent;
 
 use servo_util::str::DOMString;
 use servo_util::url::try_parse_url;
 
+use libc::c_void;
+
+pub struct TrustedWorkerAddress(pub *c_void);
+
 #[deriving(Encodable)]
 pub struct Worker {
     eventtarget: EventTarget,
+    global: GlobalField,
     sender: Untraceable<Sender<DOMString>>,
 }
 
 impl Worker {
-    pub fn new_inherited(sender: Sender<DOMString>) -> Worker {
+    pub fn new_inherited(global: &GlobalRef, sender: Sender<DOMString>) -> Worker {
         Worker {
             eventtarget: EventTarget::new_inherited(WorkerTypeId),
+            global: GlobalField::from_rooted(global),
             sender: Untraceable::new(sender),
         }
     }
 
     pub fn new(global: &GlobalRef, sender: Sender<DOMString>) -> Temporary<Worker> {
-        reflect_dom_object(box Worker::new_inherited(sender),
+        reflect_dom_object(box Worker::new_inherited(global, sender),
                            global,
                            WorkerBinding::Wrap)
     }
@@ -43,10 +51,22 @@ impl Worker {
         };
 
         let (sender, receiver) = channel();
+        let worker = Worker::new(global, sender).root();
+        let worker_ref = TrustedWorkerAddress(&**worker as *Worker as *c_void);
+
         let resource_task = global.resource_task();
         DedicatedWorkerGlobalScope::run_worker_scope(
-            worker_url, receiver, resource_task, global.script_chan().clone());
-        Ok(Worker::new(global, sender))
+            worker_url, worker_ref, receiver, resource_task,
+            global.script_chan().clone());
+        Ok(Temporary::from_rooted(&*worker))
+    }
+
+    pub fn handle_message(address: TrustedWorkerAddress, message: DOMString) {
+        let worker = unsafe { JS::from_trusted_worker_address(address).root() };
+
+        let target: &JSRef<EventTarget> = EventTargetCast::from_ref(&*worker);
+        let global = worker.global.root();
+        MessageEvent::dispatch(target, &global.root_ref(), message);
     }
 }
 

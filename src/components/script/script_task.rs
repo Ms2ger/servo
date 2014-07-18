@@ -20,6 +20,7 @@ use dom::eventtarget::{EventTarget, EventTargetHelpers};
 use dom::node;
 use dom::node::{Node, NodeHelpers};
 use dom::window::{TimerId, Window, WindowHelpers};
+use dom::worker::{Worker, TrustedWorkerAddress};
 use dom::xmlhttprequest::{TrustedXHRAddress, XMLHttpRequest, XHRProgress};
 use html::hubbub_html_parser::HtmlParserResult;
 use html::hubbub_html_parser::{HtmlDiscoveredStyle, HtmlDiscoveredScript};
@@ -47,6 +48,7 @@ use servo_msg::constellation_msg;
 use servo_net::image_cache_task::ImageCacheTask;
 use servo_net::resource_task::ResourceTask;
 use servo_util::geometry::to_frac_px;
+use servo_util::str::DOMString;
 use servo_util::task::send_on_failure;
 use std::cell::RefCell;
 use std::comm::{channel, Sender, Receiver};
@@ -86,6 +88,8 @@ pub enum ScriptMsg {
     ExitPipelineMsg(PipelineId),
     /// Notifies the script that a window associated with a particular pipeline should be closed.
     ExitWindowMsg(PipelineId),
+    /// XXX
+    WorkerPostMessage(TrustedWorkerAddress, DOMString),
     /// Notifies the script of progress on a fetch
     XHRProgressMsg(TrustedXHRAddress, XHRProgress)
 }
@@ -380,6 +384,7 @@ impl ScriptTask {
                 ExitPipelineMsg(id) => if self.handle_exit_pipeline_msg(id) { return false },
                 ExitWindowMsg(id) => self.handle_exit_window_msg(id),
                 ResizeMsg(..) => fail!("should have handled ResizeMsg already"),
+                WorkerPostMessage(addr, message) => Worker::handle_message(addr, message),
                 XHRProgressMsg(addr, progress) => XMLHttpRequest::handle_xhr_progress(addr, progress),
             }
         }
