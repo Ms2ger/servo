@@ -28,15 +28,22 @@ use native;
 use rustrt::task::TaskOpts;
 use url::Url;
 
+
+use dom::workerglobalscope::{ControlMessage, Shutdown};
+use std::comm::{Empty, Disconnected};
+
+
 #[deriving(Encodable)]
 pub struct DedicatedWorkerGlobalScope {
     workerglobalscope: WorkerGlobalScope,
+    control_receiver: Untraceable<Receiver<ControlMessage>>,
     receiver: Untraceable<Receiver<DOMString>>,
 }
 
 impl DedicatedWorkerGlobalScope {
     pub fn new_inherited(worker_url: Url,
                          cx: Rc<Cx>,
+                         control_receiver: Receiver<ControlMessage>,
                          receiver: Receiver<DOMString>,
                          resource_task: ResourceTask,
                          script_chan: ScriptChan)
@@ -45,24 +52,28 @@ impl DedicatedWorkerGlobalScope {
             workerglobalscope: WorkerGlobalScope::new_inherited(
                 DedicatedGlobalScope, worker_url, cx, resource_task,
                 script_chan),
+            control_receiver: Untraceable::new(control_receiver),
             receiver: Untraceable::new(receiver),
         }
     }
 
     pub fn new(worker_url: Url,
                cx: Rc<Cx>,
+               control_receiver: Receiver<ControlMessage>,
                receiver: Receiver<DOMString>,
                resource_task: ResourceTask,
                script_chan: ScriptChan)
                -> Temporary<DedicatedWorkerGlobalScope> {
         let scope = box DedicatedWorkerGlobalScope::new_inherited(
-            worker_url, cx.clone(), receiver, resource_task, script_chan);
+            worker_url, cx.clone(), control_receiver, receiver, resource_task,
+            script_chan);
         DedicatedWorkerGlobalScopeBinding::Wrap(cx.ptr, scope)
     }
 }
 
 impl DedicatedWorkerGlobalScope {
     pub fn run_worker_scope(worker_url: Url,
+                            control_receiver: Receiver<ControlMessage>,
                             receiver: Receiver<DOMString>,
                             resource_task: ResourceTask,
                             script_chan: ScriptChan) {
@@ -84,8 +95,8 @@ impl DedicatedWorkerGlobalScope {
 
             let (_js_runtime, js_context) = ScriptTask::new_rt_and_cx();
             let global = DedicatedWorkerGlobalScope::new(
-                worker_url, js_context.clone(), receiver, resource_task,
-                script_chan).root();
+                worker_url, js_context.clone(), control_receiver, receiver,
+                resource_task, script_chan).root();
             match js_context.evaluate_script(
                 global.reflector().get_jsobject(), source, filename.to_str(), 1) {
                 Ok(_) => (),
@@ -97,11 +108,21 @@ impl DedicatedWorkerGlobalScope {
             let target: &JSRef<EventTarget> =
                 EventTargetCast::from_ref(&*global);
             loop {
+                loop {
+                    match global.control_receiver.try_recv() {
+                        Ok(Shutdown(sender)) => {
+                            sender.send();
+                            return;
+                        },
+                        Err(Empty) => break,
+                        Err(Disconnected) => return,
+                    }
+                }
                 match global.receiver.recv_opt() {
                     Ok(message) => {
                         MessageEvent::dispatch(target, &Worker(*scope), message)
                     },
-                    Err(_) => break,
+                    Err(_) => return,
                 }
             }
         });

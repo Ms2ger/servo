@@ -14,6 +14,9 @@ use dom::eventtarget::{EventTarget, WorkerTypeId};
 use servo_util::str::DOMString;
 use servo_util::url::try_parse_url;
 
+use dom::workerglobalscope::{ControlMessage, Shutdown};
+
+
 #[deriving(Encodable)]
 pub struct Worker {
     eventtarget: EventTarget,
@@ -21,14 +24,17 @@ pub struct Worker {
 }
 
 impl Worker {
-    pub fn new_inherited(sender: Sender<DOMString>) -> Worker {
+    pub fn new_inherited(control_sender: Sender<ControlMessage>,
+                         sender: Sender<DOMString>) -> Worker {
         Worker {
             eventtarget: EventTarget::new_inherited(WorkerTypeId),
             sender: Untraceable::new(sender),
         }
     }
 
-    pub fn new(global: &GlobalRef, sender: Sender<DOMString>) -> Temporary<Worker> {
+    pub fn new(global: &GlobalRef,
+               control_sender: Sender<ControlMessage>,
+               sender: Sender<DOMString>) -> Temporary<Worker> {
         reflect_dom_object(box Worker::new_inherited(sender),
                            global,
                            WorkerBinding::Wrap)
@@ -42,11 +48,13 @@ impl Worker {
             Err(_) => return Err(Syntax),
         };
 
+        let (control_sender, control_receiver) = channel();
         let (sender, receiver) = channel();
         let resource_task = global.resource_task();
         DedicatedWorkerGlobalScope::run_worker_scope(
-            worker_url, receiver, resource_task, global.script_chan().clone());
-        Ok(Worker::new(global, sender))
+            worker_url, control_receiver, receiver, resource_task,
+            global.script_chan().clone());
+        Ok(Worker::new(global, control_sender, sender))
     }
 }
 

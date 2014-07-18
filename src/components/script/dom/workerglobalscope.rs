@@ -24,6 +24,10 @@ pub enum WorkerGlobalScopeId {
     DedicatedGlobalScope,
 }
 
+pub enum ControlMessage {
+    Shutdown,
+}
+
 #[deriving(Encodable)]
 pub struct WorkerGlobalScope {
     pub eventtarget: EventTarget,
