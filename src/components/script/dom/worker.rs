@@ -7,7 +7,7 @@ use dom::bindings::codegen::InheritTypes::EventTargetCast;
 use dom::bindings::error::{Fallible, Syntax};
 use dom::bindings::global::{GlobalRef, GlobalField};
 use dom::bindings::js::{JS, JSRef, Temporary};
-use dom::bindings::trace::Untraceable;
+use dom::bindings::trace::{Traceable, Untraceable};
 use dom::bindings::utils::{Reflectable, Reflector, reflect_dom_object};
 use dom::dedicatedworkerglobalscope::DedicatedWorkerGlobalScope;
 use dom::eventtarget::{EventTarget, WorkerTypeId};
@@ -16,13 +16,17 @@ use dom::messageevent::MessageEvent;
 use servo_util::str::DOMString;
 use servo_util::url::try_parse_url;
 
+use js::jsapi::{JS_AddObjectRoot, JS_RemoveObjectRoot};
+
 use libc::c_void;
+use std::cell::Cell;
 
 pub struct TrustedWorkerAddress(pub *c_void);
 
 #[deriving(Encodable)]
 pub struct Worker {
     eventtarget: EventTarget,
+    refcount: Traceable<Cell<uint>>,
     global: GlobalField,
     sender: Untraceable<Sender<DOMString>>,
 }
@@ -31,6 +35,7 @@ impl Worker {
     pub fn new_inherited(global: &GlobalRef, sender: Sender<DOMString>) -> Worker {
         Worker {
             eventtarget: EventTarget::new_inherited(WorkerTypeId),
+            refcount: Traceable::new(Cell::new(0)),
             global: GlobalField::from_rooted(global),
             sender: Untraceable::new(sender),
         }
@@ -52,7 +57,7 @@ impl Worker {
 
         let (sender, receiver) = channel();
         let worker = Worker::new(global, sender).root();
-        let worker_ref = TrustedWorkerAddress(&**worker as *Worker as *c_void);
+        let worker_ref = worker.addref();
 
         let resource_task = global.resource_task();
         DedicatedWorkerGlobalScope::run_worker_scope(
@@ -68,6 +73,36 @@ impl Worker {
         let global = worker.global.root();
         MessageEvent::dispatch(target, &global.root_ref(), message);
     }
+
+    pub fn handle_release(address: TrustedWorkerAddress) {
+        let worker = unsafe { JS::from_trusted_worker_address(address).root() };
+        worker.release();
+    }
+}
+
+impl Worker {
+    // Creates a trusted address to the object, and roots it. Always pair this with a release()
+    pub fn addref(&self) -> TrustedWorkerAddress {
+        let refcount = self.refcount.deref().get();
+        if refcount == 0 {
+            unsafe {
+                JS_AddObjectRoot(self.global.root().root_ref().get_cx(), self.reflector().rootable());
+            }
+        }
+        self.refcount.set(refcount + 1);
+        TrustedWorkerAddress(self as *Worker as *c_void)
+    }
+
+    pub fn release(&self) {
+        let refcount = self.refcount.get();
+        assert!(refcount > 0)
+        self.refcount.set(refcount - 1);
+        if refcount == 1 {
+            unsafe {
+                JS_RemoveObjectRoot(self.global.root().root_ref().get_cx(), self.reflector().rootable());
+            }
+        }
+    }
 }
 
 pub trait WorkerMethods {
@@ -76,6 +111,7 @@ pub trait WorkerMethods {
 
 impl<'a> WorkerMethods for JSRef<'a, Worker> {
     fn PostMessage(&self, message: DOMString) {
+        self.addref();
         self.sender.send(message);
     }
 }

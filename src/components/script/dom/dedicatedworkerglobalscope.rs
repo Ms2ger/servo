@@ -15,7 +15,7 @@ use dom::messageevent::MessageEvent;
 use dom::worker::TrustedWorkerAddress;
 use dom::workerglobalscope::DedicatedGlobalScope;
 use dom::workerglobalscope::WorkerGlobalScope;
-use script_task::{ScriptTask, ScriptChan, WorkerPostMessage};
+use script_task::{ScriptTask, ScriptChan, WorkerPostMessage, WorkerRelease};
 use script_task::StackRootTLS;
 
 use servo_net::resource_task::{ResourceTask, load_whole_resource};
@@ -98,6 +98,7 @@ impl DedicatedWorkerGlobalScope {
                 Ok(_) => (),
                 Err(_) => println!("evaluate_script failed")
             }
+            global.delayed_release_worker();
 
             let scope: &JSRef<WorkerGlobalScope> =
                 WorkerGlobalScopeCast::from_ref(&*global);
@@ -106,12 +107,26 @@ impl DedicatedWorkerGlobalScope {
             loop {
                 match global.receiver.recv_opt() {
                     Ok(message) => {
-                        MessageEvent::dispatch(target, &Worker(*scope), message)
+                        MessageEvent::dispatch(target, &Worker(*scope), message);
+                        global.delayed_release_worker();
                     },
                     Err(_) => break,
                 }
             }
         });
+    }
+}
+
+trait PrivateDedicatedWorkerGlobalScopeHelpers {
+    fn delayed_release_worker(&self);
+}
+
+impl<'a> PrivateDedicatedWorkerGlobalScopeHelpers for JSRef<'a, DedicatedWorkerGlobalScope> {
+    fn delayed_release_worker(&self) {
+        let scope: &JSRef<WorkerGlobalScope> =
+            WorkerGlobalScopeCast::from_ref(self);
+        let ScriptChan(ref sender) = *scope.script_chan();
+        sender.send(WorkerRelease(*self.worker));
     }
 }
 

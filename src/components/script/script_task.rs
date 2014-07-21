@@ -89,6 +89,8 @@ pub enum ScriptMsg {
     /// Notifies the script that a window associated with a particular pipeline should be closed.
     ExitWindowMsg(PipelineId),
     /// XXX
+    WorkerRelease(TrustedWorkerAddress),
+    /// XXX
     WorkerPostMessage(TrustedWorkerAddress, DOMString),
     /// Notifies the script of progress on a fetch
     XHRProgressMsg(TrustedXHRAddress, XHRProgress)
@@ -384,6 +386,7 @@ impl ScriptTask {
                 ExitPipelineMsg(id) => if self.handle_exit_pipeline_msg(id) { return false },
                 ExitWindowMsg(id) => self.handle_exit_window_msg(id),
                 ResizeMsg(..) => fail!("should have handled ResizeMsg already"),
+                WorkerRelease(addr) => Worker::handle_release(addr),
                 WorkerPostMessage(addr, message) => Worker::handle_message(addr, message),
                 XHRProgressMsg(addr, progress) => XMLHttpRequest::handle_xhr_progress(addr, progress),
             }
