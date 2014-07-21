@@ -16,7 +16,7 @@ use dom::messageevent::MessageEvent;
 use servo_util::str::DOMString;
 use servo_util::url::try_parse_url;
 
-use js::jsapi::{JS_AddObjectRoot, JS_RemoveObjectRoot};
+use js::jsapi::{JS_AddObjectRoot, JS_RemoveObjectRoot, JSContext};
 
 use libc::c_void;
 use std::cell::Cell;
@@ -93,7 +93,16 @@ impl Worker {
         TrustedWorkerAddress(self as *Worker as *c_void)
     }
 
+    #[inline(never)]
+    fn check_cx(cx: *mut JSContext) {
+        use js::jsapi::{JS_AbortIfWrongThread, JS_GetRuntime};
+        unsafe {
+            JS_AbortIfWrongThread(JS_GetRuntime(cx));
+        }
+    }
+
     pub fn release(&self) {
+        Worker::check_cx(self.global.root().root_ref().get_cx());
         let refcount = self.refcount.get();
         assert!(refcount > 0)
         self.refcount.set(refcount - 1);
