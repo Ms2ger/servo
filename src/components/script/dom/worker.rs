@@ -96,8 +96,11 @@ impl Worker {
     #[inline(never)]
     fn check_cx(cx: *mut JSContext) {
         use js::jsapi::{JS_AbortIfWrongThread, JS_GetRuntime};
+        println!("Cx: {:p}", cx);
         unsafe {
-            JS_AbortIfWrongThread(JS_GetRuntime(cx));
+            let rt = JS_GetRuntime(cx);
+            println!("Rt: {:p}", rt);
+            JS_AbortIfWrongThread(rt);
         }
     }
 

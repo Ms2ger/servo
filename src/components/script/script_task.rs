@@ -256,12 +256,14 @@ impl ScriptTask {
         let js_runtime = js::rust::rt();
         assert!({
             let ptr: *mut JSRuntime = (*js_runtime).ptr;
+            println!("New rt {:p}", ptr);
             ptr.is_not_null()
         });
 
         let js_context = js_runtime.cx();
         assert!({
             let ptr: *mut JSContext = (*js_context).ptr;
+            println!("New cx {:p}", ptr);
             ptr.is_not_null()
         });
         js_context.set_default_options_and_version();
