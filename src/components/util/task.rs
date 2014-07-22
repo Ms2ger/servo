@@ -7,6 +7,10 @@ use std::task;
 use std::comm::Sender;
 use std::task::TaskBuilder;
 
+use native;
+use rustrt::task::{TaskOpts, Result};
+
+
 pub fn spawn_named<S: IntoMaybeOwned<'static>>(name: S, f: proc():Send) {
     let builder = task::TaskBuilder::new().named(name);
     builder.spawn(f);
@@ -27,4 +31,21 @@ pub fn send_on_failure<T: Send>(builder: &mut TaskBuilder, msg: T, dest: Sender<
             }
         }
     })
+}
+
+pub fn send_on_failure_native<T: Send>(name: &str, msg: T, dest: Sender<T>, f: proc():Send) {
+    let mut task_opts = TaskOpts::new();
+    task_opts.name = Some(name.to_string().into_maybe_owned());
+
+    let watched_name = name.to_string();
+    task_opts.on_exit = Some(proc(result: Result) {
+        match result {
+            Ok(()) => (),
+            Err(..) => {
+                debug!("{:s} failed, notifying constellation", watched_name);
+                dest.send(msg);
+            }
+        }
+    });
+    native::task::spawn_opts(task_opts, f);
 }

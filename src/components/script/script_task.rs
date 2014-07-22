@@ -49,13 +49,12 @@ use servo_net::image_cache_task::ImageCacheTask;
 use servo_net::resource_task::ResourceTask;
 use servo_util::geometry::to_frac_px;
 use servo_util::str::DOMString;
-use servo_util::task::send_on_failure;
+use servo_util::task::send_on_failure_native;
 use std::cell::RefCell;
 use std::comm::{channel, Sender, Receiver};
 use std::mem::replace;
 use std::ptr;
 use std::rc::Rc;
-use std::task::TaskBuilder;
 use url::Url;
 
 use serialize::{Encoder, Encodable};
@@ -298,10 +297,8 @@ impl ScriptTask {
                   resource_task: ResourceTask,
                   image_cache_task: ImageCacheTask,
                   window_size: WindowSizeData) {
-        let mut builder = TaskBuilder::new().named("ScriptTask");
         let ConstellationChan(const_chan) = constellation_chan.clone();
-        send_on_failure(&mut builder, FailureMsg(failure_msg), const_chan);
-        builder.spawn(proc() {
+        send_on_failure_native("ScriptTask", FailureMsg(failure_msg), const_chan, proc() {
             let script_task = ScriptTask::new(id,
                                               compositor as Box<ScriptListener>,
                                               layout_chan,
