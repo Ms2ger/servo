@@ -37,7 +37,7 @@ use js::jsapi::JS_CallFunctionValue;
 use js::jsapi::{JS_SetWrapObjectCallbacks, JS_SetGCZeal, JS_DEFAULT_ZEAL_FREQ, JS_GC};
 use js::jsapi::{JSContext, JSRuntime};
 use js::jsval::NullValue;
-use js::rust::{Cx, RtUtils};
+use js::rust::{Cx, RtUtils, JSAutoRequest};
 use js::rust::with_compartment;
 use js;
 use servo_msg::compositor_msg::{FinishedLoading, LayerId, Loading};
@@ -550,6 +550,9 @@ impl ScriptTask {
 
         let cx = self.js_context.borrow();
         let cx = cx.get_ref();
+
+        let _ar = JSAutoRequest::new(cx.deref().ptr);
+
         // Create the window and document objects.
         let window = Window::new(cx.deref().ptr,
                                  page.clone(),
