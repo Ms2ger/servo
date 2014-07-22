@@ -22,7 +22,7 @@ use servo_net::resource_task::{ResourceTask, load_whole_resource};
 
 use servo_util::str::DOMString;
 
-use js::rust::Cx;
+use js::rust::{Cx, JSAutoRequest};
 
 use std::rc::Rc;
 use native;
@@ -93,10 +93,13 @@ impl DedicatedWorkerGlobalScope {
             let global = DedicatedWorkerGlobalScope::new(
                 worker_url, worker, js_context.clone(), receiver, resource_task,
                 script_chan).root();
-            match js_context.evaluate_script(
-                global.reflector().get_jsobject(), source, filename.to_str(), 1) {
-                Ok(_) => (),
-                Err(_) => println!("evaluate_script failed")
+            {
+                let _ar = JSAutoRequest::new(js_context.ptr);
+                match js_context.evaluate_script(
+                    global.reflector().get_jsobject(), source, filename.to_str(), 1) {
+                    Ok(_) => (),
+                    Err(_) => println!("evaluate_script failed")
+                }
             }
             global.delayed_release_worker();
 
