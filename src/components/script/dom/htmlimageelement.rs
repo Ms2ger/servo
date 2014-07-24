@@ -5,6 +5,8 @@
 use dom::attr::AttrValue;
 use dom::bindings::codegen::Bindings::HTMLImageElementBinding;
 use dom::bindings::codegen::InheritTypes::{NodeCast, ElementCast, HTMLElementCast, HTMLImageElementDerived};
+use dom::bindings::error::Fallible;
+use dom::bindings::global::GlobalRef;
 use dom::bindings::js::{JS, JSRef, Temporary};
 use dom::bindings::trace::Untraceable;
 use dom::bindings::utils::{Reflectable, Reflector};
@@ -77,6 +79,24 @@ impl HTMLImageElement {
     pub fn new(localName: DOMString, document: &JSRef<Document>) -> Temporary<HTMLImageElement> {
         let element = HTMLImageElement::new_inherited(localName, document);
         Node::reflect_node(box element, document, HTMLImageElementBinding::Wrap)
+    }
+
+    pub fn Image(global: &GlobalRef, width: Option<u32>, height: Option<u32>)
+                 -> Fallible<Temporary<HTMLImageElement>> {
+        let window = global.as_window();
+        let browser_context = window.browser_context.borrow();
+        let browser_context = browser_context.get_ref();
+        let document = browser_context.active_document().root();
+        let element = HTMLImageElement::new("img".to_string(), &*document).root();
+        match width {
+            Some(width) => element.SetWidth(width),
+            None => (),
+        }
+        match height {
+            Some(height) => element.SetHeight(height),
+            None => (),
+        }
+        return Ok(Temporary::from_rooted(&*element));
     }
 }
 
