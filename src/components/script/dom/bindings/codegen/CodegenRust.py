@@ -3903,7 +3903,7 @@ class CGClassTraceHook(CGAbstractClassHook):
     def generate_code(self):
         return CGGeneric("(*this).trace(%s);" % self.args[0].name)
 
-class CGClassConstructHook(CGAbstractExternMethod):
+class CGClassConstructor(CGAbstractExternMethod):
     """
     JS-visible constructor for our objects
     """
@@ -4027,7 +4027,7 @@ class CGDescriptor(CGThing):
             cgThings.append(CGClassTraceHook(descriptor))
 
         if descriptor.interface.hasInterfaceObject():
-            cgThings.append(CGClassConstructHook(descriptor))
+            cgThings.append(CGClassConstructor(descriptor))
             cgThings.append(CGInterfaceObjectJSClass(descriptor))
 
         if descriptor.interface.hasInterfacePrototypeObject():
