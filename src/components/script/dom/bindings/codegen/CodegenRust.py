@@ -3907,11 +3907,11 @@ class CGClassConstructor(CGAbstractExternMethod):
     """
     JS-visible constructor for our objects
     """
-    def __init__(self, descriptor):
+    def __init__(self, descriptor, ctor, name=CONSTRUCT_HOOK_NAME):
         args = [Argument('*mut JSContext', 'cx'), Argument('u32', 'argc'), Argument('*mut JSVal', 'vp')]
-        CGAbstractExternMethod.__init__(self, descriptor, CONSTRUCT_HOOK_NAME,
+        CGAbstractExternMethod.__init__(self, descriptor, name,
                                         'JSBool', args)
-        self._ctor = self.descriptor.interface.ctor()
+        self._ctor = ctor
 
     def define(self):
         if not self._ctor:
@@ -3937,6 +3937,11 @@ let global = global_object_for_js_object(JS_CALLEE(cx, vp).to_object()).root();
                                      self.descriptor, self._ctor,
                                      constructorName=ctorName)
         return CGList([preamble, callGenerator])
+
+
+def NamedConstructorName(m):
+    return '_' + m.identifier.name
+
 
 class CGClassFinalizeHook(CGAbstractClassHook):
     """
@@ -3978,6 +3983,11 @@ class CGDescriptor(CGThing):
         if descriptor.interface.hasInterfacePrototypeObject():
             (hasMethod, hasGetter, hasLenientGetter,
              hasSetter, hasLenientSetter) = False, False, False, False, False
+
+            for n in descriptor.interface.namedConstructors:
+                cgThings.append(CGClassConstructor(descriptor, n,
+                                                   NamedConstructorName(n)))
+
             for m in descriptor.interface.members:
                 if m.isMethod() and not m.isIdentifierLess():
                     if m.isStatic():
@@ -4027,7 +4037,8 @@ class CGDescriptor(CGThing):
             cgThings.append(CGClassTraceHook(descriptor))
 
         if descriptor.interface.hasInterfaceObject():
-            cgThings.append(CGClassConstructor(descriptor))
+            cgThings.append(CGClassConstructor(descriptor,
+                                               descriptor.interface.ctor()))
             cgThings.append(CGInterfaceObjectJSClass(descriptor))
 
         if descriptor.interface.hasInterfacePrototypeObject():
