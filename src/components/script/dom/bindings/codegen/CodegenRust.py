@@ -148,10 +148,14 @@ class CGMethodCall(CGThing):
     A class to generate selection of a method signature from a set of
     signatures and generation of a call to that signature.
     """
-    def __init__(self, argsPre, nativeMethodName, static, descriptor, method):
+    def __init__(self, argsPre, nativeMethodName, static, descriptor, method,
+                 constructorName=None):
         CGThing.__init__(self)
 
-        methodName = '\\"%s.%s\\"' % (descriptor.interface.identifier.name, method.identifier.name)
+        if constructorName:
+            methodName = constructorName
+        else:
+            methodName = "%s.%s" % (descriptor.interface.identifier.name, method.identifier.name)
 
         def requiredArgCount(signature):
             arguments = signature[1]
@@ -182,7 +186,7 @@ class CGMethodCall(CGThing):
             if requiredArgs > 0:
                 code = (
                     "if argc < %d {\n"
-                    "  throw_type_error(cx, \"Not enough arguments to %s.\");\n"
+                    "  throw_type_error(cx, \"Not enough arguments to \\\"%s\\\".\");\n"
                     "  return 0;\n"
                     "}" % (requiredArgs, methodName))
                 self.cgRoot.prepend(
@@ -3915,12 +3919,23 @@ class CGClassConstructHook(CGAbstractExternMethod):
         return CGAbstractExternMethod.define(self)
 
     def definition_body(self):
+        # Figure out the name of our constructor for error reporting purposes.
+        # For unnamed webidl constructors, identifier.name is "constructor" but
+        # the name JS sees is the interface name; for named constructors
+        # identifier.name is the actual name.
+        name = self._ctor.identifier.name
+        if name != "constructor":
+            ctorName = name
+        else:
+            ctorName = self.descriptor.interface.identifier.name
+
         preamble = CGGeneric("""\
 let global = global_object_for_js_object(JS_CALLEE(cx, vp).to_object()).root();
 """)
         nativeName = MakeNativeName(self._ctor.identifier.name)
         callGenerator = CGMethodCall(["&global.root_ref()"], nativeName, True,
-                                     self.descriptor, self._ctor)
+                                     self.descriptor, self._ctor,
+                                     constructorName=ctorName)
         return CGList([preamble, callGenerator])
 
 class CGClassFinalizeHook(CGAbstractClassHook):
