@@ -38,6 +38,7 @@ use js::jsapi::{JSContext, JSObject, JSBool, jsid, JSClass};
 use js::jsapi::{JSFunctionSpec, JSPropertySpec};
 use js::jsapi::{JS_NewGlobalObject, JS_InitStandardClasses};
 use js::jsapi::{JSString};
+use js::jsapi::{JS_PropertyStub, JS_StrictPropertyStub};
 use js::jsfriendapi::JS_ObjectToOuterObject;
 use js::jsfriendapi::bindgen::JS_NewObjectWithUniqueType;
 use js::jsval::JSVal;
@@ -221,6 +222,12 @@ pub struct NativeProperties {
     pub staticAttrs: Option<&'static [JSPropertySpec]>,
 }
 
+pub struct NamedConstructor {
+    pub name: &'static [u8],
+    pub native: NonNullJSNative,
+    pub nargs: u32,
+}
+
 pub type NonNullJSNative =
     unsafe extern "C" fn (arg1: *mut JSContext, arg2: c_uint, arg3: *mut JSVal) -> JSBool;
 
@@ -228,6 +235,7 @@ pub fn CreateInterfaceObjects2(cx: *mut JSContext, global: *mut JSObject, receiv
                                protoProto: *mut JSObject,
                                protoClass: &'static JSClass,
                                constructor: Option<(NonNullJSNative, &'static str, u32)>,
+                               named_constructors: &'static [NamedConstructor],
                                domClass: *DOMClass,
                                members: &'static NativeProperties) -> *mut JSObject {
     let proto = CreateInterfacePrototypeObject(cx, global, protoProto,
@@ -241,9 +249,8 @@ pub fn CreateInterfaceObjects2(cx: *mut JSContext, global: *mut JSObject, receiv
     match constructor {
         Some((native, name, nargs)) => {
             name.to_c_str().with_ref(|s| {
-                CreateInterfaceObject(cx, global, receiver,
-                                      native, nargs, proto,
-                                      members, s)
+                CreateInterfaceObject(cx, global, receiver, native, nargs,
+                                      named_constructors, proto, members, s)
             })
         },
         None => (),
@@ -265,8 +272,9 @@ fn DefineConstructor(cx: *mut JSContext, receiver: *mut JSObject,
 }
 
 fn CreateInterfaceObject(cx: *mut JSContext, global: *mut JSObject, receiver: *mut JSObject,
-                         constructorNative: NonNullJSNative,
-                         ctorNargs: u32, proto: *mut JSObject,
+                         constructorNative: NonNullJSNative, ctorNargs: u32,
+                         named_constructors: &'static [NamedConstructor],
+                         proto: *mut JSObject,
                          members: &'static NativeProperties,
                          name: *libc::c_char) {
     unsafe {
@@ -297,6 +305,28 @@ fn CreateInterfaceObject(cx: *mut JSContext, global: *mut JSObject, receiver: *m
         }
 
         DefineConstructor(cx, receiver, name, constructor);
+
+        for constructor in named_constructors.iter() {
+            let named_constructor = JS_NewFunction(
+                cx, Some(constructor.native), constructor.nargs,
+                JSFUN_CONSTRUCTOR, global,
+                constructor.name.as_ptr() as *libc::c_char);
+            assert!(named_constructor.is_not_null());
+
+            let named_constructor = JS_GetFunctionObject(named_constructor);
+            assert!(named_constructor.is_not_null());
+
+            "prototype".to_c_str().with_ref(|s| {
+                assert!(JS_DefineProperty(cx, named_constructor, s,
+                                          ObjectOrNullValue(proto),
+                                          JSPROP_PERMANENT | JSPROP_READONLY,
+                                          JS_PropertyStub,
+                                          JS_StrictPropertyStub) != 0);
+            });
+
+            DefineConstructor(cx, global, constructor.name,
+                              named_constructor);
+        }
     }
 }
 

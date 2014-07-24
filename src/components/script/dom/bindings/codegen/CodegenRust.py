@@ -1970,10 +1970,16 @@ class CGCreateInterfaceObjectsMethod(CGAbstractMethod):
         else:
             constructor = 'None'
 
+        if len(self.descriptor.interface.namedConstructors) > 0:
+            namedConstructors = "namedConstructors"
+        else:
+            namedConstructors = "&[]"
+
         call = """return CreateInterfaceObjects2(aCx, aGlobal, aReceiver, parentProto,
                                &PrototypeClass, %s,
                                %s,
-                               &sNativeProperties);""" % (constructor, domClass)
+                               %s,
+                               &sNativeProperties);""" % (constructor, namedConstructors, domClass)
 
         return CGList([
             CGGeneric(getParentProto),
@@ -3943,6 +3949,32 @@ def NamedConstructorName(m):
     return '_' + m.identifier.name
 
 
+class CGNamedConstructors(CGThing):
+    def __init__(self, descriptor):
+        assert descriptor.interface.namedConstructors
+        CGThing.__init__(self)
+
+        def struct(n):
+            return CGGeneric(
+                "NamedConstructor {\n"
+                "    name: \"%s\",\n"
+                "    native: %s,\n"
+                "    nargs: %i,\n"
+                "}" %
+                (n.identifier.name, NamedConstructorName(n), methodLength(n)))
+
+        namedConstructors = CGList([
+            struct(n) for n in descriptor.interface.namedConstructors
+        ], ",\n")
+
+        self.cgRoot = CGWrapper(namedConstructors,
+                                pre="static namedConstructors: &'static [NamedConstructor] = &[\n",
+                                post="];")
+
+    def define(self):
+        return self.cgRoot.define()
+
+
 class CGClassFinalizeHook(CGAbstractClassHook):
     """
     A hook for finalize, used to release our native object.
@@ -4040,6 +4072,8 @@ class CGDescriptor(CGThing):
             cgThings.append(CGClassConstructor(descriptor,
                                                descriptor.interface.ctor()))
             cgThings.append(CGInterfaceObjectJSClass(descriptor))
+            if descriptor.interface.namedConstructors:
+                cgThings.append(CGNamedConstructors(descriptor))
 
         if descriptor.interface.hasInterfacePrototypeObject():
             cgThings.append(CGPrototypeJSClass(descriptor))
@@ -4450,6 +4484,7 @@ class CGBindingRoot(CGThing):
             'dom::bindings::utils::VoidVal',
             'dom::bindings::utils::get_dictionary_property',
             'dom::bindings::utils::NativeProperties',
+            'dom::bindings::utils::NamedConstructor',
             'dom::bindings::trace::JSTraceable',
             'dom::bindings::callback::{CallbackContainer,CallbackInterface,CallbackFunction}',
             'dom::bindings::callback::{CallSetup,ExceptionHandling}',
