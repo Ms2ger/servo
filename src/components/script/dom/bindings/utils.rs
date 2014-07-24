@@ -252,6 +252,18 @@ pub fn CreateInterfaceObjects2(cx: *mut JSContext, global: *mut JSObject, receiv
     proto
 }
 
+fn DefineConstructor(cx: *mut JSContext, receiver: *mut JSObject,
+                     name: *libc::c_char, constructor: *mut JSObject) {
+    let mut alreadyDefined = 0;
+    assert!(JS_AlreadyHasOwnProperty(cx, receiver, name, &mut alreadyDefined) != 0);
+
+    if alreadyDefined == 0 {
+        assert!(JS_DefineProperty(cx, receiver, name,
+                                  ObjectValue(&*constructor),
+                                  None, None, 0) != 0);
+    }
+}
+
 fn CreateInterfaceObject(cx: *mut JSContext, global: *mut JSObject, receiver: *mut JSObject,
                          constructorNative: NonNullJSNative,
                          ctorNargs: u32, proto: *mut JSObject,
@@ -284,14 +296,7 @@ fn CreateInterfaceObject(cx: *mut JSContext, global: *mut JSObject, receiver: *m
             assert!(JS_LinkConstructorAndPrototype(cx, constructor, proto) != 0);
         }
 
-        let mut alreadyDefined = 0;
-        assert!(JS_AlreadyHasOwnProperty(cx, receiver, name, &mut alreadyDefined) != 0);
-
-        if alreadyDefined == 0 {
-            assert!(JS_DefineProperty(cx, receiver, name,
-                                      ObjectValue(&*constructor),
-                                      None, None, 0) != 0);
-        }
+        DefineConstructor(cx, receiver, name, constructor);
     }
 }
 
