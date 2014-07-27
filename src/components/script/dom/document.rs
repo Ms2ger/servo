@@ -324,6 +324,7 @@ pub trait DocumentMethods {
     fn SetOnclick(&self, listener: Option<EventHandlerNonNull>);
     fn GetOnload(&self) -> Option<EventHandlerNonNull>;
     fn SetOnload(&self, listener: Option<EventHandlerNonNull>);
+    fn DefaultView(&self) -> Temporary<Window>;
 }
 
 impl<'a> DocumentMethods for JSRef<'a, Document> {
@@ -836,5 +837,9 @@ impl<'a> DocumentMethods for JSRef<'a, Document> {
     fn SetOnload(&self, listener: Option<EventHandlerNonNull>) {
         let eventtarget: &JSRef<EventTarget> = EventTargetCast::from_ref(self);
         eventtarget.set_event_handler_common("load", listener)
+    }
+
+    fn DefaultView(&self) -> Temporary<Window> {
+        Temporary::new(self.window)
     }
 }

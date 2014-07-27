@@ -62,6 +62,8 @@ partial interface Document {
   readonly attribute HTMLCollection scripts;
   readonly attribute HTMLCollection anchors;
   readonly attribute HTMLCollection applets;
+
+  readonly attribute Window defaultView;
 };
 
 Document implements ParentNode;
