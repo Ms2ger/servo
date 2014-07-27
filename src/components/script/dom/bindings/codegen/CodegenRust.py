@@ -1315,7 +1315,7 @@ class CGImports(CGWrapper):
     """
     Generates the appropriate import/use statements.
     """
-    def __init__(self, child, descriptors, imports):
+    def __init__(self, child, descriptors, imports, doc=None):
         """
         Adds a set of imports.
         """
@@ -1340,6 +1340,8 @@ class CGImports(CGWrapper):
             imports.append('dom::%s::%sMethods' % (name.lower(), name))
 
         statements = ['#![allow(%s)]' % ','.join(ignored_warnings)]
+        if doc:
+            statements.append('#![doc="%s")]' % doc)
         statements.extend('use %s;' % i for i in sorted(imports))
 
         CGWrapper.__init__(self, child,
@@ -5309,7 +5311,7 @@ class GlobalGenRoots():
             'js::jsapi::JSContext',
             'js::jsapi::JSObject',
             'libc',
-        ])
+        ], doc=)
 
     @staticmethod
     def InterfaceTypes(config):
