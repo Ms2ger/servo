@@ -33,4 +33,9 @@ impl Reflectable for CSSStyleDeclaration {
 }
 
 pub trait CSSStyleDeclarationMethods {
+    fn GetPropertyValue(&self);
+}
+
+impl<'a> CSSStyleDeclarationMethods for JSRef<'a, CSSStyleDeclaration> {
+    fn GetPropertyValue(&self) {}
 }

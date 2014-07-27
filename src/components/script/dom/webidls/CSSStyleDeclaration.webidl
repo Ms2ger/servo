@@ -1,1 +1,3 @@
-interface CSSStyleDeclaration {};
+interface CSSStyleDeclaration {
+  void getPropertyValue();
+};
