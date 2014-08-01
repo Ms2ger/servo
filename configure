@@ -673,97 +673,13 @@ fi
 # cross compile configurations
 EXTRA_CONFIGURE_ARGS="CC=${CFG_CC} CXX=${CFG_CXX} LD=${CFG_LD} AR=${CFG_AR} RANLIB=${CFG_RANLIB}"
 
-for i in ${CFG_SUBMODULES}
-do
-    if [ -d ${CFG_BUILD_DIR}src/${i} ]
-    then
-	cd ${CFG_BUILD_DIR}src/${i}
-    fi
-    CONFIGURE_SCRIPT="${CFG_SRC_DIR}src/${i}/configure"
-    CONFIGURE_ARGS=""
-    ENV_VARS=""
-    ENABLE_DEBUG="$CFG_ENABLE_DEBUG"
-
-    case $i in
-        platform/android/libexpat)
-            CONFIGURE_SCRIPT="${CFG_SRC_DIR}src/${i}/expat/configure"
-            CONFIGURE_ARGS="${CONFIGURE_ARGS} --host=arm-linux-androideabi"
-            CONFIGURE_ARGS="${CONFIGURE_ARGS} --with-sysroot=${CFG_ANDROID_CROSS_PATH}/sysroot"
-            CONFIGURE_ARGS="${CONFIGURE_ARGS} ${EXTRA_CONFIGURE_ARGS}"
-            ;;
-        platform/android/libfreetype2)
-            CONFIGURE_ARGS="${CONFIGURE_ARGS} --host=arm-linux"
-            CONFIGURE_ARGS="${CONFIGURE_ARGS} --with-sysroot=${CFG_ANDROID_CROSS_PATH}/sysroot"
-            CONFIGURE_ARGS="${CONFIGURE_ARGS} --without-zlib"
-            CONFIGURE_ARGS="${CONFIGURE_ARGS} ${EXTRA_CONFIGURE_ARGS}"
-            ;;
-        platform/linux/fontconfig)
-            CONFIGURE_SCRIPT="${CFG_SRC_DIR}src/${i}/autogen.sh"
-            CONFIGURE_ARGS="${CONFIGURE_ARGS} --sysconfdir=/etc"
-            CONFIGURE_ARGS="${CONFIGURE_ARGS} --localstatedir=/var"
-            CONFIGURE_ARGS="${CONFIGURE_ARGS} --disable-docs"
-            CONFIGURE_ARGS="${CONFIGURE_ARGS} --disable-shared" # work around Rust #12557
-            if [ -f /etc/redhat-release ]; then
-                # Some RedHat-based distros (including our CentOS 6 build machines) are missing
-                # pkg-config files for expat: https://bugzilla.redhat.com/show_bug.cgi?id=833338
-                CONFIGURE_ARGS="${CONFIGURE_ARGS} --with-expat=/usr"
-            fi
-            CONFIGURE_ARGS="${CONFIGURE_ARGS} ${EXTRA_CONFIGURE_ARGS}"
-            ;;
-        platform/android/fontconfig)
-            CONFIGURE_SCRIPT="${CFG_SRC_DIR}src/${i}/autogen.sh"
-            CONFIGURE_ARGS="${CONFIGURE_ARGS} --host=arm-linux-androideabi"
-            CONFIGURE_ARGS="${CONFIGURE_ARGS} --with-arch=arm"
-            CONFIGURE_ARGS="${CONFIGURE_ARGS} --with-expat-includes=${CFG_SRC_DIR}src/platform/android/libexpat/expat/lib"
-            CONFIGURE_ARGS="${CONFIGURE_ARGS} --with-expat-lib=${CFG_BUILD_DIR}src/platform/android/libexpat/.libs"
-            CONFIGURE_ARGS="${CONFIGURE_ARGS} --with-sysroot=${CFG_ANDROID_CROSS_PATH}/sysroot"
-            CONFIGURE_ARGS="${CONFIGURE_ARGS} --with-cache-dir=${CFG_ANDROID_RESOURCE_PATH}/.fccache"
-            CONFIGURE_ARGS="${CONFIGURE_ARGS} --with-confdir=${CFG_ANDROID_RESOURCE_PATH}/.fcconfig"
-            CONFIGURE_ARGS="${CONFIGURE_ARGS} --with-default-fonts=${CFG_ANDROID_FONT_PATH}"
-            CONFIGURE_ARGS="${CONFIGURE_ARGS} ${EXTRA_CONFIGURE_ARGS}"
-            ;;
-        support/spidermonkey/mozjs)
-            # needed because Spidermonkey configure is in non-standard location
-                CONFIGURE_SCRIPT="${CFG_SRC_DIR}src/${i}/js/src/configure"
-            if [ ${CFG_OSTYPE} = "linux-androideabi" ]; then
-                CONFIGURE_ARGS="${CONFIGURE_ARGS} --target=arm-linux-androideabi"
-                CONFIGURE_ARGS="${CONFIGURE_ARGS} --with-android-ndk=${CFG_ANDROID_NDK_PATH}"
-                CONFIGURE_ARGS="${CONFIGURE_ARGS} --with-android-toolchain=${CFG_ANDROID_CROSS_PATH}"
-            fi
-            CONFIGURE_ARGS="${CONFIGURE_ARGS} --enable-gczeal"
-            ;;
-        support/skia/skia)
-            # Right now the skia configure script actually ignores --enable-debug and the
-            # build looks only at CFG_ENABLE_DEBUG_SKIA exported from our Makefile.  But we
-            # still refrain from passing --enable-debug if we didn't get --enable-debug-skia,
-            # in order to be more future-proof.
-            #
-            # The same applies to rust-azure below.  Also note that the two libraries won't
-            # link if one is built with debugging and the other isn't.
-            ENABLE_DEBUG="$CFG_ENABLE_DEBUG_SKIA"
-            ;;
-        support/azure/rust-azure)
-            # needed because Azure's configure wants "--enable-skia"
-            CONFIGURE_ARGS="${CONFIGURE_ARGS} --enable-skia"
-            ENABLE_DEBUG="$CFG_ENABLE_DEBUG_SKIA"
-            ;;
-        support/phf/rust-phf)
-            ENABLE_DEBUG=""
-            ;;
-        support/url/rust-url)
-            CONFIGURE_SCRIPT="${CFG_SRC_DIR}src/support/url/configure"
-            ;;
-        *)
-            ;;
-    esac
-
-    if [ -n "$ENABLE_DEBUG" ]; then
-        CONFIGURE_ARGS="${CONFIGURE_ARGS} --enable-debug"
-    fi
-
-    if [ -f ${CONFIGURE_SCRIPT} ]; then
-	(sh ${CONFIGURE_SCRIPT} ${CONFIGURE_ARGS}) || exit $?
-    fi
-done
+${CFG_PYTHON2} "${CFG_SRC_DIR}mk/configure-submodules.py" \
+    ${CFG_SUBMODULES} \
+    --srcdir="${CFG_SRC_DIR}" \
+    --builddir="${CFG_BUILD_DIR}" \
+    --enable-debug="${CFG_ENABLE_DEBUG}" \
+    --enable-debug-skia="${CFG_ENABLE_DEBUG_SKIA}" \
+    --extra-args="${EXTRA_CONFIGURE_ARGS}" \
+    || exit $?
 
 step_msg "complete"
