@@ -1,4 +1,4 @@
 set -e
-cd build; ../configure
+../configure
 make tidy
 make -j2
