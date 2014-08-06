@@ -40,7 +40,6 @@ use js::rust::{Cx, RtUtils};
 =======*/
 use js::jsapi::{JS_SetGCZeal, JS_GC, JS_AddExtraGCRootsTracer};
 use js::jsapi::{JSContext, JSRuntime};
-use js::jsval::NullValue;
 use js::rust::{Cx, RtUtils, JSAutoRequest};
 //>>>>>>> b93d695... Build with upgraded SpiderMonkey.
 use js::rust::with_compartment;
@@ -340,7 +339,7 @@ impl ScriptTask {
     /// Handle incoming control messages.
     fn handle_msgs(&self) -> bool {
         let cx = self.js_context.borrow().get_ref().deref().ptr;
-        let mut ar = Some(JSAutoRequest::new(cx));
+        let mut _ar = Some(JSAutoRequest::new(cx));
 
         let roots = RootCollection::new(self.get_cx());
         let _stack_roots_tls = StackRootTLS::new(&roots);
@@ -407,11 +406,11 @@ impl ScriptTask {
                 ReflowCompleteMsg(id, reflow_id) => self.handle_reflow_complete_msg(id, reflow_id),
                 ResizeInactiveMsg(id, new_size) => self.handle_resize_inactive_msg(id, new_size),
                 ExitPipelineMsg(id) => {
-                    ar = None;
+                    _ar = None;
                     if self.handle_exit_pipeline_msg(id) { return false }
                 }
                 ExitWindowMsg(id) => {
-                    ar = None;
+                    _ar = None;
                     self.handle_exit_window_msg(id)
                 }
                 ResizeMsg(..) => fail!("should have handled ResizeMsg already"),

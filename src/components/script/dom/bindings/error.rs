@@ -74,12 +74,12 @@ pub fn report_pending_exception(cx: *mut JSContext, obj: *mut JSObject) {
 /// Throw an exception to signal that a `JSVal` can not be converted to any of
 /// the types in an IDL union type.
 pub fn throw_not_in_union(cx: *mut JSContext, names: &'static str) -> bool {
-    assert!(unsafe { JS_IsExceptionPending(cx) } == 0);
+    assert!(unsafe { !JS_IsExceptionPending(cx) });
     let message = format!("argument could not be converted to any of: {}", names);
     message.with_c_str(|string| {
         unsafe { ReportError(cx, string) };
     });
-    return 0;
+    return false;
 }
 
 /// Format string used to throw `TypeError`s.

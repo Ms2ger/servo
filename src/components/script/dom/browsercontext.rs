@@ -85,7 +85,7 @@ static proxy_name: [u8, ..6] = ['P' as u8, 'r' as u8, 'o' as u8, 'x' as u8, 'y' 
 static mut ProxyClass: js::Class = js::Class {
     name: &proxy_name as *const u8 as *const libc::c_char,
     flags: js::NON_NATIVE | js::JSCLASS_IS_PROXY | js::JSCLASS_IMPLEMENTS_BARRIERS |
-           ((js::PROXY_MINIMUM_SLOTS & js::JSCLASS_RESERVED_SLOTS_MASK) << js::JSCLASS_RESERVED_SLOTS_SHIFT),
+           ((js::PROXY_MINIMUM_SLOTS & js::JSCLASS_RESERVED_SLOTS_MASK as u32) << js::JSCLASS_RESERVED_SLOTS_SHIFT),
     addProperty: Some(JS_PropertyStub),
     delProperty: Some(JS_DeletePropertyStub),
     getProperty: Some(JS_PropertyStub),

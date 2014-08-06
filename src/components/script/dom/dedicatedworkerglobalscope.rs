@@ -69,8 +69,6 @@ impl DedicatedWorkerGlobalScope {
             .native()
             .named(format!("Web Worker at {}", worker_url.serialize()))
             .spawn(proc() {
-            let roots = RootCollection::new();
-            let _stack_roots_tls = StackRootTLS::new(&roots);
 
             let (url, source) = match load_whole_resource(&resource_task, worker_url.clone()) {
                 Err(_) => {
@@ -83,6 +81,9 @@ impl DedicatedWorkerGlobalScope {
             };
 
             let (_js_runtime, js_context) = ScriptTask::new_rt_and_cx();
+            let roots = RootCollection::new(js_context.ptr);
+            let _stack_roots_tls = StackRootTLS::new(&roots);
+
             let global = DedicatedWorkerGlobalScope::new(
                 worker_url, js_context.clone(), receiver, resource_task,
                 script_chan).root();

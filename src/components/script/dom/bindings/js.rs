@@ -97,7 +97,7 @@ impl PersistentRootedObjectElement {
         self.prev = self as *mut _;
         unsafe {
             let list = getPersistentRootedObjectList(rt);
-            insertObjectLinkedListElement(list, self as *mut _);
+            insertObjectLinkedListElement(list, self as *mut _ as *mut _);
         }
     }
 }
@@ -523,7 +523,6 @@ impl<'a, 'b, T: Reflectable> Root<'a, 'b, T> {
     /// It cannot not outlive its associated `RootCollection`, and it contains a `JSRef`
     /// which cannot outlive this new `Root`.
     fn new(roots: &'a RootCollection, unrooted: &JS<T>) -> Root<'a, 'b, T> {
-        let stack = roots.cx;
         let root = Root {
             stack: Cell::new(ptr::mut_null()),
             prev: Cell::new(ptr::null()),
@@ -532,6 +531,7 @@ impl<'a, 'b, T: Reflectable> Root<'a, 'b, T> {
                 ptr: unrooted.ptr.clone(),
                 chain: ContravariantLifetime,
             },
+            ptr: unrooted.ptr,
             js_ptr: unrooted.reflector().get_jsobject(),
         };
         roots.root(&root);
@@ -540,7 +540,7 @@ impl<'a, 'b, T: Reflectable> Root<'a, 'b, T> {
 
     pub fn init(&self) {
         unsafe {
-            assert!(JS_IsInRequest(JS_GetRuntime(self.root_list.cx)) != 0);
+            assert!(JS_IsInRequest(JS_GetRuntime(self.root_list.cx)));
             let cxfields: *mut ContextFriendFields = mem::transmute(self.root_list.cx);
             self.stack.set(&mut (*cxfields).thingGCRooters[THING_ROOT_OBJECT as uint]);
             self.prev.set(*self.stack.get());

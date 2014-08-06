@@ -100,12 +100,12 @@ impl CallbackInterface {
         unsafe {
             let name = name.to_c_str();
             let callback = self.callback(); // XXX unrooted
-            if JS_GetProperty(cx, object_handle(&callback), name, mut_value_handle(&mut callable)) == 0 {
+            if JS_GetProperty(cx, object_handle(&callback), name.as_ptr(), mut_value_handle(&mut callable)) {
                 return Err(());
             }
 
             if !callable.is_object() ||
-               JS_ObjectIsCallable(cx, callable.to_object()) == 0 {
+               !JS_ObjectIsCallable(cx, callable.to_object()) {
                 // FIXME(#347)
                 //ThrowErrorMessage(cx, MSG_NOT_CALLABLE, description.get());
                 return Err(());
@@ -122,7 +122,7 @@ pub fn WrapCallThisObject<T: Reflectable>(cx: *mut JSContext,
     assert!(obj.is_not_null());
 
     unsafe {
-        if JS_WrapObject(cx, mut_object_handle(&mut obj)) == 0 {
+        if !JS_WrapObject(cx, mut_object_handle(&mut obj)) {
             return ptr::mut_null();
         }
         return obj;

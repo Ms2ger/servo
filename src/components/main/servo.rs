@@ -19,7 +19,6 @@ extern crate servo_net = "net";
 extern crate servo_msg = "msg";
 #[phase(plugin, link)]
 extern crate servo_util = "util";
-#[link_args = "-ljs_static"]
 extern crate script;
 extern crate layout;
 extern crate green;
@@ -28,6 +27,7 @@ extern crate libc;
 extern crate native;
 extern crate rustrt;
 extern crate url = "url_";
+extern crate js;
 
 #[cfg(not(test))]
 use compositing::{CompositorChan, CompositorTask, Constellation};
@@ -59,7 +59,6 @@ use std::task::TaskBuilder;
 use std::str;
 #[cfg(not(test))]
 use url::{Url, UrlParser};
-
 
 #[cfg(not(test), target_os="linux")]
 #[cfg(not(test), target_os="macos")]

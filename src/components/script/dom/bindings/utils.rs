@@ -24,7 +24,6 @@ use std::ptr;
 use std::slice;
 //use js::glue::{js_IsObjectProxyClass, js_IsFunctionProxyClass, IsProxyHandlerFamily};
 //use js::glue::{GetGlobalForObjectCrossCompartment, UnwrapObject, GetProxyHandlerExtra};
-use std::str;
 use js::glue::{CompartmentOptions_SetVersion, CompartmentOptions_SetTraceGlobal};
 use js::glue::{GetGlobalForObjectCrossCompartment, UnwrapObject};
 use js::glue::{IsWrapper, RUST_JSID_TO_STRING, RUST_JSID_IS_INT};
@@ -116,7 +115,7 @@ pub fn unwrap_jsmanaged<T: Reflectable>(mut obj: *mut JSObject,
         let dom_class = get_dom_class(obj).or_else(|_| {
             if IsWrapper(obj) == 1 {
                 debug!("found wrapper");
-                obj = UnwrapObject(obj, /* stopAtOuter = */ 0);
+                obj = UnwrapObject(obj, /* stopAtOuter = */ false);
                 if obj.is_null() {
                     debug!("unwrapping security wrapper failed");
                     Err(())
@@ -164,7 +163,7 @@ pub fn jsstring_to_str(cx: *mut JSContext, s: *mut JSString) -> DOMString {
 /// string, or if the string does not contain valid UTF-16.
 pub fn jsid_to_str(cx: *mut JSContext, id: jsid) -> DOMString {
     unsafe {
-        assert!(RUST_JSID_IS_STRING(id) != 0);
+        assert!(RUST_JSID_IS_STRING(id));
         jsstring_to_str(cx, RUST_JSID_TO_STRING(id))
     }
 }
@@ -310,18 +309,18 @@ fn CreateInterfaceObject(cx: *mut JSContext, global: JSHandleObject, receiver: *
 
         let protohandle = object_handle(&proto);
         if proto.is_not_null() {
-            assert!(JS_LinkConstructorAndPrototype(cx, constructor, protohandle) != 0);
+            assert!(JS_LinkConstructorAndPrototype(cx, constructor, protohandle));
         }
 
-        let mut alreadyDefined = 0;
+        let mut alreadyDefined = false;
         let receiverhandle = object_handle(&receiver);
-        assert!(JS_AlreadyHasOwnProperty(cx, receiverhandle, name, &mut alreadyDefined) != 0);
+        assert!(JS_AlreadyHasOwnProperty(cx, receiverhandle, name, &mut alreadyDefined));
 
         let constructorhandle = ObjectValue(&**constructor);
-        if alreadyDefined == 0 {
+        if !alreadyDefined {
             assert!(JS_DefineProperty(cx, receiverhandle, name,
                                       value_handle(&constructorhandle),
-                                      0, None, None) != 0);
+                                      0, None, None));
         }
     }
 }
@@ -342,7 +341,7 @@ fn DefineConstants(cx: *mut JSContext, obj: JSHandleObject, constants: &'static 
         unsafe {
             assert!(JS_DefineProperty(cx, obj, spec.name.as_ptr() as *const libc::c_char, jsval,
                                       JSPROP_ENUMERATE | JSPROP_READONLY | JSPROP_PERMANENT,
-                                      None, None) != 0);
+                                      None, None));
         }
     }
 }
@@ -352,7 +351,7 @@ fn DefineConstants(cx: *mut JSContext, obj: JSHandleObject, constants: &'static 
 /// Fails on JSAPI failure.
 fn DefineMethods(cx: *mut JSContext, obj: JSHandleObject, methods: &'static [JSFunctionSpec]) {
     unsafe {
-        assert!(JS_DefineFunctions(cx, obj, methods.as_ptr()) != 0);
+        assert!(JS_DefineFunctions(cx, obj, methods.as_ptr()));
     }
 }
 
@@ -361,7 +360,7 @@ fn DefineMethods(cx: *mut JSContext, obj: JSHandleObject, methods: &'static [JSF
 /// Fails on JSAPI failure.
 fn DefineProperties(cx: *mut JSContext, obj: JSHandleObject, properties: &'static [JSPropertySpec]) {
     unsafe {
-        assert!(JS_DefineProperties(cx, obj, properties.as_ptr()) != 0);
+        assert!(JS_DefineProperties(cx, obj, properties.as_ptr()));
     }
 }
 
@@ -372,7 +371,7 @@ fn CreateInterfacePrototypeObject(cx: *mut JSContext, global: JSHandleObject,
                                   protoClass: &'static JSClass,
                                   members: &'static NativeProperties) -> *mut JSObject {
     unsafe {
-        let ourProto = JS_NewObjectWithUniqueType(cx, protoClass, &*parentProto, &*global);
+        let ourProto = JS_NewObjectWithUniqueType(cx, protoClass, parentProto, global);
         assert!(ourProto.is_not_null());
 
         let ourProto = object_handle(&ourProto);
@@ -399,7 +398,7 @@ fn CreateInterfacePrototypeObject(cx: *mut JSContext, global: JSHandleObject,
 /// `NoInterfaceObject` nor `Constructor`.
 pub extern fn ThrowingConstructor(_cx: *mut JSContext, _argc: c_uint, _vp: *mut JSVal) -> bool {
     // FIXME(#347) should trigger exception here
-    return 0;
+    return false;
 }
 
 /// Construct and cache the ProtoOrIfaceArray for the given global.
@@ -473,24 +472,22 @@ pub fn GetPropertyOnPrototype(cx: *mut JSContext, proxy: JSHandleObject, id: JSH
     unsafe {
       //let proto = GetObjectProto(proxy);
       let mut proto = ptr::mut_null();
-      if JS_GetPrototype(cx, proxy, mut_object_handle(&mut proto)) == 0 {
+      if !JS_GetPrototype(cx, proxy, mut_object_handle(&mut proto)) {
           return false;
       }
       if proto.is_null() {
           *found = false;
           return true;
       }
-      let mut hasProp = 0;
-      if JS_HasPropertyById(cx, object_handle(&proto), id, &mut hasProp) == 0 {
+      if !JS_HasPropertyById(cx, object_handle(&proto), id, found) {
           return false;
       }
-      *found = hasProp != 0;
       let no_output = vp.as_ref().map_or(true, |vp| vp.deref().is_null());
-      if hasProp == 0 || no_output {
+      if !*found || no_output {
           return true;
       }
 
-      JS_ForwardGetPropertyTo(cx, object_handle(&proto), id, proxy, vp.unwrap()) != 0
+      JS_ForwardGetPropertyTo(cx, object_handle(&proto), id, proxy, vp.unwrap())
   }
 }
 
@@ -498,7 +495,7 @@ pub fn GetPropertyOnPrototype(cx: *mut JSContext, proxy: JSHandleObject, id: JSH
 /// `jsid` is not an integer.
 pub fn GetArrayIndexFromId(_cx: *mut JSContext, id: jsid) -> Option<u32> {
     unsafe {
-        if RUST_JSID_IS_INT(id) != 0 {
+        if RUST_JSID_IS_INT(id) {
             return Some(RUST_JSID_TO_INT(id) as u32);
         }
         return None;
@@ -586,7 +583,7 @@ pub fn get_dictionary_property(cx: *mut JSContext,
     }*/
     if unsafe {
         property.with_ref(|s| {
-            JS_GetProperty(cx, object, s, mut_value_handle(&mut value)) == 0
+            !JS_GetProperty(cx, object, s, mut_value_handle(&mut value))
         })
     } {
         return Err(());
@@ -607,7 +604,7 @@ pub fn HasPropertyOnPrototype(cx: *mut JSContext, proxy: JSHandleObject, id: JSH
 pub fn IsConvertibleToCallbackInterface(cx: *mut JSContext, obj: *mut JSObject) -> bool {
     unsafe {
         let obj = object_handle(&obj);
-        JS_ObjectIsDate(cx, obj) == 0 && JS_ObjectIsRegExp(cx, obj) == 0
+        !JS_ObjectIsDate(cx, obj) && !JS_ObjectIsRegExp(cx, obj)
     }
 }
 

@@ -12,13 +12,13 @@ use js::jsapi::{JS_DefinePropertyById, JS_NewObjectWithGivenProto};
 use js::jsapi::{JS_ReportErrorFlagsAndNumber, JS_StrictPropertyStub};
 =======*/
 use dom::bindings::utils::{object_handle, mut_object_handle, mut_handle};
-use js::jsapi::{JSContext, jsid, JSPropertyDescriptor, JSObject, JSString, jschar};
+use js::jsapi::{JSContext, JSPropertyDescriptor, JSObject, JSString, jschar};
 use js::jsapi::{JS_GetPropertyDescriptorById, JS_NewUCString, JS_malloc, JS_free};
 use js::jsapi::{JS_DefinePropertyById, JS_NewObjectWithGivenProto, MutableHandle};
 use js::jsapi::{JS_StrictPropertyStub, JSHandleObject, JSHandleId};
 use js::jsapi::{JSREPORT_WARNING, JSREPORT_STRICT, JSREPORT_STRICT_MODE_ERROR};
 use js::jsapi::{JS_ReportErrorFlagsAndNumber, JS_DeletePropertyById2};
-use js::jsval::{UndefinedValue, ObjectValue};
+use js::jsval::{ObjectValue};
 //>>>>>>> b93d695... Build with upgraded SpiderMonkey.
 use js::glue::GetProxyExtra;
 use js::glue::{GetObjectProto, GetObjectParent, SetProxyExtra, GetProxyHandler};
@@ -38,7 +38,7 @@ pub extern fn getPropertyDescriptor(cx: *mut JSContext, proxy: JSHandleObject, i
                                     mut desc: MutableHandle<JSPropertyDescriptor>, flags: u32) -> bool {
   unsafe {
     let handler = GetProxyHandler(*proxy);
-    if !InvokeGetOwnPropertyDescriptor(handler, cx, proxy, id, mut_handle(*desc), flags) {
+    if !InvokeGetOwnPropertyDescriptor(handler, cx, proxy, id, mut_handle(desc.deref_mut()), flags) {
         return false;
     }
     if desc.obj.is_not_null() {
@@ -47,7 +47,7 @@ pub extern fn getPropertyDescriptor(cx: *mut JSContext, proxy: JSHandleObject, i
 
     //let proto = JS_GetPrototype(proxy);
     let mut proto = ptr::mut_null();
-    assert!(GetObjectProto(cx, proxy, mut_object_handle(&mut proto)) != 0);
+    assert!(GetObjectProto(cx, proxy, mut_object_handle(&mut proto)));
     if proto.is_null() {
         desc.obj = ptr::mut_null();
         return true;
@@ -91,8 +91,8 @@ pub extern fn defineProperty(cx: *mut JSContext, proxy: JSHandleObject, id: JSHa
 pub extern fn delete_(cx: *mut JSContext, proxy: JSHandleObject, id: JSHandleId,
                       bp: *mut bool) -> bool {
     unsafe {
-        let expando = EnsureExpandoObject(cx, proxy);
-        expando.is_not_null() && JS_DeletePropertyById2(cx, expando, id, bp)
+        let expando = EnsureExpandoObject(cx, *proxy);
+        expando.is_not_null() && JS_DeletePropertyById2(cx, object_handle(&expando), id, bp)
     }
 }
 
@@ -136,7 +136,7 @@ pub fn EnsureExpandoObject(cx: *mut JSContext, obj: *mut JSObject) -> *mut JSObj
         //XXXjdm it would be nice to assert that obj's class is a proxy class
         let mut expando = GetExpandoObject(obj);
         if expando.is_null() {
-            expando = JS_NewObjectWithGivenProto(cx, ptr::mut_null(),
+            expando = JS_NewObjectWithGivenProto(cx, ptr::null(),
                                                  object_handle(&ptr::mut_null()),
                                                  object_handle(&GetObjectParent(obj)));
             if expando.is_null() {

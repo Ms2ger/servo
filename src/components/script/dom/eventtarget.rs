@@ -27,7 +27,6 @@ use url::Url;
 use libc::{c_char, size_t};
 use std::cell::RefCell;
 use std::collections::hashmap::HashMap;
-use std::ptr;
 
 #[deriving(PartialEq,Encodable)]
 pub enum ListenerPhase {
@@ -203,7 +202,9 @@ impl<'a> EventTargetHelpers for JSRef<'a, EventTarget> {
             return;
         }
 
-        let handler = JS_GetFunctionObject(handler);
+        let handler = unsafe {
+            JS_GetFunctionObject(handler)
+        };
         assert!(handler.is_not_null());
         let funobj = unsafe {
             JS_CloneFunctionObject(cx, object_handle(&handler), object_handle(&scope))

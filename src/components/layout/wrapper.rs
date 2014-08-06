@@ -470,7 +470,7 @@ impl<'ln> TLayoutNode for ThreadSafeLayoutNode<'ln> {
     }
 
     unsafe fn get<'a>(&'a self) -> &'a Node { // this change.
-        mem::transmute::<*Node,&'a Node>(self.get_jsmanaged().unsafe_get())
+        mem::transmute::<*const Node,&'a Node>(self.get_jsmanaged().unsafe_get())
     }
 
     fn first_child(&self) -> Option<ThreadSafeLayoutNode<'ln>> {
