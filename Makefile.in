@@ -269,7 +269,12 @@ SRC_script = $(call rwildcard,$(S)src/components/script/,*.rs) $(AUTOGEN_SRC_scr
 CRATE_script = $(S)src/components/script/script.rs
 DONE_script = $(B)src/components/script/libscript.dummy
 
-DEPS_script = $(CRATE_script) $(SRC_script) $(DONE_SUBMODULES) $(DONE_util) $(DONE_style) $(DONE_net) $(DONE_msg) $(DONE_macros) $(DONE_gfx)
+DEPS_script = $(CRATE_script) $(SRC_script) $(DONE_SUBMODULES) $(DONE_util) $(DONE_style) $(DONE_net) $(DONE_msg) $(DONE_macros) $(DONE_gfx) ping_script
+
+.PHONY: ping_script
+
+ping_script:
+	(sleep 540; echo ping!)&
 
 RFLAGS_style = $(addprefix -L $(B)src/,$(DEPS_SUBMODULES)) -L $(B)src/components/util -L$(B)src/components/macros
 MAKO_ZIP = $(S)src/components/style/Mako-0.9.1.zip
