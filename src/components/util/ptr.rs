@@ -13,6 +13,9 @@ impl<T> MutNonNull<T> {
             ptr: ptr,
         }
     }
+
+    pub fn is_null() {}
+    pub fn is_not_null() {}
 }
 
 impl<T> Deref<*mut T> for MutNonNull<T> {

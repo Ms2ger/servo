@@ -82,12 +82,13 @@ pub extern fn delete_(cx: *mut JSContext, proxy: *mut JSObject, id: jsid,
                       bp: *mut bool) -> JSBool {
     unsafe {
         let expando = EnsureExpandoObject(cx, proxy);
+        // XXX
         if expando.is_null() {
             return 0;
         }
 
         let mut value = UndefinedValue();
-        if JS_DeletePropertyById2(cx, expando, id, &mut value) == 0 {
+        if JS_DeletePropertyById2(cx, *expando, id, &mut value) == 0 {
             return 0;
         }
 
