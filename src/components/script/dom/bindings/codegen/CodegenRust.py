@@ -192,8 +192,8 @@ class CGMethodCall(CGThing):
 
                 sigIndex = signatures.index(signature)
                 argCountCases.append(
-                    CGCase(str(argCount), getPerSignatureCall(signature,
-                                                              signatureIndex=sigIndex)))
+                    CGCase(getPerSignatureCall(signature, signatureIndex=sigIndex),
+                           str(argCount)))
                 continue
 
             distinguishingIndex = method.distinguishingIndexForArgCount(argCount)
@@ -339,8 +339,8 @@ class CGMethodCall(CGThing):
                 # do with this.
                 caseBody.append(CGGeneric("return Throw(cx, NS_ERROR_XPC_BAD_CONVERT_JS);"))
 
-            argCountCases.append(CGCase(str(argCount),
-                                        CGList(caseBody, "\n")))
+            argCountCases.append(CGCase(CGList(caseBody, "\n"),
+                                        str(argCount)))
 
         overloadCGThings = []
         overloadCGThings.append(
@@ -2326,7 +2326,7 @@ class CGCase(CGList):
     the body (allowed to be None if there is no body), and an optional
     argument (defaulting to False) for whether to fall through.
     """
-    def __init__(self, expression, body, fallThrough=False):
+    def __init__(self, body, expression, fallThrough=False):
         CGList.__init__(self, [], "\n")
         self.append(CGWrapper(CGGeneric(expression), post=" => {"))
         bodyList = CGList([body], "\n")
