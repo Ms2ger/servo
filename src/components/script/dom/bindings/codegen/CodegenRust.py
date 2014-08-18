@@ -1850,6 +1850,49 @@ with_compartment(aCx, obj, || {
 Temporary::new(raw)""" % CreateBindingJSObject(self.descriptor))
 
 
+class CGIsPermittedMethod(CGAbstractMethod):
+    """
+    crossOriginGetters/Setters/Methods are sets of names of the relevant members.
+    """
+    def __init__(self, descriptor, crossOriginGetters, crossOriginSetters,
+                 crossOriginMethods):
+        args = [Argument("*mut JSString", "property"),
+                Argument("bool", "set")]
+        CGAbstractMethod.__init__(self, descriptor, "IsPermitted", "bool", args)
+
+        allNames = crossOriginGetters | crossOriginSetters | crossOriginMethods
+        readwrite = crossOriginGetters & crossOriginSetters
+        readonly = (crossOriginGetters - crossOriginSetters) | crossOriginMethods
+        writeonly = crossOriginSetters - crossOriginGetters
+        def case(name):
+            condition = CGWrapper(CGList([CGGeneric("%du16" % ord(c)) for c in name], ", "),
+                                  pre='[', post=']').define()
+            if name in readonly:
+                guard = "!set"
+            elif name in writeonly:
+                guard = "set"
+            else:
+                assert name in readwrite
+                guard = None
+
+            return CGCase(CGGeneric("true"), condition, guard=guard)
+
+        cases = [case(name) for name in sorted(allNames)]
+        match = CGSwitch("property", cases, default=CGGeneric("false"))
+
+        get = ("let mut length = 0;\n"
+               "let chars = JS_GetInternedStringCharsAndLength(property, &mut length);\n")
+        self.cgRoot = CGList([
+            CGGeneric(get),
+            CGWrapper(CGIndenter(match),
+                      pre="slice::raw::buf_as_slice(chars, length as uint, |property| {\n",
+                      post="\n})")
+        ])
+
+    def definition_body(self):
+        return self.cgRoot
+
+
 class CGIDLInterface(CGThing):
     """
     Class for codegen of an implementation of the IDLInterface trait.
@@ -2318,23 +2361,21 @@ class CGSwitch(CGList):
 
         self.append(CGGeneric("}"))
 
-class CGCase(CGList):
+class CGCase(CGWrapper):
     """
     A class to generate code for a case statement.
 
     Takes three constructor arguments: an expression, a CGThing for
     the body (allowed to be None if there is no body), and an optional
-    argument (defaulting to False) for whether to fall through.
+    argument (defaulting to None) for an additional guard.
     """
-    def __init__(self, body, expression, fallThrough=False):
-        CGList.__init__(self, [], "\n")
-        self.append(CGWrapper(CGGeneric(expression), post=" => {"))
-        bodyList = CGList([body], "\n")
-        if fallThrough:
-            raise TypeError("fall through required but unsupported")
-            #bodyList.append(CGGeneric('fail!("fall through unsupported"); /* Fall through */'))
-        self.append(CGIndenter(bodyList));
-        self.append(CGGeneric("}"))
+    def __init__(self, body, expression, guard=None):
+        pre = expression
+        if guard:
+            pre += " if " + guard
+        pre += " => {\n"
+        post = "\n}"
+        CGWrapper.__init__(self, CGIndenter(body), pre=pre, post=post)
 
 class CGGetterCall(CGPerSignatureCall):
     """
@@ -4536,6 +4577,7 @@ class CGBindingRoot(CGThing):
             'js::jsapi::{JSPropertyOpWrapper, JSPropertySpec, JS_PropertyStub}',
             'js::jsapi::{JSStrictPropertyOpWrapper, JSString, JSTracer, JS_ConvertStub}',
             'js::jsapi::{JS_StrictPropertyStub, JS_EnumerateStub, JS_ResolveStub}',
+            'js::jsapi::JS_GetInternedStringCharsAndLength',
             'js::jsval::JSVal',
             'js::jsval::{ObjectValue, ObjectOrNullValue, PrivateValue}',
             'js::jsval::{NullValue, UndefinedValue}',
@@ -4590,6 +4632,7 @@ class CGBindingRoot(CGThing):
             'std::mem',
             'std::cmp',
             'std::ptr',
+            'std::slice',
             'std::str',
             'std::num',
         ])
