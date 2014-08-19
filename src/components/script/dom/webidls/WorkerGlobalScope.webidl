@@ -27,6 +27,6 @@ partial interface WorkerGlobalScope { // not obsolete
 
 // Proprietary
 partial interface WorkerGlobalScope {
-  [Replaceable]
+  //[Replaceable]
   readonly attribute Console console;
 };

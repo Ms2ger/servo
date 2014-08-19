@@ -1173,6 +1173,24 @@ class MethodDefiner(PropertyDefiner):
             'JSFunctionSpec',
             specData)
 
+
+def IsCrossOriginWritable(attr, descriptor):
+    """
+    Return whether the IDLAttribute in question is cross-origin writable on the
+    interface represented by descriptor.  This is needed to handle the fact that
+    some, but not all, interfaces implementing URLUtils want a cross-origin
+    writable .href.
+    """
+    crossOriginWritable = attr.getExtendedAttribute("CrossOriginWritable")
+    if not crossOriginWritable:
+        return False
+    if crossOriginWritable == True:
+        return True
+    assert (isinstance(crossOriginWritable, list) and
+            len(crossOriginWritable) == 1)
+    return crossOriginWritable[0] == descriptor.interface.identifier.name
+
+
 class AttrDefiner(PropertyDefiner):
     def __init__(self, descriptor, name, static):
         PropertyDefiner.__init__(self, descriptor, name)
@@ -4044,6 +4062,56 @@ class CGInterfaceTrait(CGThing):
         return self.cgRoot.define()
 
 
+class MemberProperties:
+    def __init__(self):
+        self.isGenericMethod = False
+        self.isCrossOriginMethod = False
+        self.isPromiseReturningMethod = False
+        self.isGenericGetter = False
+        self.isLenientGetter = False
+        self.isCrossOriginGetter = False
+        self.isGenericSetter = False
+        self.isLenientSetter = False
+        self.isCrossOriginSetter = False
+        self.isJsonifier = False
+
+
+def memberProperties(m, descriptor):
+    assert not descriptor.interface.isCallback()
+
+    props = MemberProperties()
+    if m.isMethod():
+        if not m.isIdentifierLess():
+            if not m.isStatic():
+                if m.returnsPromise():
+                    assert False, "We don't support promises"
+                    props.isPromiseReturningMethod = True
+                if m.getExtendedAttribute("CrossOriginCallable"):
+                    props.isCrossOriginMethod = True
+                else:
+                    props.isGenericMethod = True
+    elif m.isAttr():
+        if not m.isStatic():
+            if m.hasLenientThis():
+                props.isLenientGetter = True
+            elif m.getExtendedAttribute("CrossOriginReadable"):
+                props.isCrossOriginGetter = True
+            else:
+                props.isGenericGetter = True
+        if not m.readonly:
+            if not m.isStatic():
+                if m.hasLenientThis():
+                    props.isLenientSetter = True
+                elif IsCrossOriginWritable(m, descriptor):
+                    props.isCrossOriginSetter = True
+                else:
+                    props.isGenericSetter = True
+        assert not m.getExtendedAttribute("PutForwards")
+        assert not m.getExtendedAttribute("Replaceable")
+
+    return props
+
+
 class CGDescriptor(CGThing):
     def __init__(self, descriptor):
         CGThing.__init__(self)
@@ -4057,27 +4125,26 @@ class CGDescriptor(CGThing):
             # cgThings.append(CGGetConstructorObjectMethod(descriptor))
             pass
 
-        (hasMethod, hasGetter, hasLenientGetter,
-         hasSetter, hasLenientSetter) = False, False, False, False, False
+        hasMethod, hasGetter, hasSetter = False, False, False
         for m in descriptor.interface.members:
-            if m.isMethod() and not m.isIdentifierLess():
-                if m.isStatic():
-                    assert descriptor.interface.hasInterfaceObject()
-                    cgThings.append(CGStaticMethod(descriptor, m))
-                else:
-                    cgThings.append(CGSpecializedMethod(descriptor, m))
-                    cgThings.append(CGMemberJITInfo(descriptor, m))
-                    hasMethod = True
+            props = memberProperties(m, descriptor)
+            if m.isMethod():
+                assert not props.isJsonifier
+                assert not m.returnsPromise()
+                if not m.isIdentifierLess():
+                    if m.isStatic():
+                        assert descriptor.interface.hasInterfaceObject()
+                        cgThings.append(CGStaticMethod(descriptor, m))
+                    else:
+                        cgThings.append(CGSpecializedMethod(descriptor, m))
+                        cgThings.append(CGMemberJITInfo(descriptor, m))
+
             elif m.isAttr():
                 if m.isStatic():
                     assert descriptor.interface.hasInterfaceObject()
                     cgThings.append(CGStaticGetter(descriptor, m))
                 else:
                     cgThings.append(CGSpecializedGetter(descriptor, m))
-                    if m.hasLenientThis():
-                        hasLenientGetter = True
-                    else:
-                        hasGetter = True
 
                 if not m.readonly:
                     if m.isStatic():
@@ -4085,23 +4152,24 @@ class CGDescriptor(CGThing):
                         cgThings.append(CGStaticSetter(descriptor, m))
                     else:
                         cgThings.append(CGSpecializedSetter(descriptor, m))
-                        if m.hasLenientThis():
-                            hasLenientSetter = True
-                        else:
-                            hasSetter = True
+                        assert not props.isCrossOriginSetter
 
                 if not m.isStatic():
                     cgThings.append(CGMemberJITInfo(descriptor, m))
+
+            hasMethod = hasMethod or props.isGenericMethod
+            assert not props.isPromiseReturningMethod
+            hasGetter = hasGetter or props.isGenericGetter
+            assert not props.isLenientGetter
+            hasSetter = hasSetter or props.isGenericSetter
+            assert not props.isLenientSetter
+
         if hasMethod:
             cgThings.append(CGGenericMethod(descriptor))
         if hasGetter:
             cgThings.append(CGGenericGetter(descriptor))
-        if hasLenientGetter:
-            pass
         if hasSetter:
             cgThings.append(CGGenericSetter(descriptor))
-        if hasLenientSetter:
-            pass
 
         if descriptor.concrete:
             cgThings.append(CGClassFinalizeHook(descriptor))
