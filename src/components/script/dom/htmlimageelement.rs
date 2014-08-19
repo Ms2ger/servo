@@ -118,22 +118,22 @@ impl<'a> HTMLImageElementMethods for JSRef<'a, HTMLImageElement> {
 
     fn UseMap(&self) -> DOMString {
         let element: &JSRef<Element> = ElementCast::from_ref(self);
-        element.get_string_attribute("useMap")
+        element.get_string_attribute("usemap")
     }
 
     fn SetUseMap(&self, use_map: DOMString) {
         let element: &JSRef<Element> = ElementCast::from_ref(self);
-        element.set_string_attribute("useMap", use_map)
+        element.set_string_attribute("usemap", use_map)
     }
 
     fn IsMap(&self) -> bool {
         let element: &JSRef<Element> = ElementCast::from_ref(self);
-        from_str::<bool>(element.get_string_attribute("hspace").as_slice()).unwrap()
+        element.has_attribute("ismap")
     }
 
     fn SetIsMap(&self, is_map: bool) {
         let element: &JSRef<Element> = ElementCast::from_ref(self);
-        element.set_string_attribute("isMap", is_map.to_string())
+        element.set_string_attribute("ismap", is_map.to_string())
     }
 
     fn Width(&self) -> u32 {

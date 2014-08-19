@@ -134,11 +134,11 @@ impl<'a> VirtualMethods for JSRef<'a, HTMLCanvasElement> {
 
         let recreate = match name.as_slice() {
             "width" => {
-                self.width.set(num::from_str_radix(value.as_slice(), 10).unwrap());
+                self.width.set(num::from_str_radix(value.as_slice(), 10).unwrap_or(DefaultWidth));
                 true
             }
             "height" => {
-                self.height.set(num::from_str_radix(value.as_slice(), 10).unwrap());
+                self.height.set(num::from_str_radix(value.as_slice(), 10).unwrap_or(DefaultHeight));
                 true
             }
             _ => false,
