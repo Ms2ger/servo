@@ -4167,6 +4167,7 @@ class CGDescriptor(CGThing):
             pass
 
         hasMethod, hasGetter, hasSetter = False, False, False
+        crossOriginMethods, crossOriginGetters, crossOriginSetters = set(), set(), set()
         for m in descriptor.interface.members:
             props = memberProperties(m, descriptor)
             if m.isMethod():
@@ -4179,6 +4180,8 @@ class CGDescriptor(CGThing):
                     else:
                         cgThings.append(CGSpecializedMethod(descriptor, m))
                         cgThings.append(CGMemberJITInfo(descriptor, m))
+                        if props.isCrossOriginMethod:
+                            crossOriginMethods.add(m.identifier.name)
 
             elif m.isAttr():
                 if m.isStatic():
@@ -4186,6 +4189,8 @@ class CGDescriptor(CGThing):
                     cgThings.append(CGStaticGetter(descriptor, m))
                 else:
                     cgThings.append(CGSpecializedGetter(descriptor, m))
+                    if props.isCrossOriginGetter:
+                        crossOriginGetters.add(m.identifier.name)
 
                 if not m.readonly:
                     if m.isStatic():
@@ -4193,7 +4198,8 @@ class CGDescriptor(CGThing):
                         cgThings.append(CGStaticSetter(descriptor, m))
                     else:
                         cgThings.append(CGSpecializedSetter(descriptor, m))
-                        assert not props.isCrossOriginSetter
+                        if props.isCrossOriginSetter:
+                            crossOriginSetters.add(m.identifier.name)
 
                 if not m.isStatic():
                     cgThings.append(CGMemberJITInfo(descriptor, m))
@@ -4207,10 +4213,21 @@ class CGDescriptor(CGThing):
 
         if hasMethod:
             cgThings.append(CGGenericMethod(descriptor))
+        if crossOriginMethods:
+            cgThings.append(CGGenericMethod(descriptor,
+                                            allowCrossOriginThis=True))
+
         if hasGetter:
             cgThings.append(CGGenericGetter(descriptor))
+        if crossOriginGetters:
+            cgThings.append(CGGenericGetter(descriptor,
+                                            allowCrossOriginThis=True))
+
         if hasSetter:
             cgThings.append(CGGenericSetter(descriptor))
+        if crossOriginSetters:
+            cgThings.append(CGGenericSetter(descriptor,
+                                            allowCrossOriginThis=True))
 
         if descriptor.concrete:
             cgThings.append(CGClassFinalizeHook(descriptor))
@@ -4257,6 +4274,12 @@ class CGDescriptor(CGThing):
                 pass
 
             cgThings.append(CGWrapMethod(descriptor))
+
+        if crossOriginGetters or crossOriginSetters or crossOriginMethods:
+            cgThings.append(CGIsPermittedMethod(descriptor,
+                                                crossOriginGetters,
+                                                crossOriginSetters,
+                                                crossOriginMethods))
 
         cgThings.append(CGIDLInterface(descriptor))
         cgThings.append(CGInterfaceTrait(descriptor))
