@@ -2431,8 +2431,12 @@ class CGAbstractBindingMethod(CGAbstractExternMethod):
     |this| object.  Subclasses are expected to override the generate_code
     function to do the rest of the work.  This function should return a
     CGThing which is already properly indented.
+
+    If allowCrossOriginThis is true, then this-unwrapping will first do an
+    UncheckedUnwrap and after that operate on the result.
     """
-    def __init__(self, descriptor, name, args, unwrapFailureCode=None):
+    def __init__(self, descriptor, name, args, unwrapFailureCode=None,
+                 getThisObj=None, allowCrossOriginThis=False):
         CGAbstractExternMethod.__init__(self, descriptor, name, "JSBool", args)
 
         if unwrapFailureCode is None:
@@ -2442,6 +2446,25 @@ class CGAbstractBindingMethod(CGAbstractExternMethod):
                 'return 0;' % descriptor.interface.identifier.name)
         else:
             self.unwrapFailureCode = unwrapFailureCode
+
+        if getThisObj == "":
+            self.getThisObj = None
+        else:
+            if getThisObj is None:
+                if descriptor.interface.isOnGlobalProtoChain():
+                    ensureCondition = "!args.thisv().isNullOrUndefined() && !args.thisv().isObject()"
+                    getThisObj = "args.thisv().isObject() ? &args.thisv().toObject() : js::GetGlobalForObjectCrossCompartment(&args.callee())"
+                else:
+                    ensureCondition = "!args.thisv().isObject()"
+                    getThisObj = "&args.thisv().toObject()"
+                ensureThisObj = CGIfWrapper(CGGeneric(self.unwrapFailureCode),
+                                            ensureCondition)
+            else:
+                ensureThisObj = None
+            self.getThisObj = CGList(
+                [ensureThisObj,
+                 CGGeneric("JS::Rooted<JSObject*> obj(cx, %s);\n" %
+                           getThisObj)])
 
     def definition_body(self):
         # Our descriptor might claim that we're not castable, simply because
@@ -2458,7 +2481,11 @@ class CGAbstractBindingMethod(CGAbstractExternMethod):
             "}\n"
             "\n"
             "let this: JS<%s> = %s;\n" % (self.descriptor.concreteType, unwrapThis))
-        return CGList([ unwrapThis, self.generate_code() ], "\n")
+        return CGList([
+            self.getThisObj,
+            unwrapThis,
+            self.generate_code()
+        ], "\n")
 
     def generate_code(self):
         assert(False) # Override me
@@ -2491,10 +2518,13 @@ class CGGenericMethod(CGAbstractBindingMethod):
     """
     A class for generating the C++ code for an IDL method..
     """
-    def __init__(self, descriptor):
+    def __init__(self, descriptor, allowCrossOriginThis=False):
         args = [Argument('*mut JSContext', 'cx'), Argument('libc::c_uint', 'argc'),
                 Argument('*mut JSVal', 'vp')]
-        CGAbstractBindingMethod.__init__(self, descriptor, 'genericMethod', args)
+        name = "genericCrossOriginMethod" if allowCrossOriginThis else "genericMethod"
+        CGAbstractBindingMethod.__init__(self, descriptor, name,
+                                         args,
+                                         allowCrossOriginThis=allowCrossOriginThis)
 
     def generate_code(self):
         return CGGeneric(
@@ -2545,7 +2575,7 @@ class CGGenericGetter(CGAbstractBindingMethod):
     """
     A class for generating the C++ code for an IDL attribute getter.
     """
-    def __init__(self, descriptor, lenientThis=False):
+    def __init__(self, descriptor, lenientThis=False, allowCrossOriginThis=False):
         args = [Argument('*mut JSContext', 'cx'), Argument('libc::c_uint', 'argc'),
                 Argument('*mut JSVal', 'vp')]
         if lenientThis:
@@ -2555,10 +2585,14 @@ class CGGenericGetter(CGAbstractBindingMethod):
                 "JS_SET_RVAL(cx, vp, JS::UndefinedValue());\n"
                 "return true;")
         else:
-            name = "genericGetter"
+            if allowCrossOriginThis:
+                name = "genericCrossOriginGetter"
+            else:
+                name = "genericGetter"
             unwrapFailureCode = None
         CGAbstractBindingMethod.__init__(self, descriptor, name, args,
-                                         unwrapFailureCode)
+                                         unwrapFailureCode,
+                                         allowCrossOriginThis=allowCrossOriginThis)
 
     def generate_code(self):
         return CGGeneric(
@@ -2619,7 +2653,7 @@ class CGGenericSetter(CGAbstractBindingMethod):
     """
     A class for generating the Rust code for an IDL attribute setter.
     """
-    def __init__(self, descriptor, lenientThis=False):
+    def __init__(self, descriptor, lenientThis=False, allowCrossOriginThis=False):
         args = [Argument('*mut JSContext', 'cx'), Argument('libc::c_uint', 'argc'),
                 Argument('*mut JSVal', 'vp')]
         if lenientThis:
@@ -2628,10 +2662,14 @@ class CGGenericSetter(CGAbstractBindingMethod):
                 "MOZ_ASSERT(!JS_IsExceptionPending(cx));\n"
                 "return true;")
         else:
-            name = "genericSetter"
+            if allowCrossOriginThis:
+                name = "genericCrossOriginSetter"
+            else:
+                name = "genericSetter"
             unwrapFailureCode = None
         CGAbstractBindingMethod.__init__(self, descriptor, name, args,
-                                         unwrapFailureCode)
+                                         unwrapFailureCode,
+                                         allowCrossOriginThis=allowCrossOriginThis)
 
     def generate_code(self):
         return CGGeneric(
