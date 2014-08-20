@@ -100,15 +100,20 @@ class CastableObjectUnwrapper():
 
     codeOnFailure is the code to run if unwrapping fails.
     """
-    def __init__(self, descriptor, source, codeOnFailure):
+    def __init__(self, descriptor, source, codeOnFailure,
+                 allowCrossOriginObj=False):
         self.substitution = {
             "type": descriptor.nativeType,
             "depth": descriptor.interface.inheritanceDepth(),
             "prototype": "PrototypeList::id::" + descriptor.name,
             "protoID": "PrototypeList::id::" + descriptor.name + " as uint",
-            "source": source,
             "codeOnFailure": CGIndenter(CGGeneric(codeOnFailure), 4).define(),
         }
+
+        if allowCrossOriginObj:
+            self.substitution["source"] = "UnwrapObject(%s, 0, ptr::mut_null())" % source
+        else:
+            self.substitution["source"] = source
 
     def __str__(self):
         return string.Template(
@@ -2450,21 +2455,25 @@ class CGAbstractBindingMethod(CGAbstractExternMethod):
         if getThisObj == "":
             self.getThisObj = None
         else:
+            self.getThisObj = CGList([], "\n")
             if getThisObj is None:
+                self.getThisObj.append(
+                    CGGeneric("let thisv = JS_THIS_VALUE(cx, vp);\n"))
+
                 if descriptor.interface.isOnGlobalProtoChain():
-                    ensureCondition = "!args.thisv().isNullOrUndefined() && !args.thisv().isObject()"
-                    getThisObj = "args.thisv().isObject() ? &args.thisv().toObject() : js::GetGlobalForObjectCrossCompartment(&args.callee())"
+                    ensureCondition = "!thisv.is_null_or_undefined() && !thisv.is_object()"
+                    getThisObj = CGIfElseWrapper("thisv.is_object()",
+                        CGGeneric("thisv.to_object()"),
+                        CGGeneric("GetGlobalForObjectCrossCompartment(JS_CALLEE(cx, vp).to_object())"))
                 else:
-                    ensureCondition = "!args.thisv().isObject()"
-                    getThisObj = "&args.thisv().toObject()"
-                ensureThisObj = CGIfWrapper(CGGeneric(self.unwrapFailureCode),
-                                            ensureCondition)
-            else:
-                ensureThisObj = None
-            self.getThisObj = CGList(
-                [ensureThisObj,
-                 CGGeneric("JS::Rooted<JSObject*> obj(cx, %s);\n" %
-                           getThisObj)])
+                    ensureCondition = "!thisv.is_object()"
+                    getThisObj = CGGeneric("thisv.to_object()")
+                self.getThisObj.append(
+                    CGIfWrapper(CGGeneric(self.unwrapFailureCode), ensureCondition))
+
+            self.getThisObj.append(CGWrapper(getThisObj, pre="let obj = ", post=";\n"))
+
+        self.allowCrossOriginThis = allowCrossOriginThis
 
     def definition_body(self):
         # Our descriptor might claim that we're not castable, simply because
@@ -2472,14 +2481,10 @@ class CGAbstractBindingMethod(CGAbstractExternMethod):
         # know that we're the real deal.  So fake a descriptor here for
         # consumption by FailureFatalCastableObjectUnwrapper.
         unwrapThis = str(CastableObjectUnwrapper(
-                        FakeCastableDescriptor(self.descriptor),
-                        "obj", self.unwrapFailureCode))
+            FakeCastableDescriptor(self.descriptor), "obj",
+            self.unwrapFailureCode,
+            allowCrossOriginObj=self.allowCrossOriginThis))
         unwrapThis = CGGeneric(
-            "let obj: *mut JSObject = JS_THIS_OBJECT(cx, vp as *mut JSVal);\n"
-            "if obj.is_null() {\n"
-            "  return false as JSBool;\n"
-            "}\n"
-            "\n"
             "let this: JS<%s> = %s;\n" % (self.descriptor.concreteType, unwrapThis))
         return CGList([
             self.getThisObj,
@@ -4621,7 +4626,7 @@ class CGBindingRoot(CGThing):
         #       not every binding ever.
         curr = CGImports(curr, descriptors, [
             'js',
-            'js::{JS_ARGV, JS_CALLEE, JS_THIS_OBJECT}',
+            'js::{JS_ARGV, JS_CALLEE, JS_THIS_VALUE}',
             'js::{JSCLASS_GLOBAL_SLOT_COUNT, JSCLASS_IS_DOMJSCLASS}',
             'js::{JSCLASS_IS_GLOBAL, JSCLASS_RESERVED_SLOTS_SHIFT}',
             'js::{JSCLASS_RESERVED_SLOTS_MASK, JSID_VOID, JSJitInfo}',
@@ -4646,6 +4651,7 @@ class CGBindingRoot(CGThing):
             'js::glue::{GetProxyPrivate, NewProxyObject, ProxyTraps}',
             'js::glue::{RUST_FUNCTION_VALUE_TO_JITINFO}',
             'js::glue::{RUST_JS_NumberValue, RUST_JSID_IS_STRING}',
+            'js::glue::{UnwrapObject, GetGlobalForObjectCrossCompartment}',
             'js::rust::with_compartment',
             'dom::types::*',
             'dom::bindings',

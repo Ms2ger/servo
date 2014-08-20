@@ -13,6 +13,7 @@
   readonly attribute Window self;
   /*[Unforgeable]*/ readonly attribute Document document;
   //         attribute DOMString name;
+  [CrossOriginReadable]
   /*[PutForwards=href, Unforgeable]*/ readonly attribute Location location;
   //readonly attribute History history;
   //[Replaceable] readonly attribute BarProp locationbar;
