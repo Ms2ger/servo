@@ -74,6 +74,7 @@ pub mod dom {
     #[path="bindings/codegen/InterfaceTypes.rs"]
     pub mod types;
     pub mod macros;
+    pub mod origin;
 
     pub mod attr;
     pub mod attrlist;
