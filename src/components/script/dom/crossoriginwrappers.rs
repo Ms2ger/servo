@@ -3,7 +3,7 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 use js::glue::ProxyTraps;
-use js::glue::{GetProxyExtra, SetProxyExtra};
+use js::glue::{GetProxyExtra, SetProxyExtra, UnwrapObject};
 use js::jsapi::{JSContext, JSObject, JSPropertyDescriptor, jsid};
 use js::jsapi::{JS_GetGlobalForObject, JS_NewObjectWithGivenProto};
 use js::jsval::ObjectValue;
@@ -31,6 +31,75 @@ unsafe fn ensure_holder(cx: *mut JSContext, wrapper: *mut JSObject) -> *mut JSOb
     return holder;
 }
 
+unsafe fn get_target_object(wrapper: *mut JSObject) -> *mut JSObject {
+    UnwrapObject(wrapper, /* stopAtOuter = */ 0, ptr::mut_null())
+}
+
+unsafe fn get_expando_object(_cx: *mut JSContext, _target: *mut JSObject,
+                             _consumer: *mut JSObject) -> *mut JSObject {
+    // TODO: implement.
+    ptr::mut_null()
+}
+
+unsafe fn resolve_own_property(cx: *mut JSContext, wrapper: *mut JSObject,
+                               holder: *mut JSObject, id: jsid,
+                               desc: *mut JSPropertyDescriptor) -> bool {
+    use js::jsapi::JS_GetPropertyDescriptorById;
+    use js::rust::with_compartment;
+
+    let desc = &mut *desc;
+
+    desc.obj = ptr::mut_null();
+    let target = get_target_object(wrapper);
+    let expando = get_expando_object(cx, target, wrapper);
+
+    // Check for expando properties first. Note that the expando object lives
+    // in the target compartment.
+    let found = false;
+    if expando.is_not_null() {
+        with_compartment(cx, expando, || {
+            assert!(JS_GetPropertyDescriptorById(cx, expando, id, desc) != 0);
+            found = desc.obj.is_not_null();
+        })
+    }
+/*
+    // Next, check for ES builtins.
+    if (!found && JS_IsGlobalObject(target)) {
+        JSProtoKey key = JS_IdToProtoKey(cx, id);
+        JSAutoCompartment ac(cx, target);
+        if (key != JSProto_Null) {
+            MOZ_ASSERT(key < JSProto_LIMIT);
+            RootedObject constructor(cx);
+            if (!JS_GetClassObject(cx, key, &constructor))
+                return false;
+            MOZ_ASSERT(constructor);
+            desc.value().set(ObjectValue(*constructor));
+            found = true;
+        } else if (id == GetRTIdByIndex(cx, XPCJSRuntime::IDX_EVAL)) {
+            RootedObject eval(cx);
+            if (!js::GetOriginalEval(cx, target, &eval))
+                return false;
+            desc.value().set(ObjectValue(*eval));
+            found = true;
+        }
+    }
+
+    if (found) {
+        if (!JS_WrapPropertyDescriptor(cx, desc))
+            return false;
+        // Pretend the property lives on the wrapper.
+        desc.object().set(wrapper);
+        return true;
+    }
+
+    RootedObject obj(cx, getTargetObject(wrapper));
+    if (!XrayResolveOwnProperty(cx, wrapper, obj, id, desc))
+        return false;
+
+    MOZ_ASSERT(!desc.object() || desc.object() == wrapper, "What did we resolve this on?");
+*/
+    return true;
+}
 
 extern fn get_property_descriptor(cx: *mut JSContext,
                                   wrapper: *mut JSObject,
@@ -39,27 +108,26 @@ extern fn get_property_descriptor(cx: *mut JSContext,
                                   _desc: *mut JSPropertyDescriptor)
                                   -> bool {
     unsafe {
-        let holder = ensure_holder(cx, wrapper);
-    /*
+        let _holder = ensure_holder(cx, wrapper);
         // Ordering is important here.
         //
-        // We first need to call resolveOwnProperty, even before checking the holder,
-        // because there might be a new dynamic |own| property that appears and
-        // shadows a previously-resolved non-own property that we cached on the
-        // holder. This can happen with indexed properties on NodeLists, for example,
-        // which are |own| value props.
+        // We first need to call resolveOwnProperty, even before checking the
+        // holder, because there might be a new dynamic |own| property that
+        // appears and shadows a previously-resolved non-own property that we
+        // cached on the holder. This can happen with indexed properties on
+        // NodeLists, for example, which are |own| value props.
         //
         // resolveOwnProperty may or may not cache what it finds on the holder,
-        // depending on how ephemeral it decides the property is. XPCWN |own|
-        // properties generally end up on the holder via NewResolve, whereas
-        // NodeList |own| properties don't get defined on the holder, since they're
-        // supposed to be dynamic. This means that we have to first check the result
-        // of resolveOwnProperty, and _then_, if that comes up blank, check the
-        // holder for any cached native properties.
+        // depending on how ephemeral it decides the property is. NodeList
+        // |own| properties don't get defined on the holder, since they're
+        // supposed to be dynamic. This means that we have to first check the
+        // result of resolveOwnProperty, and _then_, if that comes up blank,
+        // check the holder for any cached native properties.
         //
-        // Finally, we call resolveNativeProperty, which checks non-own properties,
-        // and unconditionally caches what it finds on the holder.
+        // Finally, we call resolveNativeProperty, which checks non-own
+        // properties, and unconditionally caches what it finds on the holder.
 
+    /*
         // Check resolveOwnProperty.
         if (!xpc::DOMXrayTraits::singleton.resolveOwnProperty(cx, *this, wrapper, holder, id, desc))
             return false;
