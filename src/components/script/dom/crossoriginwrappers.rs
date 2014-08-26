@@ -42,12 +42,15 @@ unsafe fn get_expando_object(_cx: *mut JSContext, _target: *mut JSObject,
 }
 
 unsafe fn resolve_own_property(cx: *mut JSContext, wrapper: *mut JSObject,
-                               holder: *mut JSObject, id: jsid,
+                               _holder: *mut JSObject, id: jsid, set: bool,
                                desc: *mut JSPropertyDescriptor) -> bool {
+    use js::{JSRESOLVE_ASSIGNING, JSRESOLVE_QUALIFIED};
     use js::jsapi::JS_GetPropertyDescriptorById;
     use js::rust::with_compartment;
 
     let desc = &mut *desc;
+
+    let flags = (if set { JSRESOLVE_ASSIGNING } else { 0 }) | JSRESOLVE_QUALIFIED;
 
     desc.obj = ptr::mut_null();
     let target = get_target_object(wrapper);
@@ -55,10 +58,10 @@ unsafe fn resolve_own_property(cx: *mut JSContext, wrapper: *mut JSObject,
 
     // Check for expando properties first. Note that the expando object lives
     // in the target compartment.
-    let found = false;
+    let mut found = false;
     if expando.is_not_null() {
         with_compartment(cx, expando, || {
-            assert!(JS_GetPropertyDescriptorById(cx, expando, id, desc) != 0);
+            assert!(JS_GetPropertyDescriptorById(cx, expando, id, flags, desc) != 0);
             found = desc.obj.is_not_null();
         })
     }
@@ -103,12 +106,13 @@ unsafe fn resolve_own_property(cx: *mut JSContext, wrapper: *mut JSObject,
 
 extern fn get_property_descriptor(cx: *mut JSContext,
                                   wrapper: *mut JSObject,
-                                  _id: jsid,
-                                  _set: bool,
-                                  _desc: *mut JSPropertyDescriptor)
+                                  id: jsid,
+                                  set: bool,
+                                  desc: *mut JSPropertyDescriptor)
                                   -> bool {
     unsafe {
-        let _holder = ensure_holder(cx, wrapper);
+        let holder = ensure_holder(cx, wrapper);
+
         // Ordering is important here.
         //
         // We first need to call resolveOwnProperty, even before checking the
@@ -127,11 +131,11 @@ extern fn get_property_descriptor(cx: *mut JSContext,
         // Finally, we call resolveNativeProperty, which checks non-own
         // properties, and unconditionally caches what it finds on the holder.
 
-    /*
         // Check resolveOwnProperty.
-        if (!xpc::DOMXrayTraits::singleton.resolveOwnProperty(cx, *this, wrapper, holder, id, desc))
+        if !resolve_own_property(cx, wrapper, holder, id, set, desc) {
             return false;
-
+        }
+/*
         // Check the holder.
         if (!desc.object() && !JS_GetPropertyDescriptorById(cx, holder, id, desc))
             return false;
