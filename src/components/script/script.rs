@@ -71,6 +71,7 @@ pub mod dom {
         }
     }
 
+    pub mod crossoriginwrappers;
     #[path="bindings/codegen/InterfaceTypes.rs"]
     pub mod types;
     pub mod macros;
