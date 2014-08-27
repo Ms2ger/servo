@@ -3,7 +3,7 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 use js::glue::ProxyTraps;
-use js::jsapi::{JSContext, JSObject, jsid};
+use js::jsapi::{JSContext, JSObject, jsid, JSPropertyDescriptor};
 
 use std::ptr;
 
@@ -12,6 +12,13 @@ fn ReportError(cx: *mut JSContext, message: &str) {
     message.with_c_str(|string| {
         unsafe { ReportError(cx, string) };
     });
+}
+
+extern fn define_property(cx: *mut JSContext, _wrapper: *mut JSObject,
+                          _id: jsid, _desc: *mut JSPropertyDescriptor)
+                          -> bool {
+    ReportError(cx, "Permission denied to define property on cross-origin object");
+    return false;
 }
 
 extern fn delete(cx: *mut JSContext, _wrapper: *mut JSObject, _id: jsid,
@@ -33,7 +40,7 @@ extern fn get_prototype_of(_cx: *mut JSContext,
 pub static proxy_handler: ProxyTraps = ProxyTraps {
     getPropertyDescriptor: None,
     getOwnPropertyDescriptor: None,
-    defineProperty: None,
+    defineProperty: Some(define_property),
     getOwnPropertyNames: 0 as *const u8,
     delete_: Some(delete),
     enumerate: 0 as *const u8,
