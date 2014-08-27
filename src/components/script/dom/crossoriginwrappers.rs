@@ -2,16 +2,18 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
+#![allow(dead_code)]
+
 use js::glue::ProxyTraps;
 use js::glue::{GetProxyExtra, SetProxyExtra, UnwrapObject};
 use js::jsapi::{JSContext, JSObject, JSPropertyDescriptor, jsid};
 use js::jsapi::{JS_GetGlobalForObject, JS_NewObjectWithGivenProto};
 use js::jsval::ObjectValue;
 
-use libc;
+use libc::c_uint;
 use std::ptr;
 
-static HOLDER_SLOT: libc::c_uint = 0;
+static HOLDER_SLOT: c_uint = 0;
 
 unsafe fn get_holder(wrapper: *mut JSObject) -> *mut JSObject {
     GetProxyExtra(wrapper, HOLDER_SLOT).to_object()
@@ -42,15 +44,11 @@ unsafe fn get_expando_object(_cx: *mut JSContext, _target: *mut JSObject,
 }
 
 unsafe fn resolve_own_property(cx: *mut JSContext, wrapper: *mut JSObject,
-                               _holder: *mut JSObject, id: jsid, set: bool,
-                               desc: *mut JSPropertyDescriptor) -> bool {
-    use js::{JSRESOLVE_ASSIGNING, JSRESOLVE_QUALIFIED};
+                               _holder: *mut JSObject, id: jsid, flags: c_uint,
+                               desc: &mut JSPropertyDescriptor) -> bool {
     use js::jsapi::JS_GetPropertyDescriptorById;
+    use js::jsfriendapi::JS_WrapPropertyDescriptor;
     use js::rust::with_compartment;
-
-    let desc = &mut *desc;
-
-    let flags = (if set { JSRESOLVE_ASSIGNING } else { 0 }) | JSRESOLVE_QUALIFIED;
 
     desc.obj = ptr::mut_null();
     let target = get_target_object(wrapper);
@@ -86,15 +84,17 @@ unsafe fn resolve_own_property(cx: *mut JSContext, wrapper: *mut JSObject,
             found = true;
         }
     }
-
-    if (found) {
-        if (!JS_WrapPropertyDescriptor(cx, desc))
+*/
+    if found {
+        if JS_WrapPropertyDescriptor(cx, desc) == 0 {
             return false;
+        }
+
         // Pretend the property lives on the wrapper.
-        desc.object().set(wrapper);
+        desc.obj = wrapper;
         return true;
     }
-
+/*
     RootedObject obj(cx, getTargetObject(wrapper));
     if (!XrayResolveOwnProperty(cx, wrapper, obj, id, desc))
         return false;
@@ -110,90 +110,104 @@ extern fn get_property_descriptor(cx: *mut JSContext,
                                   set: bool,
                                   desc: *mut JSPropertyDescriptor)
                                   -> bool {
+    use js::{JSRESOLVE_ASSIGNING, JSRESOLVE_QUALIFIED};
+    use js::{JSPROP_ENUMERATE, JSPROP_PERMANENT, JSPROP_READONLY};
+    use js::jsapi::JS_GetPropertyDescriptorById;
+
+    let flags = (if set { JSRESOLVE_ASSIGNING } else { 0 }) | JSRESOLVE_QUALIFIED;
+
     unsafe {
-        let holder = ensure_holder(cx, wrapper);
+        let desc = &mut *desc;
 
-        // Ordering is important here.
-        //
-        // We first need to call resolveOwnProperty, even before checking the
-        // holder, because there might be a new dynamic |own| property that
-        // appears and shadows a previously-resolved non-own property that we
-        // cached on the holder. This can happen with indexed properties on
-        // NodeLists, for example, which are |own| value props.
-        //
-        // resolveOwnProperty may or may not cache what it finds on the holder,
-        // depending on how ephemeral it decides the property is. NodeList
-        // |own| properties don't get defined on the holder, since they're
-        // supposed to be dynamic. This means that we have to first check the
-        // result of resolveOwnProperty, and _then_, if that comes up blank,
-        // check the holder for any cached native properties.
-        //
-        // Finally, we call resolveNativeProperty, which checks non-own
-        // properties, and unconditionally caches what it finds on the holder.
+        loop {
+            let holder = ensure_holder(cx, wrapper);
 
-        // Check resolveOwnProperty.
-        if !resolve_own_property(cx, wrapper, holder, id, set, desc) {
-            return false;
-        }
-/*
-        // Check the holder.
-        if (!desc.object() && !JS_GetPropertyDescriptorById(cx, holder, id, desc))
-            return false;
-        if (desc.object()) {
-            desc.object().set(wrapper);
-            return true;
-        }
+            // Ordering is important here.
+            //
+            // We first need to call resolveOwnProperty, even before checking the
+            // holder, because there might be a new dynamic |own| property that
+            // appears and shadows a previously-resolved non-own property that we
+            // cached on the holder. This can happen with indexed properties on
+            // NodeLists, for example, which are |own| value props.
+            //
+            // resolveOwnProperty may or may not cache what it finds on the holder,
+            // depending on how ephemeral it decides the property is. NodeList
+            // |own| properties don't get defined on the holder, since they're
+            // supposed to be dynamic. This means that we have to first check the
+            // result of resolveOwnProperty, and _then_, if that comes up blank,
+            // check the holder for any cached native properties.
+            //
+            // Finally, we call resolveNativeProperty, which checks non-own
+            // properties, and unconditionally caches what it finds on the holder.
 
-        // Nothing in the cache. Call through, and cache the result.
-        RootedObject obj(cx, getTargetObject(wrapper));
-        if (!XrayResolveNativeProperty(cx, wrapper, holder, id, desc))
-            return false;
+            // Check resolveOwnProperty.
+            if !resolve_own_property(cx, wrapper, holder, id, flags, desc) {
+                return false;
+            }
+            // Check the holder.
+            if desc.obj.is_null() && JS_GetPropertyDescriptorById(cx, holder, id, flags, desc) == 0{
+                return false;
+            }
+            if desc.obj.is_not_null() {
+                desc.obj = wrapper;
+                break;
+            }
 
-        MOZ_ASSERT(!desc.object() || desc.object() == wrapper, "What did we resolve this on?");
-
-
-        if (!desc.object() &&
-            id == nsXPConnect::GetRuntimeInstance()->GetStringID(XPCJSRuntime::IDX_TO_STRING))
-        {
-
-            JSFunction *toString = JS_NewFunction(cx, XrayToString, 0, 0, wrapper, "toString");
-            if (!toString)
+    /*
+            // Nothing in the cache. Call through, and cache the result.
+            RootedObject obj(cx, getTargetObject(wrapper));
+            if (!XrayResolveNativeProperty(cx, wrapper, holder, id, desc))
                 return false;
 
+            MOZ_ASSERT(!desc.object() || desc.object() == wrapper, "What did we resolve this on?");
+
+
+            if (!desc.object() &&
+                id == nsXPConnect::GetRuntimeInstance()->GetStringID(XPCJSRuntime::IDX_TO_STRING))
+            {
+
+                JSFunction *toString = JS_NewFunction(cx, XrayToString, 0, 0, wrapper, "toString");
+                if (!toString)
+                    return false;
+
+                desc.object().set(wrapper);
+                desc.setAttributes(0);
+                desc.setGetter(nullptr);
+                desc.setSetter(nullptr);
+                desc.value().setObject(*JS_GetFunctionObject(toString));
+            }
+
+            // If we still have nothing, we're done.
+            if (!desc.object())
+                return true;
+
+            if (!JS_DefinePropertyById(cx, holder, id, desc.value(), desc.attributes(),
+                                       desc.getter(), desc.setter()) ||
+                !JS_GetPropertyDescriptorById(cx, holder, id, desc))
+            {
+                return false;
+            }
+            MOZ_ASSERT(desc.object());
             desc.object().set(wrapper);
-            desc.setAttributes(0);
-            desc.setGetter(nullptr);
-            desc.setSetter(nullptr);
-            desc.value().setObject(*JS_GetFunctionObject(toString));
-        }
-
-        // If we still have nothing, we're done.
-        if (!desc.object())
             return true;
-
-        if (!JS_DefinePropertyById(cx, holder, id, desc.value(), desc.attributes(),
-                                   desc.getter(), desc.setter()) ||
-            !JS_GetPropertyDescriptorById(cx, holder, id, desc))
-        {
-            return false;
-        }
-        MOZ_ASSERT(desc.object());
-        desc.object().set(wrapper);
-        return true;
     */
+            break;
+        }
     /*    if (!SecurityXrayDOM::getPropertyDescriptor(cx, wrapper, id, desc))
             return false;
-        if (desc.object()) {
+*/
+        if desc.obj.is_not_null() {
             // All properties on cross-origin DOM objects are |own|.
-            desc.object().set(wrapper);
+            assert!(desc.obj == wrapper);
 
             // All properties on cross-origin DOM objects are non-enumerable and
             // "configurable". Any value attributes are read-only.
-            desc.attributesRef() &= ~JSPROP_ENUMERATE;
-            desc.attributesRef() &= ~JSPROP_PERMANENT;
-            if (!desc.getter() && !desc.setter())
-                desc.attributesRef() |= JSPROP_READONLY;
-        }*/
+            desc.attrs &= !JSPROP_ENUMERATE;
+            desc.attrs &= !JSPROP_PERMANENT;
+            if desc.getter.is_none() && desc.setter.is_none() {
+                desc.attrs |= JSPROP_READONLY;
+            }
+        }
         return true;
     }
 }
