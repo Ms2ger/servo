@@ -238,8 +238,34 @@ impl ConstantSpec {
 
 /// Helper structure for cross-origin wrappers for DOM binding objects.
 pub struct NativePropertyHooks {
+/*
+    /// The hook to call for resolving indexed or named properties. May be null
+    /// if there can't be any.
+    pub resolve_own_property: Option<
+        extern "C" fn(*mut JSContext, *mut JSObject, *mut JSObject, jsid,
+                      *mut JSPropertyDescriptor) -> bool>,
+
+    /// The hook to call for enumerating indexed or named properties. May be
+    /// null if there can't be any.
+    pub enumerate_own_properties: Option<
+        extern "C" fn(*mut JSContext, *mut JSObject, *mut JSObject,
+                      *mut IdVector) -> bool>,
+*/
+
     /// The property arrays for this interface.
     pub native_properties: &'static NativeProperties,
+/*
+    /// This will be set to the ID of the interface prototype object for the
+    /// interface, if it has one. If it doesn't have one it will be set to
+    /// prototypes::id::_ID_Count.
+    pub prototype_id: PrototypeList::id::ID,
+*/
+/*
+    /// This will be set to the ID of the interface object for the interface,
+    /// if it has one. If it doesn't have one it will be set to
+    /// constructors::id::_ID_Count.
+    pub constructor_id: constructors::ID,
+*/
 
     /// The NativePropertyHooks instance for the parent interface, if any.
     pub proto_hooks: Option<&'static NativePropertyHooks>,

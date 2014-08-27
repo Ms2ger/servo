@@ -7,6 +7,7 @@ use js::glue::{GetProxyExtra, SetProxyExtra, UnwrapObject};
 use js::jsapi::{JSContext, JSObject, JSPropertyDescriptor, jsid};
 use js::jsapi::{JS_GetGlobalForObject, JS_NewObjectWithGivenProto};
 use js::jsval::ObjectValue;
+use js::rust::with_compartment;
 
 use libc::c_uint;
 use std::ptr;
@@ -46,7 +47,6 @@ unsafe fn resolve_own_property(cx: *mut JSContext, wrapper: *mut JSObject,
                                desc: &mut JSPropertyDescriptor) -> bool {
     use js::jsapi::JS_GetPropertyDescriptorById;
     use js::jsfriendapi::JS_WrapPropertyDescriptor;
-    use js::rust::with_compartment;
 
     desc.obj = ptr::mut_null();
     let target = get_target_object(wrapper);
@@ -102,6 +102,19 @@ unsafe fn resolve_own_property(cx: *mut JSContext, wrapper: *mut JSObject,
     return true;
 }
 
+/*
+fn GetNativePropertyHooks(cx: *mut JSContext, obj: *mut JSObject)
+                          -> &'static NativePropertyHooks {
+    use dom::bindings::utils::get_dom_class;
+
+    match get_dom_class(obj) {
+        Ok(class) => class->native_hooks,
+        _ => fail!(),
+    }
+}
+*/
+
+
 extern fn get_property_descriptor(cx: *mut JSContext,
                                   wrapper: *mut JSObject,
                                   id: jsid,
@@ -143,7 +156,7 @@ extern fn get_property_descriptor(cx: *mut JSContext,
                 return false;
             }
             // Check the holder.
-            if desc.obj.is_null() && JS_GetPropertyDescriptorById(cx, holder, id, flags, desc) == 0{
+            if desc.obj.is_null() && JS_GetPropertyDescriptorById(cx, holder, id, flags, desc) == 0 {
                 return false;
             }
             if desc.obj.is_not_null() {
