@@ -221,11 +221,46 @@ pub struct ConstantSpec {
     pub value: ConstantVal
 }
 
+/*
+pub struct NativeProperties {
+    staticMethods: *JSFunctionSpec,
+    staticMethodIds: *jsid,
+    staticMethodsSpecs: *JSFunctionSpec,
+    staticAttributes: *JSPropertySpec,
+    staticAttributeIds: *jsid,
+    staticAttributeSpecs: *JSPropertySpec,
+    methods: *JSFunctionSpec,
+    methodIds: *jsid,
+    methodsSpecs: *JSFunctionSpec,
+    attributes: *JSPropertySpec,
+    attributeIds: *jsid,
+    attributeSpecs: *JSPropertySpec,
+    unforgeableAttributes: *JSPropertySpec,
+    unforgeableAttributeIds: *jsid,
+    unforgeableAttributeSpecs: *JSPropertySpec,
+    constants: *ConstantSpec,
+    constantIds: *jsid,
+    constantSpecs: *ConstantSpec
+}
+
+pub struct NativePropertyHooks {
+    resolve_own_property: *u8,
+    resolve_property: extern "C" fn(*JSContext, *JSObject, jsid, bool, *mut JSPropertyDescriptor) -> bool,
+    enumerate_own_properties: *u8,
+    enumerate_properties: *u8,
+    native_hooks: &'static NativePropertyHooks,
+}
+*/
+
 /// The struct that holds inheritance information for DOM object reflectors.
 pub struct DOMClass {
     /// A list of interfaces that this object implements, in order of decreasing
     /// derivedness.
-    pub interface_chain: [PrototypeList::id::ID, ..MAX_PROTO_CHAIN_LENGTH]
+    pub interface_chain: [PrototypeList::id::ID, ..MAX_PROTO_CHAIN_LENGTH],
+/*
+    /// The
+    pub native_hooks: &'static NativePropertyHooks,
+*/
 }
 
 /// The JSClass used for DOM object reflectors.

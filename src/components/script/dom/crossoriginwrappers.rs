@@ -104,6 +104,19 @@ unsafe fn resolve_own_property(cx: *mut JSContext, wrapper: *mut JSObject,
     return true;
 }
 
+/*
+fn GetNativePropertyHooks(cx: *mut JSContext, obj: *mut JSObject)
+                          -> &'static NativePropertyHooks {
+    use dom::bindings::utils::get_dom_class;
+
+    match get_dom_class(obj) {
+        Ok(class) => class->native_hooks,
+        _ => fail!(),
+    }
+}
+*/
+
+
 extern fn get_property_descriptor(cx: *mut JSContext,
                                   wrapper: *mut JSObject,
                                   id: jsid,
