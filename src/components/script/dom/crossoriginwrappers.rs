@@ -166,7 +166,7 @@ extern fn get_property_descriptor(cx: *mut JSContext,
                 break;
             }
 
-    /*
+            /*
             // Nothing in the cache. Call through, and cache the result.
             RootedObject obj(cx, getTargetObject(wrapper));
             if (!XrayResolveNativeProperty(cx, wrapper, holder, id, desc))
@@ -192,7 +192,7 @@ extern fn get_property_descriptor(cx: *mut JSContext,
 
             // If we still have nothing, we're done.
             if (!desc.object())
-                return true;
+                break;
 
             if (!JS_DefinePropertyById(cx, holder, id, desc.value(), desc.attributes(),
                                        desc.getter(), desc.setter()) ||
@@ -202,13 +202,9 @@ extern fn get_property_descriptor(cx: *mut JSContext,
             }
             MOZ_ASSERT(desc.object());
             desc.object().set(wrapper);
-            return true;
-    */
+            */
             break;
         }
-    /*    if (!SecurityXrayDOM::getPropertyDescriptor(cx, wrapper, id, desc))
-            return false;
-*/
         if desc.obj.is_not_null() {
             // All properties on cross-origin DOM objects are |own|.
             assert!(desc.obj == wrapper);
