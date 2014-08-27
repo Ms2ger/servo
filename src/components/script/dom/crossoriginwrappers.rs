@@ -257,12 +257,12 @@ pub static proxy_handler: ProxyTraps = ProxyTraps {
     delete_: Some(delete),
     enumerate: 0 as *const u8,
 
-    has: None,
-    hasOwn: None,
+    has: None, // -> BaseProxyHandler
+    hasOwn: None, // -> BaseProxyHandler
     get: None,
     set: None,
-    keys: 0 as *const u8,
-    iterate: None,
+    keys: 0 as *const u8, // -> BaseProxyHandler
+    iterate: None, // -> BaseProxyHandler
 
     call: None,
     construct: None,
