@@ -9,6 +9,7 @@ use js::glue::{GetProxyExtra, SetProxyExtra, UnwrapObject};
 use js::jsapi::{JSContext, JSObject, JSPropertyDescriptor, jsid};
 use js::jsapi::{JS_GetGlobalForObject, JS_NewObjectWithGivenProto};
 use js::jsval::ObjectValue;
+use js::rust::with_compartment;
 
 use libc::c_uint;
 use std::ptr;
@@ -48,7 +49,6 @@ unsafe fn resolve_own_property(cx: *mut JSContext, wrapper: *mut JSObject,
                                desc: &mut JSPropertyDescriptor) -> bool {
     use js::jsapi::JS_GetPropertyDescriptorById;
     use js::jsfriendapi::JS_WrapPropertyDescriptor;
-    use js::rust::with_compartment;
 
     desc.obj = ptr::mut_null();
     let target = get_target_object(wrapper);
@@ -221,6 +221,26 @@ extern fn get_property_descriptor(cx: *mut JSContext,
     }
 }
 
+extern fn delete(cx: *mut JSContext, wrapper: *mut JSObject, id: jsid,
+                 bp: *mut bool) -> bool {
+    use dom::bindings::utils::delete_property_by_id;
+
+    unsafe {
+        // assertEnteredPolicy(cx, wrapper, id, BaseProxyHandler::SET);
+
+        // Check the expando object.
+        let target = get_target_object(wrapper);
+        let expando = get_expando_object(cx, target, wrapper);
+        if expando.is_not_null() {
+            with_compartment(cx, expando, || {
+                delete_property_by_id(cx, expando, id, &mut *bp)
+            })
+        } else {
+            *bp = true;
+            true
+        }
+    }
+}
 
 extern fn get_prototype_of(_cx: *mut JSContext,
                            _wrapper: *mut JSObject,
@@ -237,7 +257,7 @@ static proxy_handler: ProxyTraps = ProxyTraps {
     getOwnPropertyDescriptor: Some(get_property_descriptor),
     defineProperty: None,
     getOwnPropertyNames: 0 as *const u8,
-    delete_: None,
+    delete_: Some(delete),
     enumerate: 0 as *const u8,
 
     has: None,
