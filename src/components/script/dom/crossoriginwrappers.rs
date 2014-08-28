@@ -73,9 +73,11 @@ unsafe fn XrayResolveProperty(cx: *mut JSContext, wrapper: *mut JSObject,
                               native_properties: &'static NativeProperties) -> bool {
     use dom::bindings::utils::jsid_to_str;
     use js::{JSPROP_ENUMERATE, JSPROP_PERMANENT, JSPROP_READONLY};
+    use js::{JSPROP_NATIVE_ACCESSORS, JSPROP_GETTER, JSPROP_SETTER};
     use js::glue::RUST_SET_JITINFO;
     use js::jsapi::{JS_NewFunctionById, JS_GetFunctionObject};
     use js::jsval::ObjectValue;
+    use std::mem;
     use std::str::raw::c_str_to_static_slice;
 
     let name = jsid_to_str(cx, id);
@@ -92,6 +94,7 @@ unsafe fn XrayResolveProperty(cx: *mut JSContext, wrapper: *mut JSObject,
                                               id);
             assert!(function.is_not_null());
             RUST_SET_JITINFO(function, method.call.info);
+
             let funobj = JS_GetFunctionObject(function);
             assert!(funobj.is_not_null());
             desc.value = ObjectValue(&*funobj);
@@ -103,19 +106,49 @@ unsafe fn XrayResolveProperty(cx: *mut JSContext, wrapper: *mut JSObject,
         },
         _ => (),
     }
-/*
-  if (nativeProperties->attributes) {
-    if (!XrayResolveAttribute(cx, wrapper, obj, id,
-                              nativeProperties->attributes,
-                              nativeProperties->attributeIds,
-                              nativeProperties->attributeSpecs, desc)) {
-      return false;
+
+    let attribute = native_properties.attrs.and_then(|attributes| {
+        attributes.iter().find(|spec| {
+            let attribute_name = c_str_to_static_slice((*spec).name);
+            name.as_slice() == attribute_name
+        })
+    });
+    match attribute {
+        Some(attribute) => {
+            // Because of centralization, we need to make sure we fault in the
+            // JitInfos as well. At present, until the JSAPI changes, the easiest
+            // way to do this is wrap them up as functions ourselves.
+            desc.attrs = (attribute.flags as u32) & !JSPROP_NATIVE_ACCESSORS;
+            // They all have getters, so we can just make it.
+            let function = JS_NewFunctionById(cx, attribute.getter.op,
+                                              0, 0, wrapper, id);
+            assert!(function.is_not_null());
+            RUST_SET_JITINFO(function, attribute.getter.info);
+
+            let funobj = JS_GetFunctionObject(function);
+            assert!(funobj.is_not_null());
+            desc.getter = mem::transmute(funobj);
+            desc.attrs |= JSPROP_GETTER;
+            if attribute.setter.op.is_some() {
+                // We have a setter! Make it.
+                let function = JS_NewFunctionById(cx, attribute.setter.op, 1, 0,
+                                                  wrapper, id);
+                assert!(function.is_not_null());
+                RUST_SET_JITINFO(function, attribute.setter.info);
+
+                let funobj = JS_GetFunctionObject(function);
+                assert!(funobj.is_not_null());
+                desc.setter = mem::transmute(funobj);
+                desc.attrs |= JSPROP_SETTER;
+            } else {
+                desc.setter = None;
+            }
+            desc.obj = wrapper;
+            return true;
+        },
+        _ => (),
     }
-    if (desc.object()) {
-      return true;
-    }
-  }
-*/
+
     let constant = native_properties.consts.and_then(|constants| {
         constants.iter().find(|spec| name.as_slice() == spec.get_name())
     });
