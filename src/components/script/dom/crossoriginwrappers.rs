@@ -73,21 +73,37 @@ unsafe fn XrayResolveProperty(cx: *mut JSContext, wrapper: *mut JSObject,
                               native_properties: &'static NativeProperties) -> bool {
     use dom::bindings::utils::jsid_to_str;
     use js::{JSPROP_ENUMERATE, JSPROP_PERMANENT, JSPROP_READONLY};
+    use js::glue::RUST_SET_JITINFO;
+    use js::jsapi::{JS_NewFunctionById, JS_GetFunctionObject};
+    use js::jsval::ObjectValue;
+    use std::str::raw::c_str_to_static_slice;
 
     let name = jsid_to_str(cx, id);
+    let method = native_properties.methods.and_then(|methods| {
+        methods.iter().find(|spec| {
+            let method_name = c_str_to_static_slice((*spec).name);
+            name.as_slice() == method_name
+        })
+    });
+    match method {
+        Some(method) => {
+            let function = JS_NewFunctionById(cx, method.call.op,
+                                              method.nargs as u32, 0, wrapper,
+                                              id);
+            assert!(function.is_not_null());
+            RUST_SET_JITINFO(function, method.call.info);
+            let funobj = JS_GetFunctionObject(function);
+            assert!(funobj.is_not_null());
+            desc.value = ObjectValue(&*funobj);
+            desc.attrs = method.flags as u32;
+            desc.obj = wrapper;
+            desc.setter = None;
+            desc.getter = None;
+            return true;
+        },
+        _ => (),
+    }
 /*
-  let methods = nativeProperties->methods;
-
-  if (methods) {
-    if (!XrayResolveMethod(cx, wrapper, obj, id, methods, methodIds,
-                           methodSpecs, desc)) {
-      return false;
-    }
-    if (desc.object()) {
-      return true;
-    }
-  }
-
   if (nativeProperties->attributes) {
     if (!XrayResolveAttribute(cx, wrapper, obj, id,
                               nativeProperties->attributes,
@@ -205,6 +221,10 @@ unsafe fn resolve_own_property(cx: *mut JSContext, wrapper: *mut JSObject,
     }
 /*
     RootedObject obj(cx, getTargetObject(wrapper));
+
+    1. XrayResolveUnforgeableProperty()
+    2. nativePropertyHooks->mResolveOwnProperty
+
     if (!XrayResolveOwnProperty(cx, wrapper, obj, id, desc))
         return false;
 
