@@ -22,6 +22,7 @@ use std::mem;
 use std::cmp::PartialEq;
 use std::ptr;
 use std::slice;
+use std::str;
 use js::glue::{js_IsObjectProxyClass, js_IsFunctionProxyClass, IsProxyHandlerFamily};
 use js::glue::{GetGlobalForObjectCrossCompartment, UnwrapObject, GetProxyHandlerExtra};
 use js::glue::{IsWrapper, RUST_JSID_TO_STRING, RUST_JSID_IS_INT};
@@ -233,6 +234,11 @@ impl ConstantSpec {
             BoolVal(b) => BooleanValue(b),
             VoidVal => UndefinedValue(),
         }
+    }
+
+    pub fn get_name(&self) -> &'static str {
+        debug_assert!(self.name.last() == Some(&0));
+        str::from_utf8(self.name.init()).unwrap()
     }
 }
 

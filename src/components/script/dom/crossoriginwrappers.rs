@@ -2,6 +2,8 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
+use dom::bindings::utils::{NativeProperties, NativePropertyHooks};
+
 use js::glue::ProxyTraps;
 use js::glue::{GetProxyExtra, SetProxyExtra, UnwrapObject};
 use js::jsapi::{JSContext, JSObject, JSPropertyDescriptor, jsid};
@@ -41,6 +43,115 @@ unsafe fn get_expando_object(_cx: *mut JSContext, _target: *mut JSObject,
     // TODO: implement.
     ptr::mut_null()
 }
+
+struct NativePropertyHooksIterator {
+    current: &'static NativePropertyHooks,
+}
+
+impl Iterator<&'static NativePropertyHooks> for NativePropertyHooksIterator {
+    fn next(&mut self) -> Option<&'static NativePropertyHooks> {
+        let proto = self.current.proto_hooks;
+        match proto {
+            Some(proto) => self.current = proto,
+            _ => (),
+        }
+        proto
+    }
+}
+
+unsafe fn get_native_property_hooks(object: *mut JSObject)
+                                    -> NativePropertyHooksIterator {
+    use dom::bindings::utils::get_dom_class;
+    NativePropertyHooksIterator {
+        current: get_dom_class(object).unwrap().native_hooks
+    }
+}
+
+unsafe fn XrayResolveProperty(cx: *mut JSContext, wrapper: *mut JSObject,
+                              _obj: *mut JSObject, id: jsid,
+                              desc: &mut JSPropertyDescriptor,
+                              native_properties: &'static NativeProperties) -> bool {
+    use dom::bindings::utils::jsid_to_str;
+    use js::{JSPROP_ENUMERATE, JSPROP_PERMANENT, JSPROP_READONLY};
+
+    let name = jsid_to_str(cx, id);
+/*
+  let methods = nativeProperties->methods;
+
+  if (methods) {
+    if (!XrayResolveMethod(cx, wrapper, obj, id, methods, methodIds,
+                           methodSpecs, desc)) {
+      return false;
+    }
+    if (desc.object()) {
+      return true;
+    }
+  }
+
+  if (nativeProperties->attributes) {
+    if (!XrayResolveAttribute(cx, wrapper, obj, id,
+                              nativeProperties->attributes,
+                              nativeProperties->attributeIds,
+                              nativeProperties->attributeSpecs, desc)) {
+      return false;
+    }
+    if (desc.object()) {
+      return true;
+    }
+  }
+*/
+    let constant = native_properties.consts.and_then(|constants| {
+        constants.iter().find(|spec| name.as_slice() == spec.get_name())
+    });
+    match constant {
+        Some(constant) => {
+            desc.attrs = JSPROP_ENUMERATE | JSPROP_READONLY | JSPROP_PERMANENT;
+            desc.obj = wrapper;
+            desc.value = constant.get_value();
+            return true;
+        },
+        None => (),
+    }
+
+    return true;
+}
+
+unsafe fn DoXrayResolveNativeProperty(cx: *mut JSContext, wrapper: *mut JSObject,
+                                      native_property_hooks: &'static NativePropertyHooks,
+                                      obj: *mut JSObject, id: jsid,
+                                      desc: &mut JSPropertyDescriptor) -> bool
+{
+/*
+  if (IdEquals(id, "constructor")) {
+    return nativePropertyHooks->mConstructorID == constructors::id::_ID_Count ||
+           ResolvePrototypeOrConstructor(cx, wrapper, obj,
+                                         nativePropertyHooks->mConstructorID,
+                                         0, desc);
+  }
+*/
+
+  let native_properties = native_property_hooks.native_properties;
+
+  return XrayResolveProperty(cx, wrapper, obj, id, desc, native_properties);
+}
+
+unsafe fn XrayResolveNativeProperty(cx: *mut JSContext, wrapper: *mut JSObject,
+                                    obj: *mut JSObject, id: jsid,
+                                    desc: &mut JSPropertyDescriptor) -> bool {
+    for nativePropertyHooks in get_native_property_hooks(obj) {
+        if !DoXrayResolveNativeProperty(cx, wrapper, nativePropertyHooks,
+                                        obj, id, desc) {
+            return false;
+        }
+
+        if desc.obj.is_not_null() {
+            return true;
+        }
+    }
+
+    return true;
+}
+
 
 unsafe fn resolve_own_property(cx: *mut JSContext, wrapper: *mut JSObject,
                                _holder: *mut JSObject, id: jsid, flags: c_uint,
@@ -102,19 +213,6 @@ unsafe fn resolve_own_property(cx: *mut JSContext, wrapper: *mut JSObject,
     return true;
 }
 
-/*
-fn GetNativePropertyHooks(cx: *mut JSContext, obj: *mut JSObject)
-                          -> &'static NativePropertyHooks {
-    use dom::bindings::utils::get_dom_class;
-
-    match get_dom_class(obj) {
-        Ok(class) => class->native_hooks,
-        _ => fail!(),
-    }
-}
-*/
-
-
 extern fn get_property_descriptor(cx: *mut JSContext,
                                   wrapper: *mut JSObject,
                                   id: jsid,
@@ -164,12 +262,13 @@ extern fn get_property_descriptor(cx: *mut JSContext,
                 break;
             }
 
-            /*
             // Nothing in the cache. Call through, and cache the result.
-            RootedObject obj(cx, getTargetObject(wrapper));
-            if (!XrayResolveNativeProperty(cx, wrapper, holder, id, desc))
+            let obj = get_target_object(wrapper);
+            if !XrayResolveNativeProperty(cx, wrapper, obj, id, desc) {
                 return false;
+            }
 
+/*
             MOZ_ASSERT(!desc.object() || desc.object() == wrapper, "What did we resolve this on?");
 
 
