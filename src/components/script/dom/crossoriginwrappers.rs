@@ -3,6 +3,19 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 use js::glue::ProxyTraps;
+use js::jsapi::{JSContext, JSObject};
+
+use std::ptr;
+
+extern fn get_prototype_of(_cx: *mut JSContext,
+                           _wrapper: *mut JSObject,
+                           proto: *mut *mut JSObject)
+                           -> bool {
+    unsafe {
+        *proto = ptr::mut_null();
+    }
+    true
+}
 
 pub static proxy_handler: ProxyTraps = ProxyTraps {
     getPropertyDescriptor: None,
@@ -32,6 +45,6 @@ pub static proxy_handler: ProxyTraps = ProxyTraps {
     iteratorNext: None,
     finalize: None,
     getElementIfPresent: None,
-    getPrototypeOf: None,
+    getPrototypeOf: Some(get_prototype_of),
     trace: None
 };
