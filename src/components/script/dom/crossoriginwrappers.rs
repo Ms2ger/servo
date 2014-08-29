@@ -11,7 +11,7 @@ use js::jsapi::{JS_GetGlobalForObject, JS_NewObjectWithGivenProto};
 use js::jsval::ObjectValue;
 use js::rust::with_compartment;
 
-use libc::c_uint;
+use libc::{c_int, c_uint};
 use std::ptr;
 
 static HOLDER_SLOT: c_uint = 0;
@@ -432,3 +432,49 @@ pub static proxy_handler: ProxyTraps = ProxyTraps {
     getPrototypeOf: Some(get_prototype_of),
     trace: None
 };
+
+pub extern fn enter(cx: *mut JSContext, wrapper: *mut JSObject, id: jsid,
+                    act: c_int, bp: *mut bool) -> bool {
+    use dom::bindings::utils::jsid_to_str;
+    use js::glue::WRAPPER_ACTION_CALL;
+    use js::glue::{RUST_JSID_IS_STRING, GetProxyPrivate};
+    use js::jsapi::JS_GetClass;
+    use std::str::raw::c_str_to_static_slice;
+
+    unsafe {
+        if act == WRAPPER_ACTION_CALL {
+            *bp = false;
+            return false;
+        }
+
+        // XXX act == Wrapper::ENUMERATE
+
+        // XXX act == Wrapper::GET_PROPERTY_DESCRIPTOR
+
+        if RUST_JSID_IS_STRING(id) == 0 {
+            *bp = false;
+            return false;
+        }
+
+        let _name = jsid_to_str(cx, id);
+        let obj = GetProxyPrivate(wrapper).to_object();
+
+        let class = JS_GetClass(obj);
+        let class_name = c_str_to_static_slice((*class).name);
+        if class_name == "Window" {
+            let result = false;
+            // return dom::WindowBinding::IsPermitted(prop, act == Wrapper::SET);
+            *bp = result;
+            return result;
+        }
+
+        if class_name == "Location" {
+            let result = false;
+            // return dom::LocationBinding::IsPermitted(prop, act == Wrapper::SET);
+            *bp = result;
+            return result;
+        }
+
+        return false;
+    }
+}
