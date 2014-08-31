@@ -10,7 +10,7 @@ use dom::bindings::global::Window;
 use dom::bindings::js::{JS, JSRef, RootCollection, Temporary, OptionalSettable};
 use dom::bindings::js::OptionalRootable;
 use dom::bindings::utils::Reflectable;
-use dom::bindings::utils::{wrap_for_same_compartment, pre_wrap};
+use dom::bindings::utils::{wrap_for_other_compartment, wrap_for_same_compartment, pre_wrap};
 use dom::document::{Document, HTMLDocument, DocumentHelpers};
 use dom::element::{Element, HTMLButtonElementTypeId, HTMLInputElementTypeId};
 use dom::element::{HTMLSelectElementTypeId, HTMLTextAreaElementTypeId, HTMLOptionElementTypeId};
@@ -282,16 +282,8 @@ impl ScriptTask {
                -> Rc<ScriptTask> {
         let (js_runtime, js_context) = ScriptTask::new_rt_and_cx();
         unsafe {
-            // JS_SetWrapObjectCallbacks clobbers the existing wrap callback,
-            // and JSCompartment::wrap crashes if that happens. The only way
-            // to retrieve the default callback is as the result of
-            // JS_SetWrapObjectCallbacks, which is why we call it twice.
-            let callback = JS_SetWrapObjectCallbacks((*js_runtime).ptr,
-                                                     None,
-                                                     Some(wrap_for_same_compartment),
-                                                     None);
             JS_SetWrapObjectCallbacks((*js_runtime).ptr,
-                                      callback,
+                                      Some(wrap_for_other_compartment),
                                       Some(wrap_for_same_compartment),
                                       Some(pre_wrap));
         }

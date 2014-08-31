@@ -41,6 +41,7 @@ use js::jsapi::{JSFunctionSpec, JSPropertySpec};
 use js::jsapi::{JS_NewGlobalObject, JS_InitStandardClasses};
 use js::jsapi::{JSString};
 use js::jsapi::JS_DeletePropertyById2;
+use js::jsapi::{JSCompartment, JS_GetGlobalForCompartmentOrNull};
 use js::jsfriendapi::JS_ObjectToOuterObject;
 use js::jsfriendapi::bindgen::JS_NewObjectWithUniqueType;
 use js::jsval::JSVal;
@@ -51,6 +52,7 @@ use js::{JSPROP_ENUMERATE, JSCLASS_IS_GLOBAL, JSCLASS_IS_DOMJSCLASS};
 use js::JSPROP_PERMANENT;
 use js::{JSFUN_CONSTRUCTOR, JSPROP_READONLY};
 use js;
+use url::Url;
 
 #[allow(raw_pointer_deriving)]
 #[deriving(Encodable)]
@@ -666,6 +668,44 @@ pub fn CreateDOMGlobal(cx: *mut JSContext, class: *const JSClass) -> *mut JSObje
         });
         initialize_global(obj);
         obj
+    }
+}
+
+fn get_url_from_compartment(cx: *mut JSContext,
+                            compartment: *mut JSCompartment) -> Url {
+    let global = unsafe { JS_GetGlobalForCompartmentOrNull(cx, compartment) };
+    assert!(global.is_not_null());
+    let window = get_window_from_reflector(global).root();
+    return window.get_url();
+}
+
+/// Callback to wrap cross-origin objects.
+pub extern fn wrap_for_other_compartment(cx: *mut JSContext, obj: *mut JSObject,
+                                         _wrappedProto: *mut JSObject,
+                                         _parent: *mut JSObject,
+                                         _flags: c_uint) -> *mut JSObject {
+    use js::glue::{GetObjectCompartment, GetContextCompartment};
+    use js::glue::{GetCrossCompartmentWrapperSingleton, WrapperNew};
+    unsafe {
+        // Compute the information we need to select the right wrapper.
+        let origin = GetObjectCompartment(obj);
+        let target = GetContextCompartment(cx);
+        let origin_url = get_url_from_compartment(cx, origin);
+        let target_url = get_url_from_compartment(cx, target);
+        let same_origin = origin_url.scheme == target_url.scheme &&
+                          origin_url.host() == target_url.host() &&
+                          origin_url.port() == target_url.port();
+
+        let wrapper = if same_origin {
+            GetCrossCompartmentWrapperSingleton()
+        } else {
+            match get_dom_class(obj) {
+                Ok(_) => fail!(),
+                Err(_) => fail!("We don't currently allow cross-origin access"),
+            }
+        };
+
+        return WrapperNew(cx, obj, wrapper);
     }
 }
 
