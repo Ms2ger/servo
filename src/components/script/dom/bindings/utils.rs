@@ -9,7 +9,7 @@ use dom::bindings::codegen::PrototypeList::MAX_PROTO_CHAIN_LENGTH;
 use dom::bindings::conversions::{FromJSValConvertible, IDLInterface};
 use dom::bindings::error::throw_type_error;
 use dom::bindings::global::{GlobalRef, GlobalField, WindowField, WorkerField};
-use dom::bindings::js::{JS, Temporary, Root};
+use dom::bindings::js::{JS, Temporary};
 use dom::bindings::trace::Untraceable;
 use dom::browsercontext;
 use dom::window;
@@ -684,17 +684,23 @@ pub extern fn pre_wrap(cx: *mut JSContext, _scope: *mut JSObject,
     }
 }
 
+/// Get a `Window` from its reflector.
+/// Fails if the object is not a reflector for a `Window`.
+fn get_window_from_reflector(object: *mut JSObject)
+                             -> Temporary<window::Window> {
+    let window: JS<window::Window> =
+        unwrap_jsmanaged(object,
+                         IDLInterface::get_prototype_id(None::<window::Window>),
+                         IDLInterface::get_prototype_depth(None::<window::Window>))
+        .unwrap();
+    Temporary::new(window)
+}
+
 /// Callback to outerize windows.
 pub extern fn outerize_global(_cx: *mut JSContext, obj: JSHandleObject) -> *mut JSObject {
     unsafe {
         debug!("outerizing");
-        let obj = *obj.unnamed_field1;
-        let win: Root<window::Window> =
-            unwrap_jsmanaged(obj,
-                             IDLInterface::get_prototype_id(None::<window::Window>),
-                             IDLInterface::get_prototype_depth(None::<window::Window>))
-            .unwrap()
-            .root();
+        let win = get_window_from_reflector(*obj.unnamed_field1).root();
         win.deref().browser_context.deref().borrow().get_ref().window_proxy()
     }
 }
