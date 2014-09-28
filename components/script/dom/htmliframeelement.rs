@@ -106,10 +106,11 @@ impl<'a> HTMLIFrameElementHelpers for JSRef<'a, HTMLIFrameElement> {
 
     fn process_the_iframe_attributes(self, first_time: bool) {
         fn navigate(_url: Url) {
-            // Any navigation required of the user agent in the process the
-            // iframe attributes algorithm must be completed as an explicit
-            // self-navigation override and with the iframe element's node
-            // document's browsing context as the source browsing context.
+            // Any _navigation_ required of the user agent in the
+            // _process the iframe attributes_ algorithm must be completed as
+            // an _explicit self-navigation override_ and with the iframe
+            // element's _node document_'s _browsing context_ as the
+            // _source browsing context_.
             //
             // Furthermore, if the active document of the element's child
             // browsing context before such a navigation was not completely
@@ -122,6 +123,10 @@ impl<'a> HTMLIFrameElementHelpers for JSRef<'a, HTMLIFrameElement> {
             // Document created when the child browsing context was created,
             // then any navigation required of the user agent in that
             // algorithm must be completed with replacement enabled.
+
+            let document = document_from_node(self).root();
+            let window = document.window.root();
+            let _source_browsing_context = window.browser_context.borrow().as_ref().unwrap();
         }
 
         assert!(self.browser_context.borrow().is_some());
