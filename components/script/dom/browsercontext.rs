@@ -25,6 +25,18 @@ pub struct BrowserContext {
 
 impl BrowserContext {
     pub fn new(document: JSRef<Document>) -> BrowserContext {
+        // When a browsing context is first created, it must be created with a
+        // single Document in its session history, whose address is
+        // about:blank, which is marked as being an HTML document, whose
+        // character encoding is UTF-8, and which is both ready for post-load
+        // tasks and completely loaded immediately, along with a new Window
+        // object that the Document is associated with. The Document must have
+        // a single child html node, which itself has two empty child nodes:
+        // a head element, and a body element. As soon as this Document is
+        // created, the user agent must implement the sandboxing for it. If the
+        // browsing context has a creator Document, then the browsing context's
+        // Document's referrer must be set to the address of that creator
+        // Document at the time of the browsing context's creation.
         let mut context = BrowserContext {
             history: vec!(SessionHistoryEntry::new(document)),
             active_index: 0,

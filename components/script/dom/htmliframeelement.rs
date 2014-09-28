@@ -10,6 +10,7 @@ use dom::bindings::codegen::InheritTypes::{HTMLElementCast, HTMLIFrameElementDer
 use dom::bindings::js::{JSRef, Temporary, OptionalRootable};
 use dom::bindings::trace::Traceable;
 use dom::bindings::utils::{Reflectable, Reflector};
+use dom::browsercontext::BrowserContext;
 use dom::document::Document;
 use dom::element::{HTMLIFrameElementTypeId, Element};
 use dom::element::AttributeHandlers;
@@ -28,7 +29,7 @@ use servo_util::namespace::Null;
 use servo_util::str::DOMString;
 
 use std::ascii::StrAsciiExt;
-use std::cell::Cell;
+use std::cell::{Cell, RefCell};
 use url::{Url, UrlParser};
 
 enum SandboxAllowance {
@@ -47,6 +48,7 @@ pub struct HTMLIFrameElement {
     pub htmlelement: HTMLElement,
     pub size: Traceable<Cell<Option<IFrameSize>>>,
     pub sandbox: Traceable<Cell<Option<u8>>>,
+    browser_context: RefCell<Option<BrowserContext>>,
 }
 
 impl HTMLIFrameElementDerived for EventTarget {
@@ -63,9 +65,9 @@ pub struct IFrameSize {
 
 pub trait HTMLIFrameElementHelpers {
     fn is_sandboxed(self) -> bool;
-    fn get_url(self) -> Option<Url>;
+    fn get_url(self) -> Url;
     /// http://www.whatwg.org/html/#process-the-iframe-attributes
-    fn process_the_iframe_attributes(self);
+    fn process_the_iframe_attributes(self, first_time: bool);
 }
 
 impl<'a> HTMLIFrameElementHelpers for JSRef<'a, HTMLIFrameElement> {
@@ -73,26 +75,80 @@ impl<'a> HTMLIFrameElementHelpers for JSRef<'a, HTMLIFrameElement> {
         self.sandbox.deref().get().is_some()
     }
 
-    fn get_url(self) -> Option<Url> {
+    fn get_url(self) -> Url {
+        // If the value of the src attribute is missing, or its value is the
+        // empty string, let url be the string "about:blank".
+        //
+        // Otherwise, resolve the value of the src attribute, relative to the
+        // iframe element.
+        //
+        // If that is not successful, then let url be the string "about:blank".
+        // Otherwise, let url be the resulting absolute URL.
+
         let element: JSRef<Element> = ElementCast::from_ref(self);
-        element.get_attribute(Null, "src").root().and_then(|src| {
-            let url = src.deref().value();
-            if url.as_slice().is_empty() {
+        let url = element.get_attribute(Null, "src").root().and_then(|src| {
+            let url_value = src.deref().value();
+            let url_string = url_value.as_slice();
+            if url_string.is_empty() {
                 None
             } else {
                 let window = window_from_node(self).root();
                 UrlParser::new().base_url(&window.deref().page().get_url())
-                    .parse(url.as_slice()).ok()
+                    .parse(url_string).ok()
             }
-        })
+        });
+
+        match url {
+            Some(url) => url,
+            None => Url::parse("about:blank").unwrap(),
+        }
     }
 
-    fn process_the_iframe_attributes(self) {
-        let url = match self.get_url() {
-            Some(url) => url.clone(),
-            None => Url::parse("about:blank").unwrap(),
-        };
+    fn process_the_iframe_attributes(self, first_time: bool) {
+        fn navigate(_url: Url) {
+            // Any navigation required of the user agent in the process the
+            // iframe attributes algorithm must be completed as an explicit
+            // self-navigation override and with the iframe element's node
+            // document's browsing context as the source browsing context.
+            //
+            // Furthermore, if the active document of the element's child
+            // browsing context before such a navigation was not completely
+            // loaded at the time of the new navigation, then the navigation
+            // must be completed with replacement enabled.
+            //
+            // Similarly, if the child browsing context's session history
+            // contained only one Document when the process the iframe
+            // attributes algorithm was invoked, and that was the about:blank
+            // Document created when the child browsing context was created,
+            // then any navigation required of the user agent in that
+            // algorithm must be completed with replacement enabled.
+        }
 
+        assert!(self.browser_context.borrow().is_some());
+
+        // Case 1: srcdoc.
+        let element: JSRef<Element> = ElementCast::from_ref(self);
+        match element.get_attribute(Null, "src").root() {
+            // Case 2.
+            None if first_time => {
+                // Queue a task to run the iframe load event steps.
+                // The task source for this task is the DOM manipulation task source.
+            }
+            // Case 3.
+            attr => {
+                // Step 1.
+                let url = self.get_url();
+
+                // Step 2.
+                // If there exists an ancestor browsing context whose active
+                // document's address, ignoring fragment identifiers, is equal
+                // to url, then abort these steps.
+
+                // Step 3.
+                navigate(url);
+            }
+        }
+/*
         let sandboxed = if self.is_sandboxed() {
             IFrameSandboxed
         } else {
@@ -111,6 +167,7 @@ impl<'a> HTMLIFrameElementHelpers for JSRef<'a, HTMLIFrameElement> {
 
         let ConstellationChan(ref chan) = *page.constellation_chan.deref();
         chan.send(LoadIframeUrlMsg(url, page.id, subpage_id, sandboxed));
+*/
     }
 }
 
@@ -120,6 +177,7 @@ impl HTMLIFrameElement {
             htmlelement: HTMLElement::new_inherited(HTMLIFrameElementTypeId, localName, document),
             size: Traceable::new(Cell::new(None)),
             sandbox: Traceable::new(Cell::new(None)),
+            browser_context: RefCell::new(None),
         }
     }
 
@@ -196,9 +254,12 @@ impl<'a> VirtualMethods for JSRef<'a, HTMLIFrameElement> {
         }
 
         if "src" == name.as_slice() {
-            let node: JSRef<Node> = NodeCast::from_ref(*self);
-            if node.is_in_doc() {
-                self.process_the_iframe_attributes()
+            // whenever an iframe element with a nested browsing context but
+            // with no srcdoc attribute specified has its src attribute set,
+            // changed, or removed, the user agent must process the iframe
+            // attributes.
+            if self.browser_context.borrow().is_some() {
+                self.process_the_iframe_attributes(false)
             }
         }
     }
@@ -220,8 +281,13 @@ impl<'a> VirtualMethods for JSRef<'a, HTMLIFrameElement> {
             _ => (),
         }
 
-        if tree_in_doc {
-            self.process_the_iframe_attributes();
+        // When an iframe element is inserted into a document that has a
+        // browsing context, the user agent must create a nested browsing
+        // context, and then process the iframe attributes for the
+        // "first time".
+        if tree_in_doc /* && self.owner_doc().has_browser_context() */ {
+            *self.browser_context.borrow_mut() = Some(BrowserContext::new());
+            self.process_the_iframe_attributes(true);
         }
     }
 }
