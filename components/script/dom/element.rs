@@ -11,7 +11,7 @@ use dom::bindings::codegen::Bindings::AttrBinding::AttrMethods;
 use dom::bindings::codegen::Bindings::ElementBinding;
 use dom::bindings::codegen::Bindings::ElementBinding::ElementMethods;
 use dom::bindings::codegen::Bindings::NamedNodeMapBinding::NamedNodeMapMethods;
-use dom::bindings::codegen::InheritTypes::{ElementDerived, NodeCast};
+use dom::bindings::codegen::InheritTypes::{ElementDerived, NodeCast, ElementCast};
 use dom::bindings::js::{MutNullableJS, JS, JSRef, Temporary, TemporaryPushable};
 use dom::bindings::js::{OptionalSettable, OptionalRootable, Root};
 use dom::bindings::utils::{Reflectable, Reflector};
@@ -309,6 +309,9 @@ pub trait ElementHelpers<'a> {
     fn get_namespace(self) -> &'a Namespace;
     fn summarize(self) -> Vec<AttrInfo>;
     fn is_void(self) -> bool;
+    /// https://html.spec.whatwg.org/multipage/#nearest-activatable-element
+    fn nearest_activatable_element(self) -> Option<Temporary<Element>>;
+    fn get_activation_behavior(self) -> Option<()>;
 }
 
 impl<'a> ElementHelpers<'a> for JSRef<'a, Element> {
@@ -348,6 +351,22 @@ impl<'a> ElementHelpers<'a> for JSRef<'a, Element> {
             "frame" | "hr" | "img" | "input" | "keygen" | "link" | "menuitem" |
             "meta" | "param" | "source" | "track" | "wbr" => true,
             _ => false
+        }
+    }
+
+    fn nearest_activatable_element(self) -> Option<Temporary<Element>> {
+        let node: JSRef<Node> = NodeCast::from_ref(self);
+        node.ancestors()
+            .filter_map(|node| ElementCast::to_ref(node))
+            .find(|element: &JSRef<Element>| element.get_activation_behavior().is_some())
+            .map(Temporary::from_rooted)
+    }
+
+    fn get_activation_behavior(self) -> Option<()> {
+        let node: JSRef<Node> = NodeCast::from_ref(self);
+        match node.type_id() {
+            ElementNodeTypeId(HTMLAnchorElementTypeId) => Some(()),
+            _ => None,
         }
     }
 }
