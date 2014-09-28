@@ -16,7 +16,7 @@ use dom::element::{HTMLIFrameElementTypeId, Element};
 use dom::element::AttributeHandlers;
 use dom::eventtarget::{EventTarget, NodeTargetTypeId};
 use dom::htmlelement::HTMLElement;
-use dom::node::{Node, NodeHelpers, ElementNodeTypeId, window_from_node};
+use dom::node::{Node, NodeHelpers, ElementNodeTypeId, window_from_node, document_from_node};
 use dom::virtualmethods::VirtualMethods;
 use dom::window::Window;
 use page::IterablePage;
@@ -105,7 +105,7 @@ impl<'a> HTMLIFrameElementHelpers for JSRef<'a, HTMLIFrameElement> {
     }
 
     fn process_the_iframe_attributes(self, first_time: bool) {
-        fn navigate(_url: Url) {
+        fn navigate(element: JSRef<HTMLIFrameElement>, _url: Url) {
             // Any _navigation_ required of the user agent in the
             // _process the iframe attributes_ algorithm must be completed as
             // an _explicit self-navigation override_ and with the iframe
@@ -124,7 +124,7 @@ impl<'a> HTMLIFrameElementHelpers for JSRef<'a, HTMLIFrameElement> {
             // then any navigation required of the user agent in that
             // algorithm must be completed with replacement enabled.
 
-            let document = document_from_node(self).root();
+            let document = document_from_node(element).root();
             let window = document.window.root();
             let _source_browsing_context = window.browser_context.borrow().as_ref().unwrap();
         }
@@ -150,7 +150,7 @@ impl<'a> HTMLIFrameElementHelpers for JSRef<'a, HTMLIFrameElement> {
                 // to url, then abort these steps.
 
                 // Step 3.
-                navigate(url);
+                navigate(self, url);
             }
         }
 /*
@@ -291,7 +291,7 @@ impl<'a> VirtualMethods for JSRef<'a, HTMLIFrameElement> {
         // context, and then process the iframe attributes for the
         // "first time".
         if tree_in_doc /* && self.owner_doc().has_browser_context() */ {
-            *self.browser_context.borrow_mut() = Some(BrowserContext::new());
+            *self.browser_context.borrow_mut() = Some(BrowserContext::new(fail!()));
             self.process_the_iframe_attributes(true);
         }
     }
