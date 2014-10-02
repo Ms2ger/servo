@@ -761,7 +761,7 @@ impl ScriptTask {
         //
         // Note: We can parse the next document in parallel with any previous documents.
         let html_parsing_result =
-            hubbub_html_parser::parse_html(&*page,
+            hubbub_html_parser::parse_html(&*page.url,
                                            *document,
                                            parser_input,
                                            self.resource_task.clone());

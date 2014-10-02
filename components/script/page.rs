@@ -37,7 +37,7 @@ use url::Url;
 
 /// Encapsulates a handle to a frame and its associated layout information.
 #[jstraceable]
-#[allow(unrooted_must_root)] // FIXME(#3543) should be must_root.
+#[must_root]
 pub struct Page {
     /// Pipeline id associated with this page.
     pub id: PipelineId,
@@ -72,7 +72,7 @@ pub struct Page {
     /// TODO(tkuehn): this currently does not follow any particular caching policy
     /// and simply caches pages forever (!). The bool indicates if reflow is required
     /// when reloading.
-    url: Untraceable<RefCell<Option<(Url, bool)>>>,
+    pub url: Untraceable<RefCell<Option<(Url, bool)>>>,
 
     next_subpage_id: Traceable<Cell<SubpageId>>,
 

@@ -17,7 +17,6 @@ use dom::htmlformelement::HTMLFormElement;
 use dom::htmlscriptelement::HTMLScriptElementHelpers;
 use dom::node::NodeHelpers;
 use dom::types::*;
-use page::Page;
 
 use encoding::all::UTF_8;
 use encoding::types::{Encoding, DecodeReplace};
@@ -282,7 +281,7 @@ pub fn build_element_from_tag(tag: DOMString, ns: Namespace, document: JSRef<Doc
     return ElementCast::from_temporary(HTMLUnknownElement::new(tag, document));
 }
 
-pub fn parse_html(page: &Page,
+pub fn parse_html(page_url: &RefCell<Option<(Url, bool)>>,
                   document: JSRef<Document>,
                   input: HTMLInput,
                   resource_task: ResourceTask)
@@ -325,13 +324,13 @@ pub fn parse_html(page: &Page,
                 // Store the final URL before we start parsing, so that DOM routines
                 // (e.g. HTMLImageElement::update_image) can resolve relative URLs
                 // correctly.
-                *page.mut_url() = Some((base_url.clone(), true));
+                *page_url.borrow_mut() = Some((base_url.clone(), true));
             }
 
             (Some(base_url), Some(load_response))
         },
         InputString(_) => {
-            match *page.url() {
+            match *page_url.borrow() {
                 Some((ref page_url, _)) => (Some(page_url.clone()), None),
                 None => (None, None),
             }
