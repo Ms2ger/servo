@@ -39,8 +39,10 @@ class MachCommands(CommandBase):
 
     def run_test(self, prefix, args=[]):
         t = self.find_test(prefix)
-        if t:
-            return subprocess.call([t] + args, env=self.build_env())
+        if not t:
+            return 1
+
+        return subprocess.call([t] + args, env=self.build_env())
 
     @Command('test',
              description='Run all Servo tests',
