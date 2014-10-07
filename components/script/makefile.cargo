@@ -12,7 +12,15 @@ AUTOGEN_SRC = $(foreach var,$(BINDINGS),$(subst $(WEBIDLS_SRC),$(BINDINGS_SRC)/B
 
 CACHE_DIR = $(BINDINGS_SRC)/_cache
 
-bindinggen_dependencies := $(addprefix $(BINDINGS_SRC)/,BindingGen.py Bindings.conf Configuration.py CodegenRust.py parser/WebIDL.py ParserResults.pkl Bindings/.done)
+bindinggen_dependencies := $(addprefix $(BINDINGS_SRC)/, \
+  BindingGen.py \
+  Bindings.conf \
+  Configuration.py \
+  CodegenRust.py \
+  CodegenProxies.py \
+  parser/WebIDL.py \
+  ParserResults.pkl \
+  Bindings/.done)
 
 globalgen_dependencies := $(addprefix $(BINDINGS_SRC)/,GlobalGen.py Bindings.conf Configuration.py CodegenRust.py parser/WebIDL.py) $(CACHE_DIR)/.done $(BINDINGS_SRC)/Bindings/.done
 
