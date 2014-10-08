@@ -16,6 +16,7 @@ bindinggen_dependencies := $(addprefix $(BINDINGS_SRC)/, \
   BindingGen.py \
   Bindings.conf \
   Configuration.py \
+  CodegenGeneric.py \
   CodegenRust.py \
   CodegenProxies.py \
   parser/WebIDL.py \

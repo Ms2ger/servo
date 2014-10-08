@@ -2,7 +2,7 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-from CodegenRust import (
+from CodegenGeneric import (
     Argument,
     CGAbstractExternMethod,
     CGAbstractMethod,
@@ -10,15 +10,18 @@ from CodegenRust import (
     CGGeneric,
     CGIfWrapper,
     CGIndenter,
-    CGPerSignatureCall,
     CGThing,
+    stripTrailingWhitespace,
+    toStringBool,
+)
+
+from CodegenRust import (
+    CGPerSignatureCall,
     DOMClass,
     FakeArgument,
     getJSToNativeConversionTemplate,
     instantiateJSToNativeConversionTemplate,
     MakeNativeName,
-    stripTrailingWhitespace,
-    toStringBool,
     wrapForType,
 )
 
