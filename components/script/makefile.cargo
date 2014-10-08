@@ -19,6 +19,7 @@ bindinggen_dependencies := $(addprefix $(BINDINGS_SRC)/, \
   CodegenGeneric.py \
   CodegenRust.py \
   CodegenProxies.py \
+  CodegenCallbacks.py \
   parser/WebIDL.py \
   ParserResults.pkl \
   Bindings/.done)

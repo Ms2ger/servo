@@ -3,6 +3,7 @@
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 import re
+import string
 
 
 class CGThing():
@@ -143,11 +144,11 @@ class Argument():
         self.mutable = mutable
 
     def declare(self):
-        string = ('mut ' if self.mutable else '') + self.name + ((': ' + self.argType) if self.argType else '')
+        s = ('mut ' if self.mutable else '') + self.name + ((': ' + self.argType) if self.argType else '')
         #XXXjdm Support default arguments somehow :/
         #if self.default is not None:
         #    string += " = " + self.default
-        return string
+        return s
 
     def define(self):
         return self.argType + ' ' + self.name
@@ -243,6 +244,463 @@ class CGAbstractExternMethod(CGAbstractMethod):
     def __init__(self, descriptor, name, returnType, args):
         CGAbstractMethod.__init__(self, descriptor, name, returnType, args,
                                   inline=False, extern=True)
+
+
+class ClassItem:
+    """ Use with CGClass """
+    def __init__(self, name, visibility):
+        self.name = name
+        self.visibility = visibility
+    def declare(self, cgClass):
+        assert False
+    def define(self, cgClass):
+        assert False
+
+class ClassBase(ClassItem):
+    def __init__(self, name, visibility='pub'):
+        ClassItem.__init__(self, name, visibility)
+    def declare(self, cgClass):
+        return '%s %s' % (self.visibility, self.name)
+    def define(self, cgClass):
+        # Only in the header
+        return ''
+
+class ClassMethod(ClassItem):
+    def __init__(self, name, returnType, args, inline=False, static=False,
+                 virtual=False, const=False, bodyInHeader=False,
+                 templateArgs=None, visibility='public', body=None,
+                 breakAfterReturnDecl="\n",
+                 breakAfterSelf="\n", override=False):
+        """
+        override indicates whether to flag the method as MOZ_OVERRIDE
+        """
+        assert not override or virtual
+        self.returnType = returnType
+        self.args = args
+        self.inline = False
+        self.static = static
+        self.virtual = virtual
+        self.const = const
+        self.bodyInHeader = True
+        self.templateArgs = templateArgs
+        self.body = body
+        self.breakAfterReturnDecl = breakAfterReturnDecl
+        self.breakAfterSelf = breakAfterSelf
+        self.override = override
+        ClassItem.__init__(self, name, visibility)
+
+    def getDecorators(self, declaring):
+        decorators = []
+        if self.inline:
+            decorators.append('inline')
+        if declaring:
+            if self.static:
+                decorators.append('static')
+            if self.virtual:
+                decorators.append('virtual')
+        if decorators:
+            return ' '.join(decorators) + ' '
+        return ''
+
+    def getBody(self):
+        # Override me or pass a string to constructor
+        assert self.body is not None
+        return self.body
+
+    def declare(self, cgClass):
+        templateClause = '<%s>' % ', '.join(self.templateArgs) \
+                         if self.bodyInHeader and self.templateArgs else ''
+        args = ', '.join([a.declare() for a in self.args])
+        if self.bodyInHeader:
+            body = CGIndenter(CGGeneric(self.getBody())).define()
+            body = ' {\n' + body + '\n}'
+        else:
+           body = ';'
+
+        return string.Template("${decorators}%s"
+                               "${visibility}fn ${name}${templateClause}(${args})${returnType}${const}${override}${body}%s" %
+                               (self.breakAfterReturnDecl, self.breakAfterSelf)
+                               ).substitute({
+                'templateClause': templateClause,
+                'decorators': self.getDecorators(True),
+                'returnType': (" -> %s" % self.returnType) if self.returnType else "",
+                'name': self.name,
+                'const': ' const' if self.const else '',
+                'override': ' MOZ_OVERRIDE' if self.override else '',
+                'args': args,
+                'body': body,
+                'visibility': self.visibility + ' ' if self.visibility is not 'priv' else ''
+                })
+
+    def define(self, cgClass):
+        pass
+
+class ClassUsingDeclaration(ClassItem):
+    """"
+    Used for importing a name from a base class into a CGClass
+
+    baseClass is the name of the base class to import the name from
+
+    name is the name to import
+
+    visibility determines the visibility of the name (public,
+    protected, private), defaults to public.
+    """
+    def __init__(self, baseClass, name, visibility='public'):
+        self.baseClass = baseClass
+        ClassItem.__init__(self, name, visibility)
+
+    def declare(self, cgClass):
+        return string.Template("""using ${baseClass}::${name};
+""").substitute({ 'baseClass': self.baseClass,
+                  'name': self.name })
+
+    def define(self, cgClass):
+        return ''
+
+class ClassConstructor(ClassItem):
+    """
+    Used for adding a constructor to a CGClass.
+
+    args is a list of Argument objects that are the arguments taken by the
+    constructor.
+
+    inline should be True if the constructor should be marked inline.
+
+    bodyInHeader should be True if the body should be placed in the class
+    declaration in the header.
+
+    visibility determines the visibility of the constructor (public,
+    protected, private), defaults to private.
+
+    explicit should be True if the constructor should be marked explicit.
+
+    baseConstructors is a list of strings containing calls to base constructors,
+    defaults to None.
+
+    body contains a string with the code for the constructor, defaults to empty.
+    """
+    def __init__(self, args, inline=False, bodyInHeader=False,
+                 visibility="priv", explicit=False, baseConstructors=None,
+                 body=""):
+        self.args = args
+        self.inline = False
+        self.bodyInHeader = bodyInHeader
+        self.explicit = explicit
+        self.baseConstructors = baseConstructors or []
+        self.body = body
+        ClassItem.__init__(self, None, visibility)
+
+    def getDecorators(self, declaring):
+        decorators = []
+        if self.explicit:
+            decorators.append('explicit')
+        if self.inline and declaring:
+            decorators.append('inline')
+        if decorators:
+            return ' '.join(decorators) + ' '
+        return ''
+
+    def getInitializationList(self, cgClass):
+        items = [str(c) for c in self.baseConstructors]
+        for m in cgClass.members:
+            if not m.static:
+                initialize = m.body
+                if initialize:
+                    items.append(m.name + "(" + initialize + ")")
+
+        if len(items) > 0:
+            return '\n  : ' + ',\n    '.join(items)
+        return ''
+
+    def getBody(self, cgClass):
+        initializers = ["  parent: %s" % str(self.baseConstructors[0])]
+        return (self.body + (
+                "%s {\n"
+                "%s\n"
+                "}") % (cgClass.name, '\n'.join(initializers)))
+
+    def declare(self, cgClass):
+        args = ', '.join([a.declare() for a in self.args])
+        body = '  ' + self.getBody(cgClass);
+        body = stripTrailingWhitespace(body.replace('\n', '\n  '))
+        if len(body) > 0:
+            body += '\n'
+        body = ' {\n' + body + '}'
+
+        return string.Template("""pub fn ${decorators}new(${args}) -> ${className}${body}
+""").substitute({ 'decorators': self.getDecorators(True),
+                  'className': cgClass.getNameString(),
+                  'args': args,
+                  'body': body })
+
+    def define(self, cgClass):
+        if self.bodyInHeader:
+            return ''
+
+        args = ', '.join([a.define() for a in self.args])
+
+        body = '  ' + self.getBody()
+        body = '\n' + stripTrailingWhitespace(body.replace('\n', '\n  '))
+        if len(body) > 0:
+            body += '\n'
+
+        return string.Template("""${decorators}
+${className}::${className}(${args})${initializationList}
+{${body}}
+""").substitute({ 'decorators': self.getDecorators(False),
+                  'className': cgClass.getNameString(),
+                  'args': args,
+                  'initializationList': self.getInitializationList(cgClass),
+                  'body': body })
+
+class ClassDestructor(ClassItem):
+    """
+    Used for adding a destructor to a CGClass.
+
+    inline should be True if the destructor should be marked inline.
+
+    bodyInHeader should be True if the body should be placed in the class
+    declaration in the header.
+
+    visibility determines the visibility of the destructor (public,
+    protected, private), defaults to private.
+
+    body contains a string with the code for the destructor, defaults to empty.
+
+    virtual determines whether the destructor is virtual, defaults to False.
+    """
+    def __init__(self, inline=False, bodyInHeader=False,
+                 visibility="private", body='', virtual=False):
+        self.inline = inline or bodyInHeader
+        self.bodyInHeader = bodyInHeader
+        self.body = body
+        self.virtual = virtual
+        ClassItem.__init__(self, None, visibility)
+
+    def getDecorators(self, declaring):
+        decorators = []
+        if self.virtual and declaring:
+            decorators.append('virtual')
+        if self.inline and declaring:
+            decorators.append('inline')
+        if decorators:
+            return ' '.join(decorators) + ' '
+        return ''
+
+    def getBody(self):
+        return self.body
+
+    def declare(self, cgClass):
+        if self.bodyInHeader:
+            body = '  ' + self.getBody();
+            body = stripTrailingWhitespace(body.replace('\n', '\n  '))
+            if len(body) > 0:
+                body += '\n'
+            body = '\n{\n' + body + '}'
+        else:
+            body = ';'
+
+        return string.Template("""${decorators}~${className}()${body}
+""").substitute({ 'decorators': self.getDecorators(True),
+                  'className': cgClass.getNameString(),
+                  'body': body })
+
+    def define(self, cgClass):
+        if self.bodyInHeader:
+            return ''
+
+        body = '  ' + self.getBody()
+        body = '\n' + stripTrailingWhitespace(body.replace('\n', '\n  '))
+        if len(body) > 0:
+            body += '\n'
+
+        return string.Template("""${decorators}
+${className}::~${className}()
+{${body}}
+""").substitute({ 'decorators': self.getDecorators(False),
+                  'className': cgClass.getNameString(),
+                  'body': body })
+
+class ClassMember(ClassItem):
+    def __init__(self, name, type, visibility="priv", static=False,
+                 body=None):
+        self.type = type;
+        self.static = static
+        self.body = body
+        ClassItem.__init__(self, name, visibility)
+
+    def declare(self, cgClass):
+        return '%s %s: %s,\n' % (self.visibility, self.name, self.type)
+
+    def define(self, cgClass):
+        if not self.static:
+            return ''
+        if self.body:
+            body = " = " + self.body
+        else:
+            body = ""
+        return '%s %s::%s%s;\n' % (self.type, cgClass.getNameString(),
+                                      self.name, body)
+
+class ClassTypedef(ClassItem):
+    def __init__(self, name, type, visibility="public"):
+        self.type = type
+        ClassItem.__init__(self, name, visibility)
+
+    def declare(self, cgClass):
+        return 'typedef %s %s;\n' % (self.type, self.name)
+
+    def define(self, cgClass):
+        # Only goes in the header
+        return ''
+
+class ClassEnum(ClassItem):
+    def __init__(self, name, entries, values=None, visibility="public"):
+        self.entries = entries
+        self.values = values
+        ClassItem.__init__(self, name, visibility)
+
+    def declare(self, cgClass):
+        entries = []
+        for i in range(0, len(self.entries)):
+            if not self.values or i >= len(self.values):
+                entry = '%s' % self.entries[i]
+            else:
+                entry = '%s = %s' % (self.entries[i], self.values[i])
+            entries.append(entry)
+        name = '' if not self.name else ' ' + self.name
+        return 'enum%s\n{\n  %s\n};\n' % (name, ',\n  '.join(entries))
+
+    def define(self, cgClass):
+        # Only goes in the header
+        return ''
+
+class ClassUnion(ClassItem):
+    def __init__(self, name, entries, visibility="public"):
+        self.entries = [entry + ";" for entry in entries]
+        ClassItem.__init__(self, name, visibility)
+
+    def declare(self, cgClass):
+        return 'union %s\n{\n  %s\n};\n' % (self.name, '\n  '.join(self.entries))
+
+    def define(self, cgClass):
+        # Only goes in the header
+        return ''
+
+class CGClass(CGThing):
+    def __init__(self, name, bases=[], members=[], constructors=[],
+                 destructor=None, methods=[],
+                 typedefs = [], enums=[], unions=[], templateArgs=[],
+                 templateSpecialization=[], isStruct=False,
+                 disallowCopyConstruction=False, indent='',
+                 decorators='',
+                 extradeclarations='',
+                 extradefinitions=''):
+        CGThing.__init__(self)
+        self.name = name
+        self.bases = bases
+        self.members = members
+        self.constructors = constructors
+        # We store our single destructor in a list, since all of our
+        # code wants lists of members.
+        self.destructors = [destructor] if destructor else []
+        self.methods = methods
+        self.typedefs = typedefs
+        self.enums = enums
+        self.unions = unions
+        self.templateArgs = templateArgs
+        self.templateSpecialization = templateSpecialization
+        self.isStruct = isStruct
+        self.disallowCopyConstruction = disallowCopyConstruction
+        self.indent = indent
+        self.decorators = decorators
+        self.extradeclarations = extradeclarations
+        self.extradefinitions = extradefinitions
+
+    def getNameString(self):
+        className = self.name
+        if self.templateSpecialization:
+            className = className + \
+                '<%s>' % ', '.join([str(a) for a
+                                    in self.templateSpecialization])
+        return className
+
+    def define(self):
+        result = ''
+        if self.templateArgs:
+            templateArgs = [a.declare() for a in self.templateArgs]
+            templateArgs = templateArgs[len(self.templateSpecialization):]
+            result = result + self.indent + 'template <%s>\n' \
+                     % ','.join([str(a) for a in templateArgs])
+
+        if self.templateSpecialization:
+            specialization = \
+                '<%s>' % ', '.join([str(a) for a in self.templateSpecialization])
+        else:
+            specialization = ''
+
+        myself = ''
+        if self.decorators != '':
+            myself += self.decorators + '\n'
+        myself += '%spub struct %s%s' % (self.indent, self.name, specialization)
+        result += myself
+
+        assert len(self.bases) == 1 #XXjdm Can we support multiple inheritance?
+
+        result += '{\n%s\n' % self.indent
+
+        if self.bases:
+            self.members = [ClassMember("parent", self.bases[0].name, "pub")] + self.members
+
+        result += CGIndenter(CGGeneric(self.extradeclarations),
+                             len(self.indent)).define()
+
+        def declareMembers(cgClass, memberList):
+            result = ''
+
+            for member in memberList:
+                declaration = member.declare(cgClass)
+                declaration = CGIndenter(CGGeneric(declaration)).define()
+                result = result + declaration
+            return result
+
+        if self.disallowCopyConstruction:
+            class DisallowedCopyConstructor(object):
+                def __init__(self):
+                    self.visibility = "private"
+                def declare(self, cgClass):
+                    name = cgClass.getNameString()
+                    return ("%s(const %s&) MOZ_DELETE;\n"
+                            "void operator=(const %s) MOZ_DELETE;\n" % (name, name, name))
+            disallowedCopyConstructors = [DisallowedCopyConstructor()]
+        else:
+            disallowedCopyConstructors = []
+
+        order = [(self.enums, ''), (self.unions, ''),
+                 (self.typedefs, ''), (self.members, '')]
+
+        for (memberList, separator) in order:
+            memberString = declareMembers(self, memberList)
+            if self.indent:
+                memberString = CGIndenter(CGGeneric(memberString),
+                                          len(self.indent)).define()
+            result = result + memberString
+
+        result += self.indent + '}\n\n'
+        result += 'impl %s {\n' % self.name
+
+        order = [(self.constructors + disallowedCopyConstructors, '\n'),
+                 (self.destructors, '\n'), (self.methods, '\n)')]
+        for (memberList, separator) in order:
+            memberString = declareMembers(self, memberList)
+            if self.indent:
+                memberString = CGIndenter(CGGeneric(memberString),
+                                          len(self.indent)).define()
+            result = result + memberString
+
+        result += "}"
+        return result
 
 
 def toStringBool(arg):
