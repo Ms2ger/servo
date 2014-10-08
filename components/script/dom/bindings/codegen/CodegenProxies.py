@@ -6,7 +6,6 @@ from CodegenGeneric import (
     Argument,
     CGAbstractExternMethod,
     CGAbstractMethod,
-    CGCallGenerator,
     CGGeneric,
     CGIfWrapper,
     CGIndenter,
@@ -16,6 +15,7 @@ from CodegenGeneric import (
 )
 
 from CodegenRust import (
+    CGCallGenerator,
     CGPerSignatureCall,
     DOMClass,
     FakeArgument,
