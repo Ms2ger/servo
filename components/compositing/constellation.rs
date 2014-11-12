@@ -635,11 +635,7 @@ impl<LTF: LayoutTaskFactory, STF: ScriptTaskFactory> Constellation<LTF, STF> {
         // and add the new pipeline to their sub frames.
         let frame_trees = self.find_all(source_pipeline_id);
         if frame_trees.is_empty() {
-<<<<<<< HEAD
-            fail!("Constellation: source pipeline id of ScriptLoadedURLInIFrameMsg is not in
-=======
-            panic!("Constellation: source pipeline id of LoadIframeUrlMsg is not in
->>>>>>> b255f74... Rust upgrade to rustc hash b03a2755193cd756583bcf5831cf4545d75ecb8a
+            panic!("Constellation: source pipeline id of ScriptLoadedURLInIFrameMsg is not in
                    navigation context, nor is it in a pending frame. This should be
                    impossible.");
         }
@@ -648,13 +644,8 @@ impl<LTF: LayoutTaskFactory, STF: ScriptTaskFactory> Constellation<LTF, STF> {
 
         // Compare the pipeline's url to the new url. If the origin is the same,
         // then reuse the script task in creating the new pipeline
-<<<<<<< HEAD
-        let source_pipeline = self.pipelines.find(&source_pipeline_id).expect("Constellation:
-            source Id of ScriptLoadedURLInIFrameMsg does have an associated pipeline in
-=======
         let source_pipeline = self.pipelines.get(&source_pipeline_id).expect("Constellation:
-            source Id of LoadIframeUrlMsg does have an associated pipeline in
->>>>>>> b255f74... Rust upgrade to rustc hash b03a2755193cd756583bcf5831cf4545d75ecb8a
+            source Id of ScriptLoadedURLInIFrameMsg does have an associated pipeline in
             constellation. This should be impossible.").clone();
 
         let source_url = source_pipeline.load_data.url.clone();
@@ -663,13 +654,8 @@ impl<LTF: LayoutTaskFactory, STF: ScriptTaskFactory> Constellation<LTF, STF> {
                            source_url.port() == url.port()) && sandbox == IFrameUnsandboxed;
         // FIXME(tkuehn): Need to follow the standardized spec for checking same-origin
         // Reuse the script task if the URL is same-origin
-<<<<<<< HEAD
         let script_pipeline = if same_script {
-            debug!("Constellation: loading same-origin iframe at {:?}", url);
-=======
-        let new_pipeline = if same_script {
             debug!("Constellation: loading same-origin iframe at {}", url);
->>>>>>> b255f74... Rust upgrade to rustc hash b03a2755193cd756583bcf5831cf4545d75ecb8a
             Some(source_pipeline.clone())
         } else {
             debug!("Constellation: loading cross-origin iframe at {}", url);

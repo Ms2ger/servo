@@ -3,7 +3,7 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 use compositor_layer::{CompositorData, CompositorLayer, DoesntWantScrollEvents};
-use compositor_layer::{ScrollPositionChanged, WantsScrollEvents};
+use compositor_layer::WantsScrollEvents;
 use compositor_task::{ChangeReadyState, ChangeRenderState, CompositorEventListener};
 use compositor_task::{CompositorProxy, CompositorReceiver, CompositorTask};
 use compositor_task::{CreateOrUpdateDescendantLayer, CreateOrUpdateRootLayer, Exit};
