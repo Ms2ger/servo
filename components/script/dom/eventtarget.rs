@@ -139,8 +139,8 @@ impl<'a> EventTargetHelpers for JSRef<'a, EventTarget> {
                                  listener: Option<EventListener>) {
         let mut handlers = self.handlers.borrow_mut();
         let entries = match handlers.entry(ty) {
-                Occupied(entry) => entry.into_mut(),
-                Vacant(entry) => entry.set(vec!()),
+            Occupied(entry) => entry.into_mut(),
+            Vacant(entry) => entry.set(vec!()),
         };
 
         let idx = entries.iter().position(|&entry| {
@@ -198,15 +198,15 @@ impl<'a> EventTargetHelpers for JSRef<'a, EventTarget> {
 
         let source: Vec<u16> = source.as_slice().utf16_units().collect();
         let handler = unsafe {
-                JS_CompileUCFunction(cx,
-                                     ptr::null_mut(),
-                                     name.as_ptr(),
-                                     nargs,
-                                     &ARG_NAMES as *const *const i8 as *mut *const i8,
-                                     source.as_ptr(),
-                                     source.len() as size_t,
-                                     url.as_ptr(),
-                                     lineno)
+            JS_CompileUCFunction(cx,
+                                 ptr::null_mut(),
+                                 name.as_ptr(),
+                                 nargs,
+                                 &ARG_NAMES as *const *const i8 as *mut *const i8,
+                                 source.as_ptr(),
+                                 source.len() as size_t,
+                                 url.as_ptr(),
+                                 lineno)
         };
         if handler.is_null() {
             report_pending_exception(cx, self.reflector().get_jsobject());
@@ -247,8 +247,8 @@ impl<'a> EventTargetMethods for JSRef<'a, EventTarget> {
             Some(listener) => {
                 let mut handlers = self.handlers.borrow_mut();
                 let entry = match handlers.entry(ty) {
-                        Occupied(entry) => entry.into_mut(),
-                        Vacant(entry) => entry.set(vec!()),
+                    Occupied(entry) => entry.into_mut(),
+                    Vacant(entry) => entry.set(vec!()),
                 };
 
                 let phase = if capture { Capturing } else { Bubbling };

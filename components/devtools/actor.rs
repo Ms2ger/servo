@@ -47,7 +47,7 @@ impl<'a> AnyRefExt<'a> for &'a Actor + 'a {
         // prevents downcast_ref from giving realistic return values.
         unsafe {
             let t = TypeId::of::<T>();
-            let this:  &Actor = transmute(self);
+            let this: &Actor = transmute(self);
             let boxed: TypeId = this.get_type_id();
             t == boxed
         }
