@@ -99,7 +99,7 @@ fn do_parse_integer<T: Iterator<char>>(input: T) -> Option<i64> {
         _ => return None,
     }
 
-    let value = input.take_while(|c| is_ascii_digit(c)).map(|d| {
+    let value = input.take_while(is_ascii_digit).map(|d| {
         d as i64 - '0' as i64
     }).fold(Some(0i64), |accumulator, d| {
         accumulator.and_then(|accumulator| {
