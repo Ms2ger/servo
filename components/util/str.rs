@@ -70,7 +70,10 @@ pub fn split_html_space_chars<'a>(s: &'a str) -> Filter<'a, &'a str, CharSplits<
 /// <http://www.whatwg.org/html/#rules-for-parsing-non-negative-integers>.
 fn do_parse_integer<T: Iterator<char>>(input: T) -> Option<i64> {
     fn is_ascii_digit(c: char) -> bool {
-        c >= '0' && c <= '9'
+        match c {
+            '0'...'9' => true,
+            _ => false,
+        }
     }
 
 

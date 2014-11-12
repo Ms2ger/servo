@@ -384,7 +384,7 @@ pub trait NodeHelpers<'a> {
     fn child_elements(self) -> ChildElementIterator<'a>;
     fn following_siblings(self) -> NodeChildrenIterator<'a>;
     fn is_in_doc(self) -> bool;
-    fn is_inclusive_ancestor_of(self, parent: JSRef<'a, Node>) -> bool;
+    fn is_inclusive_ancestor_of(self, parent: JSRef<'a, Node>) -> bool;    // FIXME: See #3960
     fn is_parent_of(self, child: JSRef<Node>) -> bool;
 
     fn type_id(self) -> NodeTypeId;
@@ -2059,7 +2059,7 @@ impl<'a> NodeMethods for JSRef<'a, Node> {
 
     // http://dom.spec.whatwg.org/#dom-node-comparedocumentposition
     fn CompareDocumentPosition(self, other: JSRef<Node>) -> u16 {
-        if self.clone() == other {
+        if self.clone() == other {    // FIXME: See issue #3960
             // step 2.
             0
         } else {

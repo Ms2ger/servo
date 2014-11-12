@@ -636,8 +636,8 @@ impl<LTF: LayoutTaskFactory, STF: ScriptTaskFactory> Constellation<LTF, STF> {
         let frame_trees = self.find_all(source_pipeline_id);
         if frame_trees.is_empty() {
             panic!("Constellation: source pipeline id of ScriptLoadedURLInIFrameMsg is not in
-                   navigation context, nor is it in a pending frame. This should be
-                   impossible.");
+                    navigation context, nor is it in a pending frame. This should be
+                    impossible.");
         }
 
         let next_pipeline_id = self.get_next_pipeline_id();
