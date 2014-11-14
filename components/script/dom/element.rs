@@ -801,7 +801,6 @@ impl<'a> ElementMethods for JSRef<'a, Element> {
 
         // Step 4.
         let (prefix, local_name) = get_attribute_parts(name.as_slice());
-        let prefix = prefix.map(Atom::from_slice);
         match prefix {
             Some(ref prefix) => {
                 // Step 5.
@@ -968,12 +967,12 @@ impl<'a> ElementMethods for JSRef<'a, Element> {
     }
 }
 
-pub fn get_attribute_parts<'a>(name: &'a str) -> (Option<&'a str>, &'a str) {
+pub fn get_attribute_parts<'a>(name: &'a str) -> (Option<Atom>, &'a str) {
     //FIXME: Throw for XML-invalid names
     //FIXME: Throw for XMLNS-invalid names
     let (prefix, local_name) = if name.contains(":")  {
         let mut parts = name.splitn(1, ':');
-        (Some(parts.next().unwrap()), parts.next().unwrap())
+        (Some(Atom::from_slice(parts.next().unwrap())), parts.next().unwrap())
     } else {
         (None, name)
     };

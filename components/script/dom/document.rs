@@ -591,7 +591,6 @@ impl<'a> DocumentMethods for JSRef<'a, Document> {
 
         let (prefix_from_qname, local_name_from_qname)
             = get_attribute_parts(qualified_name.as_slice());
-        let prefix_from_qname = prefix_from_qname.map(Atom::from_slice);
         match (&ns, &prefix_from_qname, local_name_from_qname) {
             // throw if prefix is not null and namespace is null
             (&ns!(""), &Some(_), _) => {
