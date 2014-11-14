@@ -591,19 +591,20 @@ impl<'a> DocumentMethods for JSRef<'a, Document> {
 
         let (prefix_from_qname, local_name_from_qname)
             = get_attribute_parts(qualified_name.as_slice());
-        match (&ns, prefix_from_qname, local_name_from_qname) {
+        let prefix_from_qname = prefix_from_qname.map(Atom::from_slice);
+        match (&ns, &prefix_from_qname, local_name_from_qname) {
             // throw if prefix is not null and namespace is null
-            (&ns!(""), Some(_), _) => {
+            (&ns!(""), &Some(_), _) => {
                 debug!("Namespace can't be null with a non-null prefix");
                 return Err(NamespaceError);
             },
             // throw if prefix is "xml" and namespace is not the XML namespace
-            (_, Some(ref prefix), _) if "xml" == prefix.as_slice() && ns != ns!(XML) => {
+            (_, &Some(ref prefix), _) if "xml" == prefix.as_slice() && ns != ns!(XML) => {
                 debug!("Namespace must be the xml namespace if the prefix is 'xml'");
                 return Err(NamespaceError);
             },
             // throw if namespace is the XMLNS namespace and neither qualifiedName nor prefix is "xmlns"
-            (&ns!(XMLNS), Some(ref prefix), _) if "xmlns" == prefix.as_slice() => {},
+            (&ns!(XMLNS), &Some(atom!("xmlns")), _) => {},
             (&ns!(XMLNS), _, "xmlns") => {},
             (&ns!(XMLNS), _, _) => {
                 debug!("The prefix or the qualified name must be 'xmlns' if namespace is the XMLNS namespace ");
@@ -613,8 +614,7 @@ impl<'a> DocumentMethods for JSRef<'a, Document> {
         }
 
         let name = QualName::new(ns, Atom::from_slice(local_name_from_qname));
-        Ok(Element::create(name, prefix_from_qname.map(|s| s.to_string()), self,
-                           ScriptCreated))
+        Ok(Element::create(name, prefix_from_qname, self, ScriptCreated))
     }
 
     // http://dom.spec.whatwg.org/#dom-document-createdocumentfragment

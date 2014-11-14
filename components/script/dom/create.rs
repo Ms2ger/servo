@@ -75,13 +75,13 @@ use dom::htmlulistelement::HTMLUListElement;
 use dom::htmlunknownelement::HTMLUnknownElement;
 use dom::htmlvideoelement::HTMLVideoElement;
 
-use servo_util::str::DOMString;
+use string_cache::{Atom, QualName};
 
-use string_cache::QualName;
-
-pub fn create_element(name: QualName, prefix: Option<DOMString>,
+pub fn create_element(name: QualName, prefix: Option<Atom>,
                       document: JSRef<Document>, creator: ElementCreator)
                       -> Temporary<Element> {
+    let prefix = prefix.map(|p| p.as_slice().to_string());
+
     if name.ns != ns!(HTML) {
         return Element::new(name.local.as_slice().to_string(), name.ns, prefix, document);
     }

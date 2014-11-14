@@ -64,7 +64,7 @@ use style;
 use style::ComputedValues;
 use sync::Arc;
 use uuid;
-use string_cache::QualName;
+use string_cache::{Atom, QualName};
 
 //
 // The basic Node structure
@@ -1516,7 +1516,7 @@ impl Node {
                     local: element.local_name().clone()
                 };
                 let element = Element::create(name,
-                    element.prefix().as_ref().map(|p| p.as_slice().to_string()), *document, ScriptCreated);
+                    element.prefix().as_ref().map(|p| Atom::from_slice(p.as_slice())), *document, ScriptCreated);
                 NodeCast::from_temporary(element)
             },
             TextNodeTypeId => {
