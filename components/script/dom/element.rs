@@ -422,11 +422,11 @@ pub trait AttributeHandlers {
     fn set_attribute_from_parser(self,
                                  name: QualName,
                                  value: DOMString,
-                                 prefix: Option<DOMString>);
+                                 prefix: Option<Atom>);
     fn set_attribute(self, name: &Atom, value: AttrValue);
     fn do_set_attribute(self, local_name: Atom, value: AttrValue,
                         name: Atom, namespace: Namespace,
-                        prefix: Option<DOMString>, cb: |JSRef<Attr>| -> bool);
+                        prefix: Option<Atom>, cb: |JSRef<Attr>| -> bool);
     fn parse_attribute(self, namespace: &Namespace, local_name: &Atom,
                        value: DOMString) -> AttrValue;
 
@@ -468,7 +468,7 @@ impl<'a> AttributeHandlers for JSRef<'a, Element> {
     fn set_attribute_from_parser(self,
                                  qname: QualName,
                                  value: DOMString,
-                                 prefix: Option<DOMString>) {
+                                 prefix: Option<Atom>) {
         // Don't set if the attribute already exists, so we can handle add_attrs_if_missing
         if self.attrs.borrow().iter().map(|attr| attr.root())
                 .any(|a| *a.local_name() == qname.local && *a.namespace() == qname.ns) {
@@ -478,7 +478,7 @@ impl<'a> AttributeHandlers for JSRef<'a, Element> {
         let name = match prefix {
             None => qname.local.clone(),
             Some(ref prefix) => {
-                let name = format!("{:s}:{:s}", *prefix, qname.local.as_slice());
+                let name = format!("{:s}:{:s}", prefix.as_slice(), qname.local.as_slice());
                 Atom::from_slice(name.as_slice())
             },
         };
@@ -499,7 +499,7 @@ impl<'a> AttributeHandlers for JSRef<'a, Element> {
 
     fn do_set_attribute(self, local_name: Atom, value: AttrValue,
                         name: Atom, namespace: Namespace,
-                        prefix: Option<DOMString>, cb: |JSRef<Attr>| -> bool) {
+                        prefix: Option<Atom>, cb: |JSRef<Attr>| -> bool) {
         let idx = self.attrs.borrow().iter()
                                      .map(|attr| attr.root())
                                      .position(|attr| cb(*attr));
@@ -801,20 +801,21 @@ impl<'a> ElementMethods for JSRef<'a, Element> {
 
         // Step 4.
         let (prefix, local_name) = get_attribute_parts(name.as_slice());
+        let prefix = prefix.map(Atom::from_slice);
         match prefix {
-            Some(ref prefix_str) => {
+            Some(ref prefix) => {
                 // Step 5.
                 if namespace == ns!("") {
                     return Err(NamespaceError);
                 }
 
                 // Step 6.
-                if "xml" == prefix_str.as_slice() && namespace != ns!(XML) {
+                if Atom::from_slice("xml") == *prefix && namespace != ns!(XML) {
                     return Err(NamespaceError);
                 }
 
                 // Step 7b.
-                if "xmlns" == prefix_str.as_slice() && namespace != ns!(XMLNS) {
+                if atom!("xmlns") == *prefix && namespace != ns!(XMLNS) {
                     return Err(NamespaceError);
                 }
             },
@@ -831,14 +832,14 @@ impl<'a> ElementMethods for JSRef<'a, Element> {
         }
 
         // Step 8.
-        if namespace == ns!(XMLNS) && xmlns != name && Some("xmlns") != prefix {
+        if namespace == ns!(XMLNS) && xmlns != name && Some(atom!("xmlns")) != prefix {
             return Err(NamespaceError);
         }
 
         // Step 9.
         let value = self.parse_attribute(&namespace, &local_name, value);
         self.do_set_attribute(local_name.clone(), value, name,
-                              namespace.clone(), prefix.map(|s| s.to_string()),
+                              namespace.clone(), prefix,
                               |attr| {
             *attr.local_name() == local_name &&
             *attr.namespace() == namespace

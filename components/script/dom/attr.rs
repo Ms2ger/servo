@@ -91,21 +91,21 @@ impl Reflectable for Attr {
 impl Attr {
     fn new_inherited(local_name: Atom, value: AttrValue,
                      name: Atom, namespace: Namespace,
-                     prefix: Option<DOMString>, owner: JSRef<Element>) -> Attr {
+                     prefix: Option<Atom>, owner: JSRef<Element>) -> Attr {
         Attr {
             reflector_: Reflector::new(),
             local_name: local_name,
             value: DOMRefCell::new(value),
             name: name,
             namespace: namespace,
-            prefix: prefix.map(|prefix| Atom::from_slice(prefix.as_slice())),
+            prefix: prefix,
             owner: JS::from_rooted(owner),
         }
     }
 
     pub fn new(window: JSRef<Window>, local_name: Atom, value: AttrValue,
                name: Atom, namespace: Namespace,
-               prefix: Option<DOMString>, owner: JSRef<Element>) -> Temporary<Attr> {
+               prefix: Option<Atom>, owner: JSRef<Element>) -> Temporary<Attr> {
         reflect_dom_object(box Attr::new_inherited(local_name, value, name, namespace, prefix, owner),
                            &global::Window(window), AttrBinding::Wrap)
     }

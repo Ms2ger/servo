@@ -1560,7 +1560,7 @@ impl Node {
                         &Attr::new(*window,
                                    attr.local_name().clone(), attr.value().clone(),
                                    attr.name().clone(), attr.namespace().clone(),
-                                   attr.prefix().as_ref().map(|p| p.as_slice().to_string()), copy_elem));
+                                   attr.prefix().clone(), copy_elem));
                 }
             },
             _ => ()
