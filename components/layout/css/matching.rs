@@ -9,17 +9,17 @@ use incremental::{mod, RestyleDamage};
 use util::{LayoutDataAccess, LayoutDataWrapper};
 use wrapper::{LayoutElement, LayoutNode, TLayoutNode};
 
-use script::dom::node::{TextNodeTypeId};
 use servo_util::bloom::BloomFilter;
 use servo_util::cache::{Cache, LRUCache, SimpleHashCache};
 use servo_util::smallvec::{SmallVec, SmallVec16};
 use servo_util::arc_ptr_eq;
+use script::dom::node::NodeTypeId;
 use std::mem;
 use std::hash::{Hash, sip};
 use std::slice::Items;
 use string_cache::{Atom, Namespace};
-use style::{mod, After, Before, ComputedValues, DeclarationBlock, Stylist, TElement, TNode};
-use style::{AttrIsEqualMode, AttrIsPresentMode, CommonStyleAffectingAttributes, cascade};
+use style::{mod, PseudoElement, ComputedValues, DeclarationBlock, Stylist, TElement, TNode};
+use style::{CommonStyleAffectingAttributeMode, CommonStyleAffectingAttributes, cascade};
 use sync::Arc;
 
 pub struct ApplicableDeclarations {
@@ -153,12 +153,12 @@ fn create_common_style_affecting_attributes_from_element(element: &LayoutElement
     let mut flags = CommonStyleAffectingAttributes::empty();
     for attribute_info in style::common_style_affecting_attributes().iter() {
         match attribute_info.mode {
-            AttrIsPresentMode(flag) => {
+            CommonStyleAffectingAttributeMode::IsPresent(flag) => {
                 if element.get_attr(&ns!(""), &attribute_info.atom).is_some() {
                     flags.insert(flag)
                 }
             }
-            AttrIsEqualMode(target_value, flag) => {
+            CommonStyleAffectingAttributeMode::IsEqual(target_value, flag) => {
                 match element.get_attr(&ns!(""), &attribute_info.atom) {
                     Some(element_value) if element_value == target_value => {
                         flags.insert(flag)
@@ -270,13 +270,13 @@ impl StyleSharingCandidate {
 
         for attribute_info in style::common_style_affecting_attributes().iter() {
             match attribute_info.mode {
-                AttrIsPresentMode(flag) => {
+                CommonStyleAffectingAttributeMode::IsPresent(flag) => {
                     if self.common_style_affecting_attributes.contains(flag) !=
                             element.get_attr(&ns!(""), &attribute_info.atom).is_some() {
                         return false
                     }
                 }
-                AttrIsEqualMode(target_value, flag) => {
+                CommonStyleAffectingAttributeMode::IsEqual(target_value, flag) => {
                     match element.get_attr(&ns!(""), &attribute_info.atom) {
                         Some(ref element_value) if self.common_style_affecting_attributes
                                                        .contains(flag) &&
@@ -492,12 +492,12 @@ impl<'ln> MatchMethods for LayoutNode<'ln> {
         stylist.push_applicable_declarations(self,
                                              parent_bf,
                                              None,
-                                             Some(Before),
+                                             Some(PseudoElement::Before),
                                              &mut applicable_declarations.before);
         stylist.push_applicable_declarations(self,
                                              parent_bf,
                                              None,
-                                             Some(After),
+                                             Some(PseudoElement::After),
                                              &mut applicable_declarations.after);
 
         *shareable = applicable_declarations.normal_shareable &&
@@ -511,7 +511,7 @@ impl<'ln> MatchMethods for LayoutNode<'ln> {
                                       parent: Option<LayoutNode>)
                                       -> StyleSharingResult {
         if !self.is_element() {
-            return CannotShare(false)
+            return StyleSharingResult::CannotShare(false)
         }
         let ok = {
             let element = self.as_element();
@@ -519,7 +519,7 @@ impl<'ln> MatchMethods for LayoutNode<'ln> {
                 element.get_attr(&ns!(""), &atom!("id")).is_none()
         };
         if !ok {
-            return CannotShare(false)
+            return StyleSharingResult::CannotShare(false)
         }
 
         for (i, &(ref candidate, ())) in style_sharing_candidate_cache.iter().enumerate() {
@@ -531,13 +531,13 @@ impl<'ln> MatchMethods for LayoutNode<'ln> {
                     let style = &mut shared_data.style;
                     let damage = incremental::compute_damage(style, &*shared_style);
                     *style = Some(shared_style);
-                    return StyleWasShared(i, damage)
+                    return StyleSharingResult::StyleWasShared(i, damage)
                 }
                 None => {}
             }
         }
 
-        CannotShare(true)
+        StyleSharingResult::CannotShare(true)
     }
 
     // The below two functions are copy+paste because I can't figure out how to
@@ -605,7 +605,7 @@ impl<'ln> MatchMethods for LayoutNode<'ln> {
             &None => panic!("no layout data"),
             &Some(ref mut layout_data) => {
                 match self.type_id() {
-                    Some(TextNodeTypeId) => {
+                    Some(NodeTypeId::Text) => {
                         // Text nodes get a copy of the parent style. This ensures
                         // that during fragment construction any non-inherited
                         // CSS properties (such as vertical-align) are correctly

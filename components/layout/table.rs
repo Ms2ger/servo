@@ -6,17 +6,16 @@
 
 #![deny(unsafe_blocks)]
 
-use block::{BlockFlow, MarginsMayNotCollapse, ISizeAndMarginsComputer};
+use block::{BlockFlow, ISizeAndMarginsComputer, MarginsMayCollapseFlag};
 use block::{ISizeConstraintInput, ISizeConstraintSolution};
 use construct::FlowConstructor;
 use context::LayoutContext;
 use floats::FloatKind;
 use flow::{Flow, FlowClass, IMPACTED_BY_LEFT_FLOATS, IMPACTED_BY_RIGHT_FLOATS, ImmutableFlowUtils};
-use flow::{TableFlowClass};
 use fragment::{Fragment, FragmentBoundsIterator};
 use layout_debug;
 use model::{IntrinsicISizes, IntrinsicISizesContribution};
-use table_wrapper::{TableLayout, FixedLayout, AutoLayout};
+use table_wrapper::TableLayout;
 use wrapper::ThreadSafeLayoutNode;
 
 use servo_util::geometry::Au;
@@ -24,7 +23,7 @@ use servo_util::logical_geometry::LogicalRect;
 use std::cmp::max;
 use std::fmt;
 use style::{ComputedValues, CSSFloat};
-use style::computed_values::{LPA_Auto, LPA_Length, LPA_Percentage, table_layout};
+use style::computed_values::{LengthOrPercentageOrAuto, table_layout};
 use sync::Arc;
 
 /// A table flow corresponded to the table's internal table fragment under a table wrapper flow.
@@ -53,9 +52,9 @@ impl TableFlow {
         let mut block_flow = BlockFlow::from_node_and_fragment(node, fragment);
         let table_layout = if block_flow.fragment().style().get_table().table_layout ==
                               table_layout::fixed {
-            FixedLayout
+            TableLayout::Fixed
         } else {
-            AutoLayout
+            TableLayout::Auto
         };
         TableFlow {
             block_flow: block_flow,
@@ -71,9 +70,9 @@ impl TableFlow {
         let mut block_flow = BlockFlow::from_node(constructor, node);
         let table_layout = if block_flow.fragment().style().get_table().table_layout ==
                               table_layout::fixed {
-            FixedLayout
+            TableLayout::Fixed
         } else {
-            AutoLayout
+            TableLayout::Auto
         };
         TableFlow {
             block_flow: block_flow,
@@ -90,9 +89,9 @@ impl TableFlow {
         let mut block_flow = BlockFlow::float_from_node(constructor, node, float_kind);
         let table_layout = if block_flow.fragment().style().get_table().table_layout ==
                               table_layout::fixed {
-            FixedLayout
+            TableLayout::Fixed
         } else {
-            AutoLayout
+            TableLayout::Auto
         };
         TableFlow {
             block_flow: block_flow,
@@ -134,13 +133,13 @@ impl TableFlow {
     /// methods
     #[inline(always)]
     fn assign_block_size_table_base<'a>(&mut self, layout_context: &'a LayoutContext<'a>) {
-        self.block_flow.assign_block_size_block_base(layout_context, MarginsMayNotCollapse);
+        self.block_flow.assign_block_size_block_base(layout_context, MarginsMayCollapseFlag::MarginsMayNotCollapse);
     }
 }
 
 impl Flow for TableFlow {
     fn class(&self) -> FlowClass {
-        TableFlowClass
+        FlowClass::Table
     }
 
     fn as_table<'a>(&'a mut self) -> &'a mut TableFlow {
@@ -179,12 +178,12 @@ impl Flow for TableFlow {
                 for specified_inline_size in kid.as_table_colgroup().inline_sizes.iter() {
                     self.column_intrinsic_inline_sizes.push(ColumnIntrinsicInlineSize {
                         minimum_length: match *specified_inline_size {
-                            LPA_Auto | LPA_Percentage(_) => Au(0),
-                            LPA_Length(length) => length,
+                            LengthOrPercentageOrAuto::Auto | LengthOrPercentageOrAuto::Percentage(_) => Au(0),
+                            LengthOrPercentageOrAuto::Length(length) => length,
                         },
                         percentage: match *specified_inline_size {
-                            LPA_Auto | LPA_Length(_) => 0.0,
-                            LPA_Percentage(percentage) => percentage,
+                            LengthOrPercentageOrAuto::Auto | LengthOrPercentageOrAuto::Length(_) => 0.0,
+                            LengthOrPercentageOrAuto::Percentage(percentage) => percentage,
                         },
                         preferred: Au(0),
                         constrained: false,
@@ -196,7 +195,7 @@ impl Flow for TableFlow {
                 // FIXME: Need to read inline-sizes from either table-header-group OR the first
                 // table-row.
                 match self.table_layout {
-                    FixedLayout => {
+                    TableLayout::Fixed => {
                         // Fixed table layout only looks at the first row.
                         if !did_first_row {
                             did_first_row = true;
@@ -206,7 +205,7 @@ impl Flow for TableFlow {
                             }
                         }
                     }
-                    AutoLayout => {
+                    TableLayout::Auto => {
                         let child_column_inline_sizes = kid.column_intrinsic_inline_sizes();
                         let mut child_intrinsic_sizes = TableFlow::update_column_inline_sizes(
                             &mut self.column_intrinsic_inline_sizes,
@@ -273,7 +272,7 @@ impl Flow for TableFlow {
             self.block_flow.fragment.border_box.size.inline - padding_and_borders;
 
         match self.table_layout {
-            FixedLayout => {
+            TableLayout::Fixed => {
                 // In fixed table layout, we distribute extra space among the unspecified columns
                 // if there are any, or among all the columns if all are specified.
                 self.column_computed_inline_sizes.clear();
