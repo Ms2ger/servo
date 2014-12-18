@@ -503,9 +503,9 @@ def getJSToNativeConversionTemplate(type, descriptorProvider, failureCode=None,
 
     needsRooting = typeNeedsRooting(type, descriptorProvider)
 
-    def handleOptional(template, declType, default):
+    def handleOptional(template, _, default):
         assert (defaultValue is None) == (default is None)
-        return (template, default, declType, needsRooting)
+        return (template, default, getRetvalDeclarationForType(type, descriptorProvider), needsRooting)
 
     # Unfortunately, .capitalize() on a string will lowercase things inside the
     # string, which we do not want.
