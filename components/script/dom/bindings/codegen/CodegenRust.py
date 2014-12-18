@@ -2173,9 +2173,7 @@ class CGCallGenerator(CGThing):
 
         isFallible = errorResult is not None
 
-        result = getRetvalDeclarationForType(returnType, descriptorProvider)
-        if isFallible:
-            result = CGWrapper(result, pre="Result<", post=", Error>")
+        result = CGGeneric(return_type(descriptorProvider, returnType, not isFallible))
 
         args = CGList([CGGeneric(arg) for arg in argsPre], ", ")
         for (a, name) in arguments:
