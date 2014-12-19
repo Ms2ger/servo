@@ -4,11 +4,11 @@
 
 use dom::attr::Attr;
 use dom::attr::AttrHelpers;
-use dom::EventHandlerBinding::EventHandlerNonNull;
-use dom::HTMLElementBinding;
-use dom::HTMLElementBinding::HTMLElementMethods;
-use dom::HTMLInputElementBinding::HTMLInputElementMethods;
-use dom::WindowBinding::WindowMethods;
+use dom::bindings::EventHandlerBinding::EventHandlerNonNull;
+use dom::bindings::HTMLElementBinding;
+use dom::bindings::HTMLElementBinding::HTMLElementMethods;
+use dom::bindings::HTMLInputElementBinding::HTMLInputElementMethods;
+use dom::bindings::WindowBinding::WindowMethods;
 use dom::bindings::codegen::InheritTypes::{ElementCast, HTMLFrameSetElementDerived};
 use dom::bindings::codegen::InheritTypes::{EventTargetCast, HTMLInputElementCast};
 use dom::bindings::codegen::InheritTypes::{HTMLElementDerived, HTMLBodyElementDerived};

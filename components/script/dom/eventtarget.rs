@@ -4,9 +4,9 @@
 
 use dom::bindings::callback::CallbackContainer;
 use dom::bindings::cell::DOMRefCell;
-use dom::EventHandlerBinding::EventHandlerNonNull;
-use dom::EventListenerBinding::EventListener;
-use dom::EventTargetBinding::EventTargetMethods;
+use dom::bindings::EventHandlerBinding::EventHandlerNonNull;
+use dom::bindings::EventListenerBinding::EventListener;
+use dom::bindings::EventTargetBinding::EventTargetMethods;
 use dom::bindings::error::{Fallible, report_pending_exception};
 use dom::bindings::error::Error::InvalidState;
 use dom::bindings::js::JSRef;

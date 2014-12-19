@@ -2,10 +2,10 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-use dom::TestBindingBinding::TestBindingMethods;
-use dom::TestBindingBinding::TestEnum;
-use dom::TestBindingBinding::TestEnum::_empty;
-use dom::EventListenerBinding::EventListener;
+use dom::bindings::TestBindingBinding::TestBindingMethods;
+use dom::bindings::TestBindingBinding::TestEnum;
+use dom::bindings::TestBindingBinding::TestEnum::_empty;
+use dom::bindings::EventListenerBinding::EventListener;
 use dom::bindings::codegen::Bindings::FunctionBinding::Function;
 use dom::bindings::codegen::UnionTypes::BlobOrString;
 use dom::bindings::codegen::UnionTypes::EventOrString;

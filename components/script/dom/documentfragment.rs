@@ -2,9 +2,9 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-use dom::DocumentFragmentBinding;
-use dom::DocumentFragmentBinding::DocumentFragmentMethods;
-use dom::WindowBinding::WindowMethods;
+use dom::bindings::DocumentFragmentBinding;
+use dom::bindings::DocumentFragmentBinding::DocumentFragmentMethods;
+use dom::bindings::WindowBinding::WindowMethods;
 use dom::bindings::codegen::InheritTypes::{DocumentFragmentDerived, NodeCast};
 use dom::bindings::js::{JSRef, Temporary};
 use dom::bindings::error::Fallible;

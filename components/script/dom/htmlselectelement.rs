@@ -4,8 +4,8 @@
 
 use dom::attr::Attr;
 use dom::attr::AttrHelpers;
-use dom::HTMLSelectElementBinding;
-use dom::HTMLSelectElementBinding::HTMLSelectElementMethods;
+use dom::bindings::HTMLSelectElementBinding;
+use dom::bindings::HTMLSelectElementBinding::HTMLSelectElementMethods;
 use dom::bindings::codegen::InheritTypes::{HTMLElementCast, NodeCast};
 use dom::bindings::codegen::InheritTypes::{ElementCast, HTMLSelectElementDerived, HTMLFieldSetElementDerived};
 use dom::bindings::codegen::UnionTypes::HTMLElementOrLong;

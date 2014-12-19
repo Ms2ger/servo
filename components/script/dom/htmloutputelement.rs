@@ -2,8 +2,8 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-use dom::HTMLOutputElementBinding;
-use dom::HTMLOutputElementBinding::HTMLOutputElementMethods;
+use dom::bindings::HTMLOutputElementBinding;
+use dom::bindings::HTMLOutputElementBinding::HTMLOutputElementMethods;
 use dom::bindings::codegen::InheritTypes::HTMLOutputElementDerived;
 use dom::bindings::js::{JSRef, Temporary};
 use dom::bindings::utils::{Reflectable, Reflector};

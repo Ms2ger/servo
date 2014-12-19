@@ -3,7 +3,7 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 use dom::bindings::cell::DOMRefCell;
-use dom::DocumentBinding::DocumentMethods;
+use dom::bindings::DocumentBinding::DocumentMethods;
 use dom::bindings::codegen::InheritTypes::NodeCast;
 use dom::bindings::js::{JS, JSRef, Temporary, OptionalRootable};
 use dom::bindings::utils::GlobalStaticData;

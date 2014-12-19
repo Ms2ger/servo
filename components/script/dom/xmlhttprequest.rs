@@ -3,11 +3,11 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 use dom::bindings::cell::DOMRefCell;
-use dom::EventHandlerBinding::EventHandlerNonNull;
-use dom::XMLHttpRequestBinding;
-use dom::XMLHttpRequestBinding::XMLHttpRequestMethods;
-use dom::XMLHttpRequestBinding::XMLHttpRequestResponseType;
-use dom::XMLHttpRequestBinding::XMLHttpRequestResponseType::{_empty, Json, Text};
+use dom::bindings::EventHandlerBinding::EventHandlerNonNull;
+use dom::bindings::XMLHttpRequestBinding;
+use dom::bindings::XMLHttpRequestBinding::XMLHttpRequestMethods;
+use dom::bindings::XMLHttpRequestBinding::XMLHttpRequestResponseType;
+use dom::bindings::XMLHttpRequestBinding::XMLHttpRequestResponseType::{_empty, Json, Text};
 use dom::bindings::codegen::InheritTypes::{EventCast, EventTargetCast, XMLHttpRequestDerived};
 use dom::bindings::conversions::ToJSValConvertible;
 use dom::bindings::error::{Error, ErrorResult, Fallible};

@@ -3,11 +3,11 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 use dom::attr::AttrValue;
-use dom::AttrBinding::AttrMethods;
+use dom::bindings::AttrBinding::AttrMethods;
 use dom::bindings::codegen::Bindings::EventBinding::EventMethods;
-use dom::HTMLAnchorElementBinding;
-use dom::HTMLAnchorElementBinding::HTMLAnchorElementMethods;
-use dom::NodeBinding::NodeMethods;
+use dom::bindings::HTMLAnchorElementBinding;
+use dom::bindings::HTMLAnchorElementBinding::HTMLAnchorElementMethods;
+use dom::bindings::NodeBinding::NodeMethods;
 use dom::bindings::codegen::InheritTypes::HTMLAnchorElementDerived;
 use dom::bindings::codegen::InheritTypes::{ElementCast, HTMLElementCast, NodeCast};
 use dom::bindings::js::{MutNullableJS, JSRef, Temporary, OptionalRootable};

@@ -2,9 +2,9 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-use dom::MouseEventBinding;
-use dom::MouseEventBinding::MouseEventMethods;
-use dom::UIEventBinding::UIEventMethods;
+use dom::bindings::MouseEventBinding;
+use dom::bindings::MouseEventBinding::MouseEventMethods;
+use dom::bindings::UIEventBinding::UIEventMethods;
 use dom::bindings::codegen::InheritTypes::{EventCast, UIEventCast, MouseEventDerived};
 use dom::bindings::error::Fallible;
 use dom::bindings::global::GlobalRef;

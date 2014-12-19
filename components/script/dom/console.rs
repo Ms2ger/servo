@@ -2,8 +2,8 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-use dom::ConsoleBinding;
-use dom::ConsoleBinding::ConsoleMethods;
+use dom::bindings::ConsoleBinding;
+use dom::bindings::ConsoleBinding::ConsoleMethods;
 use dom::bindings::global::GlobalRef;
 use dom::bindings::js::{JSRef, Temporary};
 use dom::bindings::utils::{Reflectable, Reflector, reflect_dom_object};

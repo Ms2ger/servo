@@ -3,8 +3,8 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 use dom::attr::AttrValue;
-use dom::HTMLAreaElementBinding;
-use dom::HTMLAreaElementBinding::HTMLAreaElementMethods;
+use dom::bindings::HTMLAreaElementBinding;
+use dom::bindings::HTMLAreaElementBinding::HTMLAreaElementMethods;
 use dom::bindings::codegen::InheritTypes::{HTMLAreaElementDerived, HTMLElementCast};
 use dom::bindings::codegen::InheritTypes::ElementCast;
 use dom::bindings::js::{MutNullableJS, JSRef, Temporary};

@@ -2,8 +2,8 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-use dom::HTMLCollectionBinding;
-use dom::HTMLCollectionBinding::HTMLCollectionMethods;
+use dom::bindings::HTMLCollectionBinding;
+use dom::bindings::HTMLCollectionBinding::HTMLCollectionMethods;
 use dom::bindings::codegen::InheritTypes::{ElementCast, NodeCast};
 use dom::bindings::global::GlobalRef;
 use dom::bindings::js::{JS, JSRef, Temporary};

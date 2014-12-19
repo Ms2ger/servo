@@ -2,8 +2,8 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-use dom::CustomEventBinding;
-use dom::CustomEventBinding::CustomEventMethods;
+use dom::bindings::CustomEventBinding;
+use dom::bindings::CustomEventBinding::CustomEventMethods;
 use dom::bindings::codegen::Bindings::EventBinding::EventMethods;
 use dom::bindings::codegen::InheritTypes::{EventCast, CustomEventDerived};
 use dom::bindings::error::Fallible;

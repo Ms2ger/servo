@@ -4,8 +4,8 @@
 
 use dom::attr::Attr;
 use dom::attr::AttrHelpers;
-use dom::HTMLFieldSetElementBinding;
-use dom::HTMLFieldSetElementBinding::HTMLFieldSetElementMethods;
+use dom::bindings::HTMLFieldSetElementBinding;
+use dom::bindings::HTMLFieldSetElementBinding::HTMLFieldSetElementMethods;
 use dom::bindings::codegen::InheritTypes::{HTMLFieldSetElementDerived, NodeCast};
 use dom::bindings::codegen::InheritTypes::{HTMLElementCast, HTMLLegendElementDerived};
 use dom::bindings::js::{JSRef, Temporary};

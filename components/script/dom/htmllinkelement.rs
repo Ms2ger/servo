@@ -4,8 +4,8 @@
 
 use dom::attr::{Attr, AttrValue};
 use dom::attr::AttrHelpers;
-use dom::HTMLLinkElementBinding;
-use dom::HTMLLinkElementBinding::HTMLLinkElementMethods;
+use dom::bindings::HTMLLinkElementBinding;
+use dom::bindings::HTMLLinkElementBinding::HTMLLinkElementMethods;
 use dom::bindings::codegen::InheritTypes::HTMLLinkElementDerived;
 use dom::bindings::codegen::InheritTypes::{ElementCast, HTMLElementCast};
 use dom::bindings::js::{MutNullableJS, JSRef, Temporary, OptionalRootable};

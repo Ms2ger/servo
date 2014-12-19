@@ -2,8 +2,8 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-use dom::DocumentTypeBinding;
-use dom::DocumentTypeBinding::DocumentTypeMethods;
+use dom::bindings::DocumentTypeBinding;
+use dom::bindings::DocumentTypeBinding::DocumentTypeMethods;
 use dom::bindings::codegen::InheritTypes::{DocumentTypeDerived, NodeCast};
 use dom::bindings::js::{JSRef, Temporary};
 use dom::bindings::utils::{Reflectable, Reflector};

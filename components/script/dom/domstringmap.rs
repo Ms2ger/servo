@@ -3,8 +3,8 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 use dom::bindings::cell::DOMRefCell;
-use dom::DOMStringMapBinding;
-use dom::DOMStringMapBinding::DOMStringMapMethods;
+use dom::bindings::DOMStringMapBinding;
+use dom::bindings::DOMStringMapBinding::DOMStringMapMethods;
 use dom::bindings::global::GlobalRef;
 use dom::bindings::js::{JSRef, Temporary};
 use dom::bindings::utils::{Reflectable, Reflector, reflect_dom_object};

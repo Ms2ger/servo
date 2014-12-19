@@ -4,8 +4,8 @@
 
 use dom::attr::Attr;
 use dom::attr::AttrHelpers;
-use dom::HTMLOptGroupElementBinding;
-use dom::HTMLOptGroupElementBinding::HTMLOptGroupElementMethods;
+use dom::bindings::HTMLOptGroupElementBinding;
+use dom::bindings::HTMLOptGroupElementBinding::HTMLOptGroupElementMethods;
 use dom::bindings::codegen::InheritTypes::{HTMLElementCast, NodeCast};
 use dom::bindings::codegen::InheritTypes::{HTMLOptGroupElementDerived, HTMLOptionElementDerived};
 use dom::bindings::js::{JSRef, Temporary};

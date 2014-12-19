@@ -2,8 +2,8 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-use dom::HTMLDataListElementBinding;
-use dom::HTMLDataListElementBinding::HTMLDataListElementMethods;
+use dom::bindings::HTMLDataListElementBinding;
+use dom::bindings::HTMLDataListElementBinding::HTMLDataListElementMethods;
 use dom::bindings::codegen::InheritTypes::{HTMLDataListElementDerived, HTMLOptionElementDerived};
 use dom::bindings::codegen::InheritTypes::NodeCast;
 use dom::bindings::js::{JSRef, Temporary};

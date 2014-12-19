@@ -6,7 +6,7 @@
 //! This module is mostly about its interaction with DOM memory management.
 
 use dom::bindings::cell::DOMRefCell;
-use dom::ServoHTMLParserBinding;
+use dom::bindings::ServoHTMLParserBinding;
 use dom::bindings::global::GlobalRef;
 use dom::bindings::trace::JSTraceable;
 use dom::bindings::js::{JS, JSRef, Temporary};

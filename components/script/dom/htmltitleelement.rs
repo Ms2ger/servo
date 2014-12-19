@@ -2,9 +2,9 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-use dom::HTMLTitleElementBinding;
-use dom::HTMLTitleElementBinding::HTMLTitleElementMethods;
-use dom::NodeBinding::NodeMethods;
+use dom::bindings::HTMLTitleElementBinding;
+use dom::bindings::HTMLTitleElementBinding::HTMLTitleElementMethods;
+use dom::bindings::NodeBinding::NodeMethods;
 use dom::bindings::codegen::InheritTypes::{HTMLElementCast, HTMLTitleElementDerived, NodeCast};
 use dom::bindings::codegen::InheritTypes::{TextCast};
 use dom::bindings::js::{JSRef, Temporary};

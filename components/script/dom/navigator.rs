@@ -2,8 +2,8 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-use dom::NavigatorBinding;
-use dom::NavigatorBinding::NavigatorMethods;
+use dom::bindings::NavigatorBinding;
+use dom::bindings::NavigatorBinding::NavigatorMethods;
 use dom::bindings::global::GlobalRef;
 use dom::bindings::js::{JSRef, Temporary};
 use dom::bindings::utils::{Reflectable, Reflector, reflect_dom_object};

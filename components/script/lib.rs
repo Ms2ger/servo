@@ -51,13 +51,13 @@ pub mod cors;
 /// The implementation of the DOM.
 #[macro_escape]
 pub mod dom {
-    pub use self::bindings::codegen::Bindings::*;
-
     #[macro_escape]
     pub mod macros;
 
     /// The code to expose the DOM to JavaScript through IDL bindings.
     pub mod bindings {
+        pub use self::bindings::codegen::Bindings::*;
+
         pub mod cell;
         pub mod global;
         pub mod js;

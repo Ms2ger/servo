@@ -5,7 +5,7 @@
 //! DOM bindings for `CharacterData`.
 
 use dom::bindings::cell::DOMRefCell;
-use dom::CharacterDataBinding::CharacterDataMethods;
+use dom::bindings::CharacterDataBinding::CharacterDataMethods;
 use dom::bindings::codegen::InheritTypes::{CharacterDataDerived, NodeCast};
 use dom::bindings::error::{Fallible, ErrorResult};
 use dom::bindings::error::Error::IndexSize;

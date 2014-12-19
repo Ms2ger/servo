@@ -3,8 +3,8 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 use dom::bindings::cell::DOMRefCell;
-use dom::URLSearchParamsBinding;
-use dom::URLSearchParamsBinding::URLSearchParamsMethods;
+use dom::bindings::URLSearchParamsBinding;
+use dom::bindings::URLSearchParamsBinding::URLSearchParamsMethods;
 use dom::bindings::codegen::UnionTypes::StringOrURLSearchParams;
 use dom::bindings::codegen::UnionTypes::StringOrURLSearchParams::{eURLSearchParams, eString};
 use dom::bindings::error::{Fallible};

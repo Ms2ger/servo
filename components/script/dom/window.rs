@@ -3,10 +3,10 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 use dom::bindings::cell::DOMRefCell;
-use dom::EventHandlerBinding::{OnErrorEventHandlerNonNull, EventHandlerNonNull};
+use dom::bindings::EventHandlerBinding::{OnErrorEventHandlerNonNull, EventHandlerNonNull};
 use dom::bindings::codegen::Bindings::FunctionBinding::Function;
-use dom::WindowBinding;
-use dom::WindowBinding::WindowMethods;
+use dom::bindings::WindowBinding;
+use dom::bindings::WindowBinding::WindowMethods;
 use dom::bindings::codegen::InheritTypes::EventTargetCast;
 use dom::bindings::error::Fallible;
 use dom::bindings::error::Error::InvalidCharacter;

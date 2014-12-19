@@ -4,8 +4,8 @@
 
 use dom::attr::Attr;
 use dom::attr::AttrHelpers;
-use dom::HTMLButtonElementBinding;
-use dom::HTMLButtonElementBinding::HTMLButtonElementMethods;
+use dom::bindings::HTMLButtonElementBinding;
+use dom::bindings::HTMLButtonElementBinding::HTMLButtonElementMethods;
 use dom::bindings::codegen::InheritTypes::{ElementCast, HTMLElementCast, NodeCast};
 use dom::bindings::codegen::InheritTypes::{HTMLButtonElementDerived, HTMLFieldSetElementDerived};
 use dom::bindings::js::{JSRef, Temporary};

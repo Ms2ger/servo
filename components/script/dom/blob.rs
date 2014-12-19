@@ -7,8 +7,8 @@ use dom::bindings::global::{GlobalRef, GlobalField};
 use dom::bindings::js::{JSRef, Temporary};
 use dom::bindings::utils::{Reflectable, Reflector, reflect_dom_object};
 use dom::bindings::error::Fallible;
-use dom::BlobBinding;
-use dom::BlobBinding::BlobMethods;
+use dom::bindings::BlobBinding;
+use dom::bindings::BlobBinding::BlobMethods;
 
 use servo_util::str::DOMString;
 use std::cmp::{min, max};
