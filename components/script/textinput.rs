@@ -4,7 +4,7 @@
 
 //! Common handling of keyboard input and state management for text input controls
 
-use dom::bindings::codegen::Bindings::KeyboardEventBinding::KeyboardEventMethods;
+use dom::KeyboardEventBinding::KeyboardEventMethods;
 use dom::bindings::js::JSRef;
 use dom::keyboardevent::KeyboardEvent;
 use servo_util::str::DOMString;

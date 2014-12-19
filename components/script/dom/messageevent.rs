@@ -3,8 +3,8 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 use dom::bindings::codegen::Bindings::EventBinding::EventMethods;
-use dom::bindings::codegen::Bindings::MessageEventBinding;
-use dom::bindings::codegen::Bindings::MessageEventBinding::MessageEventMethods;
+use dom::MessageEventBinding;
+use dom::MessageEventBinding::MessageEventMethods;
 use dom::bindings::codegen::InheritTypes::{EventCast, MessageEventDerived};
 use dom::bindings::error::Fallible;
 use dom::bindings::global::GlobalRef;

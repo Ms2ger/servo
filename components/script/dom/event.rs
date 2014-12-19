@@ -3,8 +3,8 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 use dom::bindings::cell::DOMRefCell;
-use dom::bindings::codegen::Bindings::EventBinding;
-use dom::bindings::codegen::Bindings::EventBinding::{EventConstants, EventMethods};
+use dom::EventBinding;
+use dom::EventBinding::{EventConstants, EventMethods};
 use dom::bindings::error::Fallible;
 use dom::bindings::global::GlobalRef;
 use dom::bindings::js::{MutNullableJS, JSRef, Temporary};

@@ -3,8 +3,8 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 use dom::bindings::codegen::Bindings::EventBinding::EventMethods;
-use dom::bindings::codegen::Bindings::UIEventBinding;
-use dom::bindings::codegen::Bindings::UIEventBinding::UIEventMethods;
+use dom::UIEventBinding;
+use dom::UIEventBinding::UIEventMethods;
 use dom::bindings::codegen::InheritTypes::{EventCast, UIEventDerived};
 use dom::bindings::error::Fallible;
 use dom::bindings::global::GlobalRef;

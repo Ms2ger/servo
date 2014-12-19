@@ -4,13 +4,13 @@
 
 use dom::attr::{Attr, AttrHelpers, AttrValue};
 use dom::bindings::cell::DOMRefCell;
-use dom::bindings::codegen::Bindings::DocumentBinding;
-use dom::bindings::codegen::Bindings::DocumentBinding::{DocumentMethods, DocumentReadyState};
+use dom::DocumentBinding;
+use dom::DocumentBinding::{DocumentMethods, DocumentReadyState};
 use dom::bindings::codegen::Bindings::EventHandlerBinding::EventHandlerNonNull;
-use dom::bindings::codegen::Bindings::EventTargetBinding::EventTargetMethods;
-use dom::bindings::codegen::Bindings::NodeBinding::NodeMethods;
-use dom::bindings::codegen::Bindings::NodeFilterBinding::NodeFilter;
-use dom::bindings::codegen::Bindings::WindowBinding::WindowMethods;
+use dom::EventTargetBinding::EventTargetMethods;
+use dom::NodeBinding::NodeMethods;
+use dom::NodeFilterBinding::NodeFilter;
+use dom::WindowBinding::WindowMethods;
 use dom::bindings::codegen::InheritTypes::{DocumentDerived, EventCast, HTMLElementCast};
 use dom::bindings::codegen::InheritTypes::{HTMLHeadElementCast, TextCast, ElementCast};
 use dom::bindings::codegen::InheritTypes::{DocumentTypeCast, HTMLHtmlElementCast, NodeCast};

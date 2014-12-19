@@ -2,8 +2,8 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-use dom::bindings::codegen::Bindings::CanvasRenderingContext2DBinding;
-use dom::bindings::codegen::Bindings::CanvasRenderingContext2DBinding::CanvasRenderingContext2DMethods;
+use dom::CanvasRenderingContext2DBinding;
+use dom::CanvasRenderingContext2DBinding::CanvasRenderingContext2DMethods;
 use dom::bindings::global::{GlobalRef, GlobalField};
 use dom::bindings::js::{JS, JSRef, Temporary};
 use dom::bindings::utils::{Reflector, Reflectable, reflect_dom_object};

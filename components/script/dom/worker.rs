@@ -2,9 +2,9 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-use dom::bindings::codegen::Bindings::WorkerBinding;
-use dom::bindings::codegen::Bindings::WorkerBinding::WorkerMethods;
-use dom::bindings::codegen::Bindings::EventHandlerBinding::EventHandlerNonNull;
+use dom::WorkerBinding;
+use dom::WorkerBinding::WorkerMethods;
+use dom::EventHandlerBinding::EventHandlerNonNull;
 use dom::bindings::codegen::InheritTypes::EventTargetCast;
 use dom::bindings::error::{Fallible, ErrorResult};
 use dom::bindings::error::Error::{Syntax, DataClone};

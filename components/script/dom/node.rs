@@ -6,13 +6,13 @@
 
 use dom::attr::{Attr, AttrHelpers};
 use dom::bindings::cell::DOMRefCell;
-use dom::bindings::codegen::Bindings::CharacterDataBinding::CharacterDataMethods;
-use dom::bindings::codegen::Bindings::DocumentBinding::DocumentMethods;
-use dom::bindings::codegen::Bindings::ElementBinding::ElementMethods;
-use dom::bindings::codegen::Bindings::NamedNodeMapBinding::NamedNodeMapMethods;
-use dom::bindings::codegen::Bindings::NodeBinding::{NodeConstants, NodeMethods};
-use dom::bindings::codegen::Bindings::NodeListBinding::NodeListMethods;
-use dom::bindings::codegen::Bindings::ProcessingInstructionBinding::ProcessingInstructionMethods;
+use dom::CharacterDataBinding::CharacterDataMethods;
+use dom::DocumentBinding::DocumentMethods;
+use dom::ElementBinding::ElementMethods;
+use dom::NamedNodeMapBinding::NamedNodeMapMethods;
+use dom::NodeBinding::{NodeConstants, NodeMethods};
+use dom::NodeListBinding::NodeListMethods;
+use dom::ProcessingInstructionBinding::ProcessingInstructionMethods;
 use dom::bindings::codegen::InheritTypes::{CommentCast, DocumentCast, DocumentTypeCast};
 use dom::bindings::codegen::InheritTypes::{ElementCast, TextCast, NodeCast, ElementDerived};
 use dom::bindings::codegen::InheritTypes::{CharacterDataCast, NodeBase, NodeDerived};

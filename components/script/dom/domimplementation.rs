@@ -2,10 +2,10 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-use dom::bindings::codegen::Bindings::DocumentBinding::DocumentMethods;
-use dom::bindings::codegen::Bindings::DOMImplementationBinding;
-use dom::bindings::codegen::Bindings::DOMImplementationBinding::DOMImplementationMethods;
-use dom::bindings::codegen::Bindings::NodeBinding::NodeMethods;
+use dom::DocumentBinding::DocumentMethods;
+use dom::DOMImplementationBinding;
+use dom::DOMImplementationBinding::DOMImplementationMethods;
+use dom::NodeBinding::NodeMethods;
 use dom::bindings::codegen::InheritTypes::NodeCast;
 use dom::bindings::error::Fallible;
 use dom::bindings::error::Error::{InvalidCharacter, NamespaceError};

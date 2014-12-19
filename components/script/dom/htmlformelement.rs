@@ -2,12 +2,12 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-use dom::bindings::codegen::Bindings::DocumentBinding::DocumentMethods;
+use dom::DocumentBinding::DocumentMethods;
 use dom::bindings::codegen::Bindings::EventBinding::EventMethods;
-use dom::bindings::codegen::Bindings::EventTargetBinding::EventTargetMethods;
-use dom::bindings::codegen::Bindings::HTMLFormElementBinding;
-use dom::bindings::codegen::Bindings::HTMLFormElementBinding::HTMLFormElementMethods;
-use dom::bindings::codegen::Bindings::HTMLInputElementBinding::HTMLInputElementMethods;
+use dom::EventTargetBinding::EventTargetMethods;
+use dom::HTMLFormElementBinding;
+use dom::HTMLFormElementBinding::HTMLFormElementMethods;
+use dom::HTMLInputElementBinding::HTMLInputElementMethods;
 use dom::bindings::codegen::InheritTypes::{EventTargetCast, HTMLFormElementDerived, NodeCast};
 use dom::bindings::codegen::InheritTypes::{HTMLInputElementCast, HTMLTextAreaElementCast, HTMLFormElementCast};
 use dom::bindings::global::GlobalRef;

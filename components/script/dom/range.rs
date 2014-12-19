@@ -2,9 +2,9 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-use dom::bindings::codegen::Bindings::RangeBinding;
-use dom::bindings::codegen::Bindings::RangeBinding::RangeMethods;
-use dom::bindings::codegen::Bindings::WindowBinding::WindowMethods;
+use dom::RangeBinding;
+use dom::RangeBinding::RangeMethods;
+use dom::WindowBinding::WindowMethods;
 use dom::bindings::error::Fallible;
 use dom::bindings::global::GlobalRef;
 use dom::bindings::js::{JSRef, Temporary};

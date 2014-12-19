@@ -2,7 +2,7 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-use dom::bindings::codegen::Bindings::WorkerGlobalScopeBinding::WorkerGlobalScopeMethods;
+use dom::WorkerGlobalScopeBinding::WorkerGlobalScopeMethods;
 use dom::bindings::codegen::Bindings::FunctionBinding::Function;
 use dom::bindings::error::{ErrorResult, Fallible};
 use dom::bindings::error::Error::{Syntax, Network, FailureUnknown};

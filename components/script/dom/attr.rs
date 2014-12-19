@@ -3,8 +3,8 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 use dom::bindings::cell::DOMRefCell;
-use dom::bindings::codegen::Bindings::AttrBinding;
-use dom::bindings::codegen::Bindings::AttrBinding::AttrMethods;
+use dom::AttrBinding;
+use dom::AttrBinding::AttrMethods;
 use dom::bindings::codegen::InheritTypes::NodeCast;
 use dom::bindings::global::GlobalRef;
 use dom::bindings::js::{JS, JSRef, Temporary};

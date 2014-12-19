@@ -3,7 +3,7 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 use dom::attr::AttrHelpers;
-use dom::bindings::codegen::Bindings::NodeBinding::NodeMethods;
+use dom::NodeBinding::NodeMethods;
 use dom::bindings::codegen::InheritTypes::{NodeCast, ElementCast, HTMLScriptElementCast};
 use dom::bindings::js::{JS, JSRef, Temporary, OptionalRootable, Root};
 use dom::comment::Comment;

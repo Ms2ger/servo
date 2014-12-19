@@ -4,13 +4,13 @@
 
 use dom::attr::Attr;
 use dom::attr::AttrHelpers;
-use dom::bindings::codegen::Bindings::CharacterDataBinding::CharacterDataMethods;
-use dom::bindings::codegen::Bindings::HTMLOptionElementBinding;
-use dom::bindings::codegen::Bindings::HTMLOptionElementBinding::HTMLOptionElementMethods;
+use dom::CharacterDataBinding::CharacterDataMethods;
+use dom::HTMLOptionElementBinding;
+use dom::HTMLOptionElementBinding::HTMLOptionElementMethods;
 use dom::bindings::codegen::InheritTypes::{CharacterDataCast, ElementCast, HTMLElementCast, NodeCast};
 use dom::bindings::codegen::InheritTypes::{HTMLOptionElementDerived};
 use dom::bindings::codegen::InheritTypes::{HTMLScriptElementDerived};
-use dom::bindings::codegen::Bindings::NodeBinding::NodeMethods;
+use dom::NodeBinding::NodeMethods;
 use dom::bindings::js::{JSRef, Temporary};
 use dom::bindings::utils::{Reflectable, Reflector};
 use dom::characterdata::CharacterData;

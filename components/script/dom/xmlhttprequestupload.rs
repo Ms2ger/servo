@@ -3,7 +3,7 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 use dom::bindings::codegen::InheritTypes::XMLHttpRequestUploadDerived;
-use dom::bindings::codegen::Bindings::XMLHttpRequestUploadBinding;
+use dom::XMLHttpRequestUploadBinding;
 use dom::bindings::global::GlobalRef;
 use dom::bindings::js::Temporary;
 use dom::bindings::utils::{Reflectable, Reflector, reflect_dom_object};

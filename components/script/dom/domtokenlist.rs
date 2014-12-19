@@ -3,8 +3,8 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 use dom::attr::{Attr, AttrHelpers};
-use dom::bindings::codegen::Bindings::DOMTokenListBinding;
-use dom::bindings::codegen::Bindings::DOMTokenListBinding::DOMTokenListMethods;
+use dom::DOMTokenListBinding;
+use dom::DOMTokenListBinding::DOMTokenListMethods;
 use dom::bindings::error::Fallible;
 use dom::bindings::error::Error::{InvalidCharacter, Syntax};
 use dom::bindings::global::GlobalRef;

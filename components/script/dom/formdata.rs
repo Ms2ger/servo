@@ -3,8 +3,8 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 use dom::bindings::cell::DOMRefCell;
-use dom::bindings::codegen::Bindings::FormDataBinding;
-use dom::bindings::codegen::Bindings::FormDataBinding::FormDataMethods;
+use dom::FormDataBinding;
+use dom::FormDataBinding::FormDataMethods;
 use dom::bindings::codegen::InheritTypes::FileCast;
 use dom::bindings::codegen::UnionTypes::FileOrString;
 use dom::bindings::codegen::UnionTypes::FileOrString::{eFile, eString};

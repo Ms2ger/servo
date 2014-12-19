@@ -2,8 +2,8 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-use dom::bindings::codegen::Bindings::HTMLStyleElementBinding;
-use dom::bindings::codegen::Bindings::NodeBinding::NodeMethods;
+use dom::HTMLStyleElementBinding;
+use dom::NodeBinding::NodeMethods;
 use dom::bindings::codegen::InheritTypes::{HTMLElementCast, HTMLStyleElementDerived, NodeCast};
 use dom::bindings::js::{JSRef, Temporary};
 use dom::bindings::utils::{Reflectable, Reflector};

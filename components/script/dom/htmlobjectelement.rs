@@ -4,9 +4,9 @@
 
 use dom::attr::Attr;
 use dom::attr::AttrHelpers;
-use dom::bindings::codegen::Bindings::AttrBinding::AttrMethods;
-use dom::bindings::codegen::Bindings::HTMLObjectElementBinding;
-use dom::bindings::codegen::Bindings::HTMLObjectElementBinding::HTMLObjectElementMethods;
+use dom::AttrBinding::AttrMethods;
+use dom::HTMLObjectElementBinding;
+use dom::HTMLObjectElementBinding::HTMLObjectElementMethods;
 use dom::bindings::codegen::InheritTypes::HTMLObjectElementDerived;
 use dom::bindings::codegen::InheritTypes::{ElementCast, HTMLElementCast};
 use dom::bindings::js::{JSRef, Temporary};

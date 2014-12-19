@@ -3,14 +3,14 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 use dom::bindings::callback::ExceptionHandling::RethrowExceptions;
-use dom::bindings::codegen::Bindings::TreeWalkerBinding;
-use dom::bindings::codegen::Bindings::TreeWalkerBinding::TreeWalkerMethods;
-use dom::bindings::codegen::Bindings::NodeBinding::NodeMethods;
-use dom::bindings::codegen::Bindings::NodeFilterBinding::NodeFilter;
+use dom::TreeWalkerBinding;
+use dom::TreeWalkerBinding::TreeWalkerMethods;
+use dom::NodeBinding::NodeMethods;
+use dom::NodeFilterBinding::NodeFilter;
 // FIXME: Uncomment when codegen fix allows NodeFilterConstants
 // to move to the NodeFilter binding file (#3149).
 // For now, it is defined in this file.
-// use dom::bindings::codegen::Bindings::NodeFilterBinding::NodeFilterConstants;
+// use dom::NodeFilterBinding::NodeFilterConstants;
 use dom::bindings::error::{ErrorResult, Fallible};
 use dom::bindings::global::GlobalRef;
 use dom::bindings::js::{JS, JSRef, OptionalRootable, Temporary};

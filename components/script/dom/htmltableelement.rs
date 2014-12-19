@@ -3,9 +3,9 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 use dom::attr::{Attr, AttrHelpers};
-use dom::bindings::codegen::Bindings::HTMLTableElementBinding::HTMLTableElementMethods;
-use dom::bindings::codegen::Bindings::HTMLTableElementBinding;
-use dom::bindings::codegen::Bindings::NodeBinding::NodeMethods;
+use dom::HTMLTableElementBinding::HTMLTableElementMethods;
+use dom::HTMLTableElementBinding;
+use dom::NodeBinding::NodeMethods;
 use dom::bindings::codegen::InheritTypes::{HTMLElementCast, HTMLTableCaptionElementCast};
 use dom::bindings::codegen::InheritTypes::{HTMLTableElementDerived, NodeCast};
 use dom::bindings::js::{JSRef, Temporary};

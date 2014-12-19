@@ -4,9 +4,9 @@
 
 use dom::attr::Attr;
 use dom::attr::AttrHelpers;
-use dom::bindings::codegen::Bindings::HTMLIFrameElementBinding;
-use dom::bindings::codegen::Bindings::HTMLIFrameElementBinding::HTMLIFrameElementMethods;
-use dom::bindings::codegen::Bindings::WindowBinding::WindowMethods;
+use dom::HTMLIFrameElementBinding;
+use dom::HTMLIFrameElementBinding::HTMLIFrameElementMethods;
+use dom::WindowBinding::WindowMethods;
 use dom::bindings::codegen::InheritTypes::{NodeCast, ElementCast};
 use dom::bindings::codegen::InheritTypes::{HTMLElementCast, HTMLIFrameElementDerived};
 use dom::bindings::js::{JSRef, Temporary, OptionalRootable};

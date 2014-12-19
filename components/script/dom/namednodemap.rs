@@ -3,8 +3,8 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 use dom::attr::Attr;
-use dom::bindings::codegen::Bindings::NamedNodeMapBinding;
-use dom::bindings::codegen::Bindings::NamedNodeMapBinding::NamedNodeMapMethods;
+use dom::NamedNodeMapBinding;
+use dom::NamedNodeMapBinding::NamedNodeMapMethods;
 use dom::bindings::global::GlobalRef;
 use dom::bindings::js::{JS, JSRef, Temporary};
 use dom::bindings::utils::{Reflectable, Reflector, reflect_dom_object};

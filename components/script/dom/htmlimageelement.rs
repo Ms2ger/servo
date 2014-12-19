@@ -5,8 +5,8 @@
 use dom::attr::Attr;
 use dom::attr::{AttrHelpers, AttrValue};
 use dom::bindings::cell::DOMRefCell;
-use dom::bindings::codegen::Bindings::HTMLImageElementBinding;
-use dom::bindings::codegen::Bindings::HTMLImageElementBinding::HTMLImageElementMethods;
+use dom::HTMLImageElementBinding;
+use dom::HTMLImageElementBinding::HTMLImageElementMethods;
 use dom::bindings::codegen::InheritTypes::{NodeCast, ElementCast, HTMLElementCast, HTMLImageElementDerived};
 use dom::bindings::js::{JS, JSRef, Temporary};
 use dom::bindings::utils::{Reflectable, Reflector};

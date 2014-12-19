@@ -6,10 +6,10 @@ use std::ascii::AsciiExt;
 
 use dom::attr::Attr;
 use dom::attr::AttrHelpers;
-use dom::bindings::codegen::Bindings::AttrBinding::AttrMethods;
-use dom::bindings::codegen::Bindings::HTMLScriptElementBinding;
-use dom::bindings::codegen::Bindings::HTMLScriptElementBinding::HTMLScriptElementMethods;
-use dom::bindings::codegen::Bindings::NodeBinding::NodeMethods;
+use dom::AttrBinding::AttrMethods;
+use dom::HTMLScriptElementBinding;
+use dom::HTMLScriptElementBinding::HTMLScriptElementMethods;
+use dom::NodeBinding::NodeMethods;
 use dom::bindings::codegen::InheritTypes::{HTMLScriptElementDerived, HTMLScriptElementCast};
 use dom::bindings::codegen::InheritTypes::{ElementCast, HTMLElementCast, NodeCast};
 use dom::bindings::codegen::InheritTypes::EventTargetCast;

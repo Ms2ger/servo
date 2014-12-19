@@ -4,8 +4,8 @@
 
 use dom::attr::Attr;
 use dom::attr::AttrHelpers;
-use dom::bindings::codegen::Bindings::HTMLCanvasElementBinding;
-use dom::bindings::codegen::Bindings::HTMLCanvasElementBinding::HTMLCanvasElementMethods;
+use dom::HTMLCanvasElementBinding;
+use dom::HTMLCanvasElementBinding::HTMLCanvasElementMethods;
 use dom::bindings::codegen::InheritTypes::HTMLCanvasElementDerived;
 use dom::bindings::codegen::InheritTypes::{ElementCast, HTMLElementCast};
 use dom::bindings::global::GlobalRef;

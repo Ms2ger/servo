@@ -3,9 +3,9 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 use dom::attr::{Attr, AttrHelpers};
-use dom::bindings::codegen::Bindings::EventHandlerBinding::EventHandlerNonNull;
-use dom::bindings::codegen::Bindings::HTMLBodyElementBinding::{mod, HTMLBodyElementMethods};
-use dom::bindings::codegen::Bindings::WindowBinding::WindowMethods;
+use dom::EventHandlerBinding::EventHandlerNonNull;
+use dom::HTMLBodyElementBinding::{mod, HTMLBodyElementMethods};
+use dom::WindowBinding::WindowMethods;
 use dom::bindings::codegen::InheritTypes::EventTargetCast;
 use dom::bindings::codegen::InheritTypes::{HTMLBodyElementDerived, HTMLElementCast};
 use dom::bindings::js::{JSRef, Temporary};
