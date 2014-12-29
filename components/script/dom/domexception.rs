@@ -48,14 +48,14 @@ impl DOMErrorName {
             Error::NotSupported => DOMErrorName::NotSupportedError,
             Error::InvalidState => DOMErrorName::InvalidStateError,
             Error::Syntax => DOMErrorName::SyntaxError,
-            Error::NamespaceError => DOMErrorName::NamespaceError,
+            Error::Namespace => DOMErrorName::NamespaceError,
             Error::InvalidAccess => DOMErrorName::InvalidAccessError,
             Error::Security => DOMErrorName::SecurityError,
             Error::Network => DOMErrorName::NetworkError,
             Error::Abort => DOMErrorName::AbortError,
             Error::Timeout => DOMErrorName::TimeoutError,
             Error::DataClone => DOMErrorName::DataCloneError,
-            Error::NoModificationAllowedError => DOMErrorName::NoModificationAllowedError,
+            Error::NoModificationAllowed => DOMErrorName::NoModificationAllowedError,
             Error::FailureUnknown => panic!(),
         }
     }

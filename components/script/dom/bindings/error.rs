@@ -29,14 +29,14 @@ pub enum Error {
     NotSupported,
     InvalidState,
     Syntax,
-    NamespaceError,
+    Namespace,
     InvalidAccess,
     Security,
     Network,
     Abort,
     Timeout,
     DataClone,
-    NoModificationAllowedError
+    NoModificationAllowed,
 }
 
 /// The return type for IDL operations that can throw DOM exceptions.
