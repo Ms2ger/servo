@@ -115,7 +115,7 @@ impl WorkerMessageHandler {
 }
 
 impl Runnable for WorkerMessageHandler {
-    fn handler(self){
+    fn handler(self: Box<WorkerMessageHandler>){
         Worker::handle_message(self.addr, self.data);
     }
 }
