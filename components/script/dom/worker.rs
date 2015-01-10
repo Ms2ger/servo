@@ -115,7 +115,7 @@ impl WorkerMessageHandler {
 }
 
 impl Runnable for WorkerMessageHandler {
-    fn handler(&self){
-        Worker::handle_message(self.addr.clone(), self.data);
+    fn handler(self){
+        Worker::handle_message(self.addr, self.data);
     }
 }

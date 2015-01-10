@@ -96,7 +96,7 @@ pub enum TimerSource {
 }
 
 pub trait Runnable {
-    fn handler(&self);
+    fn handler(self);
 }
 
 /// Messages used to control script event loops, such as ScriptTask and
@@ -1385,7 +1385,7 @@ impl DocumentProgressHandler {
 }
 
 impl Runnable for DocumentProgressHandler {
-    fn handler(&self) {
+    fn handler(self) {
         match self.task {
             DocumentProgressTask::DOMContentLoaded => {
                 self.dispatch_dom_content_loaded();

@@ -85,8 +85,8 @@ impl XHRProgressHandler {
 }
 
 impl Runnable for XHRProgressHandler {
-    fn handler(&self) {
-        XMLHttpRequest::handle_progress(self.addr.clone(), self.progress.clone());
+    fn handler(self) {
+        XMLHttpRequest::handle_progress(self.addr, self.progress);
     }
 }
 
