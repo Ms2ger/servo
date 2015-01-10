@@ -86,8 +86,8 @@ impl XHRProgressHandler {
 
 impl Runnable for XHRProgressHandler {
     fn handler(self: Box<XHRProgressHandler>) {
-        let XHRProgressHandler { addr, progress } = *self;
-        XMLHttpRequest::handle_progress(addr, progress);
+        let this = *self;
+        XMLHttpRequest::handle_progress(this.addr, this.progress);
     }
 }
 
