@@ -2514,7 +2514,7 @@ class CGSpecializedMethod(CGAbstractExternMethod):
 
     @staticmethod
     def makeNativeName(descriptor, method):
-        assert re.match(r"([a-z]+)([A-Z]([a-z]+|[A-Z]*))*", method.identifier.name), method.identifier.name
+        assert re.match(r"([a-z]+)?([A-Z]([a-z]+|[A-Z]*))*", method.identifier.name), method.identifier.name
         return MakeNativeName(method.identifier.name)
 
 class CGStaticMethod(CGAbstractStaticBindingMethod):
@@ -2581,7 +2581,7 @@ class CGSpecializedGetter(CGAbstractExternMethod):
 
     @staticmethod
     def makeNativeName(descriptor, attr):
-        assert re.match(r"([a-z]+)([A-Z]([a-z]+|[A-Z]*))*", attr.identifier.name), attr.identifier.name
+        assert re.match(r"([a-z]+)?([A-Z]([a-z]+|[A-Z]*))*", attr.identifier.name), attr.identifier.name
         nativeName = MakeNativeName(attr.identifier.name)
         infallible = ('infallible' in
                       descriptor.getExtendedAttributes(attr, getter=True))
@@ -2660,7 +2660,7 @@ class CGSpecializedSetter(CGAbstractExternMethod):
 
     @staticmethod
     def makeNativeName(descriptor, attr):
-        assert re.match(r"([a-z]+)([A-Z]([a-z]+|[A-Z]*))*", attr.identifier.name), attr.identifier.name
+        assert re.match(r"([a-z]+)?([A-Z]([a-z]+|[A-Z]*))*", attr.identifier.name), attr.identifier.name
         return "Set" + MakeNativeName(attr.identifier.name)
 
 
