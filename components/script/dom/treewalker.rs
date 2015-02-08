@@ -416,12 +416,17 @@ impl<'a> TreeWalkerHelpers<'a> for JSRef<'a, TreeWalker> {
         let mut node = self.current_node.get().root().get_unsound_ref_forever();
         // "2. While node is not root, run these substeps:"
         while !self.is_root_node(node) {
-            // "1. Let sibling be the previous sibling of node."
-            let mut sibling_op = node.prev_sibling();
             // "2. While sibling is not null, run these subsubsteps:"
-            while sibling_op.is_some() {
+            loop {
+                // "1. Let sibling be the previous sibling of node."
+                // "5. Set sibling to the previous sibling of node."
+                let sibling = match node.prev_sibling().root() {
+                    Some(sibling) => sibling,
+                    None => break,
+                }
+
                 // "1. Set node to sibling."
-                node = sibling_op.unwrap().root().get_unsound_ref_forever();
+                node = sibling.get_unsound_ref_forever();
                 // "2. Filter node and let result be the return value."
                 // "3. While result is not FILTER_REJECT and node has a child,
                 //     set node to its last child and then filter node and
@@ -441,8 +446,6 @@ impl<'a> TreeWalkerHelpers<'a> for JSRef<'a, TreeWalker> {
                         _ => break
                     }
                 }
-                // "5. Set sibling to the previous sibling of node."
-                sibling_op = node.prev_sibling()
             }
             // "3. If node is root or node's parent is null, return null."
             if self.is_root_node(node) || node.parent_node() == None {
