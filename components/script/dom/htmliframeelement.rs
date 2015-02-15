@@ -12,6 +12,7 @@ use dom::bindings::codegen::InheritTypes::{EventTargetCast, NodeCast, ElementCas
 use dom::bindings::codegen::InheritTypes::{HTMLElementCast, HTMLIFrameElementDerived};
 use dom::bindings::global::GlobalRef;
 use dom::bindings::js::{JSRef, Temporary, OptionalRootable};
+use dom::bindings::refcounted::Trusted;
 use dom::document::Document;
 use dom::element::{Element, ElementTypeId, AttributeHandlers};
 use dom::event::{Event, EventHelpers, EventBubbles, EventCancelable};
@@ -22,6 +23,7 @@ use dom::urlhelper::UrlHelper;
 use dom::virtualmethods::VirtualMethods;
 use dom::window::Window;
 use page::{IterablePage, Page};
+use script_task::{ScriptMsg, Runnable};
 
 use msg::constellation_msg::{PipelineId, SubpageId, ConstellationChan};
 use msg::constellation_msg::IFrameSandboxState::{IFrameSandboxed, IFrameUnsandboxed};
@@ -62,7 +64,7 @@ pub trait HTMLIFrameElementHelpers {
     fn is_sandboxed(self) -> bool;
     fn get_url(self) -> Option<Url>;
     /// http://www.whatwg.org/html/#process-the-iframe-attributes
-    fn process_the_iframe_attributes(self);
+    fn process_the_iframe_attributes(self, first_time: bool);
     fn load_event_steps(self);
     fn generate_new_subpage_id(self, page: &Page) -> (SubpageId, Option<SubpageId>);
 }
@@ -93,7 +95,25 @@ impl<'a> HTMLIFrameElementHelpers for JSRef<'a, HTMLIFrameElement> {
         (subpage_id, old_subpage_id)
     }
 
-    fn process_the_iframe_attributes(self) {
+    fn process_the_iframe_attributes(self, first_time: bool) {
+        let window = window_from_node(self).root();
+        let window = window.r();
+
+        // Case 2.
+        let element: JSRef<Element> = ElementCast::from_ref(self);
+        if first_time && !element.has_attribute(&atom!("src")) {
+            let sender = window.script_chan();
+            let address = Trusted::new(window.get_cx(), self, sender.clone());
+            sender.send(ScriptMsg::RunnableMsg(box IframeLoadEventSteps {
+                element: address.clone(),
+            }));
+            let page = window.page();
+            let (new_subpage_id, old_subpage_id) = self.generate_new_subpage_id(page);
+            self.containing_page_pipeline_id.set(Some(page.id));
+            return;
+        }
+
+        // Case 3.
         let url = match self.get_url() {
             Some(url) => url.clone(),
             None => Url::parse("about:blank").unwrap(),
@@ -105,8 +125,6 @@ impl<'a> HTMLIFrameElementHelpers for JSRef<'a, HTMLIFrameElement> {
             IFrameUnsandboxed
         };
 
-        let window = window_from_node(self).root();
-        let window = window.r();
         let page = window.page();
         let (new_subpage_id, old_subpage_id) = self.generate_new_subpage_id(page);
 
@@ -243,7 +261,7 @@ impl<'a> VirtualMethods for JSRef<'a, HTMLIFrameElement> {
             &atom!("src") => {
                 let node: JSRef<Node> = NodeCast::from_ref(*self);
                 if node.is_in_doc() {
-                    self.process_the_iframe_attributes()
+                    self.process_the_iframe_attributes(false)
                 }
             },
             _ => ()
@@ -276,8 +294,18 @@ impl<'a> VirtualMethods for JSRef<'a, HTMLIFrameElement> {
         }
 
         if tree_in_doc {
-            self.process_the_iframe_attributes();
+            self.process_the_iframe_attributes(true);
         }
     }
 }
 
+struct IframeLoadEventSteps {
+    element: Trusted<HTMLIFrameElement>,
+}
+
+impl Runnable for IframeLoadEventSteps {
+    fn handler(self: Box<IframeLoadEventSteps>) {
+        let iframe = self.element.to_temporary().root();
+        iframe.r().load_event_steps();
+    }
+}
