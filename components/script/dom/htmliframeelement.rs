@@ -8,14 +8,14 @@ use dom::attr::AttrHelpers;
 use dom::bindings::codegen::Bindings::HTMLIFrameElementBinding;
 use dom::bindings::codegen::Bindings::HTMLIFrameElementBinding::HTMLIFrameElementMethods;
 use dom::bindings::codegen::Bindings::WindowBinding::WindowMethods;
-use dom::bindings::codegen::InheritTypes::{NodeCast, ElementCast};
+use dom::bindings::codegen::InheritTypes::{EventTargetCast, NodeCast, ElementCast};
 use dom::bindings::codegen::InheritTypes::{HTMLElementCast, HTMLIFrameElementDerived};
+use dom::bindings::global::GlobalRef;
 use dom::bindings::js::{JSRef, Temporary, OptionalRootable};
 use dom::document::Document;
-use dom::element::Element;
-use dom::element::AttributeHandlers;
+use dom::element::{Element, ElementTypeId, AttributeHandlers};
+use dom::event::{Event, EventHelpers, EventBubbles, EventCancelable};
 use dom::eventtarget::{EventTarget, EventTargetTypeId};
-use dom::element::ElementTypeId;
 use dom::htmlelement::{HTMLElement, HTMLElementTypeId};
 use dom::node::{Node, NodeHelpers, NodeTypeId, window_from_node};
 use dom::urlhelper::UrlHelper;
@@ -30,6 +30,7 @@ use util::str::DOMString;
 use string_cache::Atom;
 
 use std::ascii::AsciiExt;
+use std::borrow::ToOwned;
 use std::cell::Cell;
 use url::{Url, UrlParser};
 
@@ -62,6 +63,7 @@ pub trait HTMLIFrameElementHelpers {
     fn get_url(self) -> Option<Url>;
     /// http://www.whatwg.org/html/#process-the-iframe-attributes
     fn process_the_iframe_attributes(self);
+    fn load_event_steps(self);
     fn generate_new_subpage_id(self, page: &Page) -> (SubpageId, Option<SubpageId>);
 }
 
@@ -116,6 +118,14 @@ impl<'a> HTMLIFrameElementHelpers for JSRef<'a, HTMLIFrameElement> {
                                                         new_subpage_id,
                                                         old_subpage_id,
                                                         sandboxed)).unwrap();
+    }
+
+    fn load_event_steps(self) {
+        let window = window_from_node(self).root();
+        let event = Event::new(GlobalRef::Window(window.r()), "load".to_owned(),
+                               EventBubbles::DoesNotBubble,
+                               EventCancelable::NotCancelable).root();
+        event.r().fire(EventTargetCast::from_ref(self));
     }
 }
 

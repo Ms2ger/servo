@@ -28,10 +28,10 @@ use dom::event::{Event, EventHelpers, EventBubbles, EventCancelable};
 use dom::uievent::UIEvent;
 use dom::eventtarget::{EventTarget, EventTargetHelpers};
 use dom::htmlelement::HTMLElementTypeId;
-use dom::htmliframeelement::HTMLIFrameElement;
+use dom::htmliframeelement::{HTMLIFrameElement, HTMLIFrameElementHelpers};
 use dom::keyboardevent::KeyboardEvent;
 use dom::mouseevent::MouseEvent;
-use dom::node::{self, Node, NodeHelpers, NodeDamage, NodeTypeId, window_from_node};
+use dom::node::{self, Node, NodeHelpers, NodeDamage, NodeTypeId};
 use dom::window::{Window, WindowHelpers, ScriptHelpers};
 use dom::worker::{Worker, TrustedWorkerAddress};
 use parse::html::{HTMLInput, parse_html};
@@ -926,7 +926,7 @@ impl ScriptTask {
         // "load" event as soon as we've finished executing all scripts parsed during
         // the initial load.
 
-        // https://html.spec.whatwg.org/multipage/#the-end step 7
+        // https://html.spec.whatwg.org/multipage/#the-end step 7-12
         self.chan.send(ScriptMsg::RunnableMsg(box DocumentProgressHandler {
             addr: addr,
             task: DocumentProgressTask::Load,
@@ -1433,19 +1433,15 @@ impl DocumentProgressHandler {
         event.r().set_trusted(true);
         let _ = wintarget.dispatch_event_with_target(doctarget, event.r());
 
+        // When a Document in an iframe is marked as _completely loaded_, the
+        // user agent must run the _iframe load event steps_ in parallel.
         let window_ref = window.r();
         let browser_context = window_ref.browser_context();
         let browser_context = browser_context.as_ref().unwrap();
-
-        browser_context.frame_element().map(|frame_element| {
-            let frame_element = frame_element.root();
-            let frame_window = window_from_node(frame_element.r()).root();
-            let event = Event::new(GlobalRef::Window(frame_window.r()), "load".to_owned(),
-                                   EventBubbles::DoesNotBubble,
-                                   EventCancelable::NotCancelable).root();
-            let target: JSRef<EventTarget> = EventTargetCast::from_ref(frame_element.r());
-            event.r().fire(target);
-        });
+        let frame = browser_context.frame_element().root();
+        if let Some(iframe) = frame.r().and_then(HTMLIFrameElementCast::to_ref) {
+            iframe.load_event_steps();
+        }
     }
 }
 
