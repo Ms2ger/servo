@@ -1244,7 +1244,7 @@ class MethodDefiner(PropertyDefiner):
             if m.get("methodInfo", True):
                 identifier = m.get("nativeName", m["name"])
                 jitinfo = "&%s_methodinfo" % identifier
-                accessor = "genericMethod as NonNullJSNative"
+                accessor = "generic_method as NonNullJSNative"
             else:
                 jitinfo = "0 as *const JSJitInfo"
                 accessor = m.get("nativeName", m["name"])
@@ -1288,9 +1288,9 @@ class AttrDefiner(PropertyDefiner):
                 jitinfo = "0"
             else:
                 if attr.hasLenientThis():
-                    accessor = "genericLenientGetter"
+                    accessor = "generic_lenient_getter"
                 else:
-                    accessor = "genericGetter"
+                    accessor = "generic_getter"
                 jitinfo = "&%s_getterinfo" % attr.identifier.name
 
             return ("JSPropertyOpWrapper {op: Some(%(native)s as NonNullJSNative), info: %(info)s as *const JSJitInfo}"
@@ -1306,9 +1306,9 @@ class AttrDefiner(PropertyDefiner):
                 jitinfo = "0"
             else:
                 if attr.hasLenientThis():
-                    accessor = "genericLenientSetter"
+                    accessor = "generic_lenient_setter"
                 else:
-                    accessor = "genericSetter"
+                    accessor = "generic_setter"
                 jitinfo = "&%s_setterinfo" % attr.identifier.name
 
             return ("JSStrictPropertyOpWrapper {op: Some(%(native)s as NonNullJSNative), info: %(info)s as *const JSJitInfo}"
@@ -2539,7 +2539,7 @@ class CGGenericMethod(CGAbstractBindingMethod):
     def __init__(self, descriptor):
         args = [Argument('*mut JSContext', 'cx'), Argument('libc::c_uint', 'argc'),
                 Argument('*mut JSVal', 'vp')]
-        CGAbstractBindingMethod.__init__(self, descriptor, 'genericMethod', args)
+        CGAbstractBindingMethod.__init__(self, descriptor, 'generic_method', args)
 
     def generate_code(self):
         return CGGeneric(
@@ -2594,13 +2594,13 @@ class CGGenericGetter(CGAbstractBindingMethod):
         args = [Argument('*mut JSContext', 'cx'), Argument('libc::c_uint', '_argc'),
                 Argument('*mut JSVal', 'vp')]
         if lenientThis:
-            name = "genericLenientGetter"
+            name = "generic_lenient_getter"
             unwrapFailureCode = (
                 "assert!(JS_IsExceptionPending(cx) == 0);\n"
                 "*vp = UndefinedValue();\n"
                 "return 1;")
         else:
-            name = "genericGetter"
+            name = "generic_getter"
             unwrapFailureCode = None
         CGAbstractBindingMethod.__init__(self, descriptor, name, args,
                                          unwrapFailureCode)
@@ -2668,12 +2668,12 @@ class CGGenericSetter(CGAbstractBindingMethod):
         args = [Argument('*mut JSContext', 'cx'), Argument('libc::c_uint', 'argc'),
                 Argument('*mut JSVal', 'vp')]
         if lenientThis:
-            name = "genericLenientSetter"
+            name = "generic_lenient_setter"
             unwrapFailureCode = (
                 "assert!(JS_IsExceptionPending(cx) == 0);\n"
                 "return 1;")
         else:
-            name = "genericSetter"
+            name = "generic_setter"
             unwrapFailureCode = None
         CGAbstractBindingMethod.__init__(self, descriptor, name, args,
                                          unwrapFailureCode)
