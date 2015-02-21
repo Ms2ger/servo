@@ -1901,7 +1901,7 @@ let scope = scope.reflector().get_jsobject();
 assert!(!scope.is_null());
 assert!(((*JS_GetClass(scope)).flags & JSCLASS_IS_GLOBAL) != 0);
 
-let proto = with_compartment(cx, scope, || GetProtoObject(cx, scope, scope));
+let proto = with_compartment(cx, scope, || get_proto_object(cx, scope, scope));
 assert!(!proto.is_null());
 
 %s
@@ -1913,7 +1913,7 @@ Temporary::from_unrooted(raw)""" % CreateBindingJSObject(self.descriptor, "scope
             return CGGeneric("""\
 %s
 with_compartment(cx, obj, || {
-    let proto = GetProtoObject(cx, obj, obj);
+    let proto = get_proto_object(cx, obj, obj);
     JS_SetPrototype(cx, obj, proto);
 
     raw.reflector().set_jsobject(obj);
@@ -2027,7 +2027,7 @@ class CGCreateInterfaceObjectsMethod(CGAbstractMethod):
             getParentProto = "JS_GetObjectPrototype(cx, global)"
         else:
             parentProtoName = self.descriptor.prototypeChain[-2]
-            getParentProto = ("%s::GetProtoObject(cx, global, receiver)" %
+            getParentProto = ("%s::get_proto_object(cx, global, receiver)" %
                               toBindingNamespace(parentProtoName))
 
         getParentProto = ("let parent_proto: *mut JSObject = %s;\n"
@@ -2105,7 +2105,7 @@ class CGGetProtoObjectMethod(CGGetPerInterfaceObject):
     A method for getting the interface prototype object.
     """
     def __init__(self, descriptor):
-        CGGetPerInterfaceObject.__init__(self, descriptor, "GetProtoObject",
+        CGGetPerInterfaceObject.__init__(self, descriptor, "get_proto_object",
                                          "PrototypeList::", pub=True)
     def definition_body(self):
         return CGList([
@@ -2209,7 +2209,7 @@ class CGDefineDOMInterfaceMethod(CGAbstractMethod):
     def definition_body(self):
         return CGGeneric("""\
 assert!(!global.is_null());
-assert!(!GetProtoObject(cx, global, global).is_null());""")
+assert!(!get_proto_object(cx, global, global).is_null());""")
 
 def needCx(returnType, arguments, considerTypes):
     return (considerTypes and
