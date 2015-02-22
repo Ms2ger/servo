@@ -2019,7 +2019,7 @@ class CGCreateInterfaceObjectsMethod(CGAbstractMethod):
         assert not descriptor.interface.isCallback()
         args = [Argument('*mut JSContext', 'cx'), Argument('*mut JSObject', 'global'),
                 Argument('*mut JSObject', 'receiver')]
-        CGAbstractMethod.__init__(self, descriptor, 'CreateInterfaceObjects', '*mut JSObject', args)
+        CGAbstractMethod.__init__(self, descriptor, 'create_interface_objects', '*mut JSObject', args)
         self.properties = properties
     def definition_body(self):
         protoChain = self.descriptor.prototypeChain
@@ -2092,7 +2092,7 @@ assert!(((*JS_GetClass(global)).flags & JSCLASS_DOM_GLOBAL) != 0);
 let proto_or_iface_array = get_proto_or_iface_array(global);
 let cached_object: *mut JSObject = *proto_or_iface_array.offset(%s as isize);
 if cached_object.is_null() {
-    let tmp: *mut JSObject = CreateInterfaceObjects(cx, global, receiver);
+    let tmp: *mut JSObject = create_interface_objects(cx, global, receiver);
     assert!(!tmp.is_null());
     *proto_or_iface_array.offset(%s as isize) = tmp;
     tmp
