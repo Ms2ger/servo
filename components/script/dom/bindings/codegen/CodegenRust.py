@@ -204,8 +204,10 @@ class CGMethodCall(CGThing):
                     "    throw_type_error(cx, \"Not enough arguments to %s.\");\n"
                     "    return 0;\n"
                     "}" % (requiredArgs, methodName))
-                self.cgRoot.prepend(
-                    CGWrapper(CGGeneric(code), pre="\n", post="\n"))
+            else:
+                code = "let _ = argc;"
+            self.cgRoot.prepend(
+                CGWrapper(CGGeneric(code), pre="\n", post="\n"))
 
             return
 
@@ -1421,7 +1423,6 @@ class CGImports(CGWrapper):
             'non_upper_case_globals',
             'unused_parens',
             'unused_imports',
-            'unused_variables',
             'unused_unsafe',
             'unused_mut',
             'unused_assignments',
@@ -2287,6 +2288,9 @@ class CGCallGenerator(CGThing):
         if typeRetValNeedsRooting(returnType):
             self.cgRoot.append(CGGeneric("let result = result.root();"))
 
+        if returnType is None or returnType.isVoid():
+            self.cgRoot.append(CGGeneric("let _ = result;"))
+
     def define(self):
         return self.cgRoot.define()
 
@@ -2330,11 +2334,10 @@ class CGPerSignatureCall(CGThing):
         self.argsPre = argsPre
         self.arguments = arguments
         self.argCount = len(arguments)
+        cgThings = [CGGeneric("let _ = cx;")]
         if self.argCount > argConversionStartsAt:
             # Insert our argv in there
-            cgThings = [CGGeneric(self.getArgvDecl())]
-        else:
-            cgThings = []
+            cgThings.append(CGGeneric(self.getArgvDecl()))
         cgThings.extend([CGArgumentConverter(arguments[i], i, self.getArgv(),
                                              self.getArgc(), self.descriptor,
                                              invalidEnumValueFatal=not setter) for
@@ -2591,7 +2594,7 @@ class CGGenericGetter(CGAbstractBindingMethod):
     A class for generating the C++ code for an IDL attribute getter.
     """
     def __init__(self, descriptor, lenientThis=False):
-        args = [Argument('*mut JSContext', 'cx'), Argument('libc::c_uint', 'argc'),
+        args = [Argument('*mut JSContext', 'cx'), Argument('libc::c_uint', '_argc'),
                 Argument('*mut JSVal', 'vp')]
         if lenientThis:
             name = "genericLenientGetter"
@@ -3081,7 +3084,10 @@ class CGUnionConversionStruct(CGThing):
     def try_method(self, t):
         templateVars = getUnionTypeTemplateVars(t, self.descriptorProvider)
         returnType = "Result<Option<%s>, ()>" % templateVars["typeName"]
-        jsConversion = templateVars["jsConversion"]
+        jsConversion = CGList([
+            CGGeneric("let _ = cx;"),
+            templateVars["jsConversion"],
+        ], "\n")
 
         return CGWrapper(
             CGIndenter(jsConversion, 4),
@@ -3911,7 +3917,7 @@ return true;"""
 class CGDOMJSProxyHandler_get(CGAbstractExternMethod):
     def __init__(self, descriptor):
         args = [Argument('*mut JSContext', 'cx'), Argument('*mut JSObject', 'proxy'),
-                Argument('*mut JSObject', 'receiver'), Argument('jsid', 'id'),
+                Argument('*mut JSObject', '_receiver'), Argument('jsid', 'id'),
                 Argument('*mut JSVal', 'vp')]
         CGAbstractExternMethod.__init__(self, descriptor, "get", "bool", args)
         self.descriptor = descriptor
@@ -3987,7 +3993,7 @@ return true;""" % (getIndexedOrExpando, getNamed)
 
 class CGDOMJSProxyHandler_obj_toString(CGAbstractExternMethod):
     def __init__(self, descriptor):
-        args = [Argument('*mut JSContext', 'cx'), Argument('*mut JSObject', 'proxy')]
+        args = [Argument('*mut JSContext', 'cx'), Argument('*mut JSObject', '_proxy')]
         CGAbstractExternMethod.__init__(self, descriptor, "obj_toString", "*mut JSString", args)
         self.descriptor = descriptor
     def getBody(self):
@@ -4087,7 +4093,7 @@ class CGClassFinalizeHook(CGAbstractClassHook):
     A hook for finalize, used to release our native object.
     """
     def __init__(self, descriptor):
-        args = [Argument('*mut JSFreeOp', 'fop'), Argument('*mut JSObject', 'obj')]
+        args = [Argument('*mut JSFreeOp', '_fop'), Argument('*mut JSObject', 'obj')]
         CGAbstractClassHook.__init__(self, descriptor, FINALIZE_HOOK_NAME,
                                      'void', args)
 
