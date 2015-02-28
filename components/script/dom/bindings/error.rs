@@ -8,6 +8,8 @@ use dom::bindings::conversions::ToJSValConvertible;
 use dom::bindings::global::GlobalRef;
 use dom::domexception::DOMException;
 
+use util::str::DOMString;
+
 use js::jsapi::{JSContext, JSBool, JSObject};
 use js::jsapi::{JS_IsExceptionPending, JS_SetPendingException, JS_ReportPendingException};
 use js::jsapi::{JS_ReportErrorNumber, JSErrorFormatString, JSEXN_TYPEERR};
@@ -22,36 +24,40 @@ use std::ptr;
 /// DOM exceptions that can be thrown by a native DOM method.
 #[derive(Debug, Clone)]
 pub enum Error {
-    /// IndexSizeError
+    /// IndexSizeError DOMException
     IndexSize,
-    /// NotFoundError
+    /// NotFoundError DOMException
     NotFound,
-    /// HierarchyRequestError
+    /// HierarchyRequestError DOMException
     HierarchyRequest,
-    /// InvalidCharacterError
+    /// InvalidCharacterError DOMException
     InvalidCharacter,
-    /// NotSupportedError
+    /// NotSupportedError DOMException
     NotSupported,
-    /// InvalidStateError
+    /// InvalidStateError DOMException
     InvalidState,
-    /// SyntaxError
+    /// SyntaxError DOMException
     Syntax,
-    /// NamespaceError
+    /// NamespaceError DOMException
     NamespaceError,
-    /// InvalidAccessError
+    /// InvalidAccessError DOMException
     InvalidAccess,
-    /// SecurityError
+    /// SecurityError DOMException
     Security,
-    /// NetworkError
+    /// NetworkError DOMException
     Network,
-    /// AbortError
+    /// AbortError DOMException
     Abort,
-    /// TimeoutError
+    /// TimeoutError DOMException
     Timeout,
-    /// DataCloneError
+    /// DataCloneError DOMException
     DataClone,
-    /// NoModificationAllowedError
+    /// NoModificationAllowedError DOMException
     NoModificationAllowedError,
+
+    /// TypeError JavaScript Error
+    TypeError(DOMString),
+
     /// Unknown failure
     FailureUnknown,
 }
@@ -67,6 +73,26 @@ pub type ErrorResult = Fallible<()>;
 pub fn throw_dom_exception(cx: *mut JSContext, global: GlobalRef,
                            result: Error) {
     assert!(unsafe { JS_IsExceptionPending(cx) } == 0);
+        match error {
+            Error::IndexSize => DOMErrorName::IndexSizeError,
+            Error::NotFound => DOMErrorName::NotFoundError,
+            Error::HierarchyRequest => DOMErrorName::HierarchyRequestError,
+            Error::InvalidCharacter => DOMErrorName::InvalidCharacterError,
+            Error::NotSupported => DOMErrorName::NotSupportedError,
+            Error::InvalidState => DOMErrorName::InvalidStateError,
+            Error::Syntax => DOMErrorName::SyntaxError,
+            Error::NamespaceError => DOMErrorName::NamespaceError,
+            Error::InvalidAccess => DOMErrorName::InvalidAccessError,
+            Error::Security => DOMErrorName::SecurityError,
+            Error::Network => DOMErrorName::NetworkError,
+            Error::Abort => DOMErrorName::AbortError,
+            Error::Timeout => DOMErrorName::TimeoutError,
+            Error::DataClone => DOMErrorName::DataCloneError,
+            Error::NoModificationAllowedError => DOMErrorName::NoModificationAllowedError,
+            Error::FailureUnknown => panic!(),
+        }
+    match result {
+        Failure
     let exception = DOMException::new_from_error(global, result).root();
     let thrown = exception.to_jsval(cx);
     unsafe {
