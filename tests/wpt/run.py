@@ -12,7 +12,7 @@ def wptsubdir(*args):
 
 # Imports
 sys.path.append(wptsubdir("web-platform-tests"))
-sys.path.append(wptsubdir("web-platform-tests", "tools", "scripts"))
+sys.path.append(wptsubdir("web-platform-tests", "tools", "manifest"))
 from wptrunner import wptrunner, wptcommandline
 import manifest
 
