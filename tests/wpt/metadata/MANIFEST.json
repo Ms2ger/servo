@@ -14312,10 +14312,6 @@
         "url": "/html/semantics/scripting-1/the-script-element/script-for-event.xhtml"
       },
       {
-        "path": "html/semantics/scripting-1/the-script-element/script-for-onload.html",
-        "url": "/html/semantics/scripting-1/the-script-element/script-for-onload.html"
-      },
-      {
         "path": "html/semantics/scripting-1/the-script-element/script-language-type.html",
         "url": "/html/semantics/scripting-1/the-script-element/script-language-type.html"
       },
@@ -24627,7 +24623,7 @@
       }
     ]
   },
-  "rev": "709decbf2479c986d00622055030eb0eb558701f",
+  "rev": "b39f4064947a670a7d8b783484081a3219c908b7",
   "url_base": "/",
   "version": 2
 }

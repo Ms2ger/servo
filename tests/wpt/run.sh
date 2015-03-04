@@ -27,4 +27,5 @@ python $wpt_root/run.py \
   --config $wpt_root/config.ini \
   --binary $binary_dir/servo \
   --log-mach - \
+  --no-pause-after-test \
   "$@"
