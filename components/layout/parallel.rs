@@ -22,7 +22,7 @@ use wrapper::{PreorderDomTraversal, PostorderDomTraversal};
 
 use util::opts;
 use util::time::{TimeProfilerCategory, ProfilerMetadata, TimeProfilerChan, profile};
-use util::workqueue::{WorkQueue, WorkUnit, WorkerProxy};
+use workqueue::{WorkQueue, WorkUnit, WorkerProxy};
 use std::mem;
 use std::ptr;
 use std::sync::atomic::{AtomicInt, Ordering};

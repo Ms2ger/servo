@@ -7,15 +7,18 @@
 //! Data associated with queues is simply a pair of unsigned integers. It is expected that a
 //! higher-level API on top of this could allow safe fork-join parallelism.
 
-use task::spawn_named;
-use task_state;
+#![allow(unsafe_blocks)]
+
+use util::deque::{Abort, BufferPool, Data, Empty, Stealer, Worker};
+use util::task::spawn_named;
+use util::task_state;
 
 use libc::funcs::posix88::unistd::usleep;
-use std::mem;
 use rand::{Rng, weak_rng, XorShiftRng};
+
+use std::mem;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::mpsc::{channel, Sender, Receiver};
-use deque::{Abort, BufferPool, Data, Empty, Stealer, Worker};
 
 /// A unit of work.
 ///

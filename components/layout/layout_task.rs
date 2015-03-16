@@ -62,7 +62,7 @@ use util::task::spawn_named_with_send_on_failure;
 use util::task_state;
 use util::time::{TimeProfilerCategory, ProfilerMetadata, TimeProfilerChan};
 use util::time::{TimerMetadataFrameType, TimerMetadataReflowType, profile};
-use util::workqueue::WorkQueue;
+use workqueue::WorkQueue;
 use std::borrow::ToOwned;
 use std::cell::Cell;
 use std::ops::{Deref, DerefMut};
