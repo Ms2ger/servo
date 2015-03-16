@@ -34,6 +34,7 @@ extern crate canvas;
 extern crate geom;
 extern crate gfx;
 extern crate layout_traits;
+extern crate rand;
 extern crate script;
 extern crate script_traits;
 extern crate "rustc-serialize" as rustc_serialize;
@@ -87,6 +88,7 @@ pub mod table_row;
 pub mod table_cell;
 pub mod text;
 pub mod traversal;
+pub mod workqueue;
 pub mod wrapper;
 
 pub mod css {

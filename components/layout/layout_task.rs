@@ -78,7 +78,7 @@ use util::task::spawn_named_with_send_on_failure;
 use util::task_state;
 use util::time::{TimeProfilerCategory, ProfilerMetadata, TimeProfilerChan};
 use util::time::{TimerMetadataFrameType, TimerMetadataReflowType, profile};
-use util::workqueue::WorkQueue;
+use workqueue::WorkQueue;
 
 /// Mutable data belonging to the LayoutTask.
 ///

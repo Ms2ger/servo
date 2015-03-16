@@ -73,7 +73,6 @@ pub mod time;
 pub mod taskpool;
 pub mod task_state;
 pub mod vec;
-pub mod workqueue;
 
 pub fn breakpoint() {
     unsafe { ::std::intrinsics::breakpoint() };
