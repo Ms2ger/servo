@@ -100,7 +100,7 @@ pub struct LayoutTaskData {
     pub stylist: Box<Stylist>,
 
     /// The workers that we use for parallel operation.
-    pub parallel_traversal: Option<WorkQueue<SharedLayoutContextWrapper, UnsafeFlow>>,
+    pub parallel_traversal: Option<WorkQueue<'static, SharedLayoutContextWrapper, UnsafeFlow>>,
 
     /// The dirty rect. Used during display list construction.
     pub dirty: Rect<Au>,

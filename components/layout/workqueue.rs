@@ -25,7 +25,7 @@ use std::sync::mpsc::{channel, Sender, Receiver};
 ///
 /// - `QueueData`: global custom data for the entire work queue.
 /// - `WorkData`: custom data specific to each unit of work.
-pub struct WorkUnit<QueueData, WorkData> {
+pub struct WorkUnit<'a, QueueData: 'a, WorkData: 'a> {
     /// The function to execute.
     pub fun: extern "Rust" fn(WorkData, &mut WorkerProxy<QueueData, WorkData>),
     /// Arbitrary data.
@@ -33,56 +33,56 @@ pub struct WorkUnit<QueueData, WorkData> {
 }
 
 /// Messages from the supervisor to the worker.
-enum WorkerMsg<QueueData: 'static, WorkData: 'static> {
+enum WorkerMsg<'a, QueueData: 'a, WorkData: 'a> {
     /// Tells the worker to start work.
-    Start(Worker<WorkUnit<QueueData, WorkData>>, *mut AtomicUsize, *const QueueData),
+    Start(Worker<WorkUnit<'a, QueueData, WorkData>>, *mut AtomicUsize, *const QueueData),
     /// Tells the worker to stop. It can be restarted again with a `WorkerMsg::Start`.
     Stop,
     /// Tells the worker thread to terminate.
     Exit,
 }
 
-unsafe impl<QueueData: 'static, WorkData: 'static> Send for WorkerMsg<QueueData, WorkData> {}
+unsafe impl<'a, QueueData: 'a, WorkData: 'a> Send for WorkerMsg<'a, QueueData, WorkData> {}
 
 /// Messages to the supervisor.
-enum SupervisorMsg<QueueData: 'static, WorkData: 'static> {
+enum SupervisorMsg<'a, QueueData: 'a, WorkData: 'a> {
     Finished,
-    ReturnDeque(usize, Worker<WorkUnit<QueueData, WorkData>>),
+    ReturnDeque(usize, Worker<WorkUnit<'a, QueueData, WorkData>>),
 }
 
-unsafe impl<QueueData: 'static, WorkData: 'static> Send for SupervisorMsg<QueueData, WorkData> {}
+unsafe impl<'a, QueueData: 'a, WorkData: 'a> Send for SupervisorMsg<'a, QueueData, WorkData> {}
 
 /// Information that the supervisor thread keeps about the worker threads.
-struct WorkerInfo<QueueData: 'static, WorkData: 'static> {
+struct WorkerInfo<'a, QueueData: 'a, WorkData: 'a> {
     /// The communication channel to the workers.
-    chan: Sender<WorkerMsg<QueueData, WorkData>>,
+    chan: Sender<WorkerMsg<'a, QueueData, WorkData>>,
     /// The worker end of the deque, if we have it.
-    deque: Option<Worker<WorkUnit<QueueData, WorkData>>>,
+    deque: Option<Worker<WorkUnit<'a, QueueData, WorkData>>>,
     /// The thief end of the work-stealing deque.
-    thief: Stealer<WorkUnit<QueueData, WorkData>>,
+    thief: Stealer<WorkUnit<'a, QueueData, WorkData>>,
 }
 
 /// Information specific to each worker thread that the thread keeps.
-struct WorkerThread<QueueData: 'static, WorkData: 'static> {
+struct WorkerThread<'a, QueueData: 'a, WorkData: 'a> {
     /// The index of this worker.
     index: usize,
     /// The communication port from the supervisor.
-    port: Receiver<WorkerMsg<QueueData, WorkData>>,
+    port: Receiver<WorkerMsg<'a, QueueData, WorkData>>,
     /// The communication channel on which messages are sent to the supervisor.
-    chan: Sender<SupervisorMsg<QueueData, WorkData>>,
+    chan: Sender<SupervisorMsg<'a, QueueData, WorkData>>,
     /// The thief end of the work-stealing deque for all other workers.
-    other_deques: Vec<Stealer<WorkUnit<QueueData, WorkData>>>,
+    other_deques: Vec<Stealer<WorkUnit<'a, QueueData, WorkData>>>,
     /// The random number generator for this worker.
     rng: XorShiftRng,
 }
 
-unsafe impl<QueueData: 'static, WorkData: 'static> Send for WorkerThread<QueueData, WorkData> {}
+unsafe impl<'a, QueueData: 'a, WorkData: 'a> Send for WorkerThread<'a, QueueData, WorkData> {}
 
 static SPIN_COUNT: u32 = 128;
 static SPINS_UNTIL_BACKOFF: u32 = 100;
 static BACKOFF_INCREMENT_IN_US: u32 = 5;
 
-impl<QueueData: Send, WorkData: Send> WorkerThread<QueueData, WorkData> {
+impl<'a, QueueData: Send + 'a, WorkData: Send + 'a> WorkerThread<'a, QueueData, WorkData> {
     /// The main logic. This function starts up the worker and listens for
     /// messages.
     fn start(&mut self) {
@@ -180,13 +180,13 @@ impl<QueueData: Send, WorkData: Send> WorkerThread<QueueData, WorkData> {
 
 /// A handle to the work queue that individual work units have.
 pub struct WorkerProxy<'a, QueueData: 'a, WorkData: 'a> {
-    worker: &'a mut Worker<WorkUnit<QueueData, WorkData>>,
+    worker: &'a mut Worker<WorkUnit<'a, QueueData, WorkData>>,
     ref_count: *mut AtomicUsize,
     queue_data: *const QueueData,
     worker_index: u8,
 }
 
-impl<'a, QueueData: 'static, WorkData: Send + 'static> WorkerProxy<'a, QueueData, WorkData> {
+impl<'a, QueueData, WorkData: Send> WorkerProxy<'a, QueueData, WorkData> {
     /// Enqueues a block into the work queue.
     #[inline]
     pub fn push(&mut self, work_unit: WorkUnit<QueueData, WorkData>) {
@@ -212,18 +212,18 @@ impl<'a, QueueData: 'static, WorkData: Send + 'static> WorkerProxy<'a, QueueData
 }
 
 /// A work queue on which units of work can be submitted.
-pub struct WorkQueue<QueueData: 'static, WorkData: 'static> {
+pub struct WorkQueue<'a, QueueData: 'a, WorkData: 'a> {
     /// Information about each of the workers.
-    workers: Vec<WorkerInfo<QueueData, WorkData>>,
+    workers: Vec<WorkerInfo<'a, QueueData, WorkData>>,
     /// A port on which deques can be received from the workers.
-    port: Receiver<SupervisorMsg<QueueData, WorkData>>,
+    port: Receiver<SupervisorMsg<'a, QueueData, WorkData>>,
     /// The amount of work that has been enqueued.
     work_count: usize,
     /// Arbitrary user data.
     pub data: QueueData,
 }
 
-impl<QueueData: Send, WorkData: Send> WorkQueue<QueueData, WorkData> {
+impl<'a, QueueData: Send + 'a, WorkData: Send + 'a> WorkQueue<'a, QueueData, WorkData> {
     /// Creates a new work queue and spawns all the threads associated with
     /// it.
     pub fn new(task_name: &'static str,
