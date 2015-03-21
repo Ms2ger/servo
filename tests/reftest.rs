@@ -16,14 +16,14 @@ extern crate url;
 use std::env;
 use std::fs::PathExt;
 use std::io::Read;
-use std::old_io::{Reader, Command, IoResult};
-use std::old_io::process::ExitStatus;
+use std::old_io::{Reader, IoResult};
 use std::old_io::fs::PathExtensions;
 use std::old_path::Path;
 use std::thunk::Thunk;
 use test::{AutoColor, DynTestName, DynTestFn, TestDesc, TestOpts, TestDescAndFn, ShouldPanic};
 use test::run_tests_console;
 use url::Url;
+use std::process::{Command, ExitStatus};
 
 
 bitflags!(
@@ -107,12 +107,13 @@ fn run(test_opts: TestOpts, all_tests: Vec<TestDescAndFn>,
     // Verify that we're passing in valid servo arguments. Otherwise, servo
     // will exit before we've run any tests, and it will appear to us as if
     // all the tests are failing.
-    let mut command = match Command::new(servo_path())
+    let mut command = match Command::new(&servo_path())
                             .args(servo_args.as_slice()).spawn() {
         Ok(p) => p,
         Err(e) => panic!("failed to execute process: {}", e),
     };
-    let stderr = command.stderr.as_mut().unwrap().read_to_string().unwrap();
+    let mut stderr = vec![];
+    command.stderr.as_mut().unwrap().read_to_string(&mut stderr).unwrap();
 
     if stderr.as_slice().contains("Unrecognized") {
         println!("Servo: {}", stderr.as_slice());
@@ -248,7 +249,7 @@ fn make_test(reftest: Reftest) -> TestDescAndFn {
 
 fn capture(reftest: &Reftest, side: usize) -> (u32, u32, Vec<u8>) {
     let png_filename = format!("/tmp/servo-reftest-{:06}-{}.png", reftest.id, side);
-    let mut command = Command::new(servo_path());
+    let mut command = Command::new(&servo_path());
     command
         .args(&reftest.servo_args[..])
         // Allows pixel perfect rendering of Ahem font for reftests.
@@ -281,8 +282,7 @@ fn capture(reftest: &Reftest, side: usize) -> (u32, u32, Vec<u8>) {
     };
     assert_eq!(retval, ExitStatus(0));
 
-    let path = png_filename.parse::<Path>().unwrap();
-    let image = png::load_png(&path).unwrap();
+    let image = png::load_png(&png_filename).unwrap();
     let rgba8_bytes = match image.pixels {
         png::PixelsByColorType::RGBA8(pixels) => pixels,
         _ => panic!(),
