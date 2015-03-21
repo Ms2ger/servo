@@ -7,16 +7,16 @@
 // option. This file may not be copied, modified, or distributed
 // except according to those terms.
 
-#![feature(collections, core, env, io, hash, os, path, std_misc, test)]
+#![feature(collections, core, io, old_io, path, std_misc, test, path_ext, fs_walk, exit_status)]
 #[macro_use] extern crate bitflags;
 extern crate png;
 extern crate test;
 extern crate url;
 
-use std::ascii::AsciiExt;
 use std::env;
-use std::old_io as io;
-use std::old_io::{File, Reader, Command, IoResult};
+use std::fs::PathExt;
+use std::io::Read;
+use std::old_io::{Reader, Command, IoResult};
 use std::old_io::process::ExitStatus;
 use std::old_io::fs::PathExtensions;
 use std::old_path::Path;
@@ -68,11 +68,12 @@ fn main() {
     let mut all_tests = vec!();
     println!("Scanning {} for manifests\n", base_path);
 
-    for file in io::fs::walk_dir(&Path::new(base_path)).unwrap() {
-        let maybe_extension = file.extension_str();
+    for file in ::std::fs::walk_dir(base_path).unwrap() {
+        let file = file.unwrap().path();
+        let maybe_extension = file.extension();
         match maybe_extension {
             Some(extension) => {
-                if extension.to_ascii_lowercase().as_slice() == "list" && file.is_file() {
+                if extension == ::std::ffi::OsStr::from_str("list") && file.is_file() {
                     let mut tests = parse_lists(&file, servo_args, render_mode, all_tests.len());
                     println!("\t{} [{} tests]", file.display(), tests.len());
                     all_tests.append(&mut tests);
@@ -130,7 +131,7 @@ enum ReftestKind {
 struct Reftest {
     name: String,
     kind: ReftestKind,
-    files: [Path; 2],
+    files: [::std::path::PathBuf; 2],
     id: usize,
     servo_args: Vec<String>,
     render_mode: RenderMode,
@@ -147,11 +148,14 @@ struct TestLine<'a> {
     file_right: &'a str,
 }
 
-fn parse_lists(file: &Path, servo_args: &[String], render_mode: RenderMode, id_offset: usize) -> Vec<TestDescAndFn> {
+fn parse_lists(file: &::std::path::Path, servo_args: &[String], render_mode: RenderMode, id_offset: usize) -> Vec<TestDescAndFn> {
     let mut tests = Vec::new();
-    let contents = File::open_mode(file, io::Open, io::Read)
-                       .and_then(|mut f| f.read_to_string())
-                       .ok().expect("Could not read file");
+    let contents = {
+        let mut f = ::std::fs::File::open(file).unwrap();
+        let mut contents = String::new();
+        f.read_to_string(&mut contents).unwrap();
+        contents
+    };
 
     for line in contents.as_slice().lines() {
         // ignore comments or empty lines
@@ -183,7 +187,7 @@ fn parse_lists(file: &Path, servo_args: &[String], render_mode: RenderMode, id_o
             part => panic!("reftest line: '{}' has invalid kind '{}'", line, part)
         };
 
-        let base = Path::new(env::current_dir().unwrap().to_str().unwrap()).join(file.dir_path());
+        let base = env::current_dir().unwrap().join(file.parent().unwrap());
 
         let file_left =  base.join(test_line.file_left);
         let file_right = base.join(test_line.file_right);
@@ -253,7 +257,7 @@ fn capture(reftest: &Reftest, side: usize) -> (u32, u32, Vec<u8>) {
         .args(["-f", "-o"].as_slice())
         .arg(png_filename.as_slice())
         .arg({
-            let mut url = Url::from_file_path(&reftest.files[side]).unwrap();
+            let mut url = Url::from_file_path(&*reftest.files[side]).unwrap();
             url.fragment = reftest.fragment_identifier.clone();
             url.to_string()
         });
