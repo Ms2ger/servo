@@ -1049,12 +1049,10 @@ class CGArgumentConverter(CGThing):
             seqType = CGTemplatedType("Vec", declType)
 
             variadicConversion = string.Template(
-                "let mut vector: ${seqType} = Vec::with_capacity((${argc} - ${index}) as usize);\n"
-                "for variadicArg in range(${index}, ${argc}) {\n"
+                "let vector: Result<${seqType}, ()> = range(${index}, ${argc}).map(|variadicArg| {\n"
                 "${inner}\n"
-                "    vector.push(slot);\n"
-                "}\n"
-                "vector"
+                "    slot\n"
+                "}).collect();\n"
             ).substitute({
                 "index": index,
                 "argc": argc,
