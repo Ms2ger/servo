@@ -2,14 +2,15 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-use net_traits::{ControlMsg, CookieSource, LoadData, LoadResponse, Metadata};
-use net_traits::ProgressMsg::{Payload, Done};
+use file_loader;
 use mime_classifier::MIMEClassifier;
 use resource_task::{start_sending_opt, start_sending_sniffed_opt};
 
-use log;
-use std::collections::HashSet;
-use file_loader;
+use net_traits::{ControlMsg, CookieSource, LoadData, LoadResponse, Metadata, ProgressMsg};
+use util::opts;
+use util::resource_files::resources_dir_path;
+use util::task::spawn_named;
+
 use flate2::read::{DeflateDecoder, GzDecoder};
 use hyper::client::Request;
 use hyper::header::{AcceptEncoding, ContentLength, ContentType, Host, Location};
@@ -18,18 +19,17 @@ use hyper::method::Method;
 use hyper::mime::{Mime, TopLevel, SubLevel};
 use hyper::net::HttpConnector;
 use hyper::status::{StatusCode, StatusClass};
-use std::error::Error;
 use openssl::ssl::{SslContext, SslVerifyMode};
+use url::{Url, UrlParser};
+
+use log;
+use std::borrow::ToOwned;
+use std::collections::HashSet;
+use std::error::Error;
 use std::io::{self, Read, Write};
 use std::sync::Arc;
 use std::sync::mpsc::{Sender, channel};
 use std::thunk::Invoke;
-use util::task::spawn_named;
-use util::resource_files::resources_dir_path;
-use util::opts;
-use url::{Url, UrlParser};
-
-use std::borrow::ToOwned;
 
 pub fn factory(cookies_chan: Sender<ControlMsg>)
                -> Box<Invoke<(LoadData, Arc<MIMEClassifier>)> + Send> {
@@ -43,7 +43,7 @@ fn send_error(url: Url, err: String, start_chan: Sender<LoadResponse>) {
     metadata.status = None;
 
     match start_sending_opt(start_chan, metadata) {
-        Ok(p) => p.send(Done(Err(err))).unwrap(),
+        Ok(p) => p.send(ProgressMsg::Done(Err(err))).unwrap(),
         _ => {}
     };
 }
@@ -356,7 +356,7 @@ fn send_data<R: Read>(reader: &mut R,
     };
 
     loop {
-        if progress_chan.send(Payload(chunk)).is_err() {
+        if progress_chan.send(ProgressMsg::Payload(chunk)).is_err() {
             // The send errors when the receiver is out of scope,
             // which will happen if the fetch has timed out (or has been aborted)
             // so we don't need to continue with the loading of the file here.
@@ -369,5 +369,5 @@ fn send_data<R: Read>(reader: &mut R,
         };
     }
 
-    let _ = progress_chan.send(Done(Ok(())));
+    let _ = progress_chan.send(ProgressMsg::Done(Ok(())));
 }

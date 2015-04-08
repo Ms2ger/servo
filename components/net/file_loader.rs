@@ -2,18 +2,18 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-use net_traits::{LoadData, Metadata, ProgressMsg};
-use net_traits::ProgressMsg::{Payload, Done};
 use mime_classifier::MIMEClassifier;
 use resource_task::{start_sending, start_sending_sniffed};
 
+use net_traits::{LoadData, Metadata, ProgressMsg};
+use util::task::spawn_named;
+
 use std::borrow::ToOwned;
-use std::io;
 use std::fs::File;
+use std::io;
 use std::path::PathBuf;
 use std::sync::Arc;
 use std::sync::mpsc::Sender;
-use util::task::spawn_named;
 
 static READ_SIZE: usize = 8192;
 
@@ -38,7 +38,7 @@ fn read_all(reader: &mut io::Read, progress_chan: &Sender<ProgressMsg>)
             -> Result<(), String> {
     loop {
         match try!(read_block(reader)) {
-            ReadStatus::Partial(buf) => progress_chan.send(Payload(buf)).unwrap(),
+            ReadStatus::Partial(buf) => progress_chan.send(ProgressMsg::Payload(buf)).unwrap(),
             ReadStatus::EOF => return Ok(()),
         }
     }
@@ -60,23 +60,23 @@ pub fn factory(load_data: LoadData, classifier: Arc<MIMEClassifier>) {
                             Ok(ReadStatus::Partial(buf)) => {
                                 let progress_chan = start_sending_sniffed(start_chan, metadata,
                                                                           classifier, &buf);
-                                progress_chan.send(Payload(buf)).unwrap();
+                                progress_chan.send(ProgressMsg::Payload(buf)).unwrap();
                                 (read_all(reader, &progress_chan), progress_chan)
                             }
                             Ok(ReadStatus::EOF) | Err(_) =>
                                 (res.map(|_| ()), start_sending(start_chan, metadata)),
                         };
-                        progress_chan.send(Done(res)).unwrap();
+                        progress_chan.send(ProgressMsg::Done(res)).unwrap();
                     }
                     Err(e) => {
                         let progress_chan = start_sending(start_chan, metadata);
-                        progress_chan.send(Done(Err(e.description().to_string()))).unwrap();
+                        progress_chan.send(ProgressMsg::Done(Err(e.description().to_string()))).unwrap();
                     }
                 }
             }
             Err(_) => {
                 let progress_chan = start_sending(start_chan, metadata);
-                progress_chan.send(Done(Err(url.to_string()))).unwrap();
+                progress_chan.send(ProgressMsg::Done(Err(url.to_string()))).unwrap();
             }
         }
     });

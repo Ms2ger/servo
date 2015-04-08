@@ -43,8 +43,7 @@ use js::jsapi::JS_ClearPendingException;
 use js::jsval::{JSVal, NullValue, UndefinedValue};
 
 use net_traits::ControlMsg::Load;
-use net_traits::ProgressMsg::{Payload, Done};
-use net_traits::{ResourceTask, ResourceCORSData, LoadData, LoadResponse};
+use net_traits::{ProgressMsg, ResourceTask, ResourceCORSData, LoadData, LoadResponse};
 use cors::{allow_cross_origin_request, CORSRequest, RequestMode};
 use util::str::DOMString;
 use util::task::spawn_named;
@@ -324,16 +323,16 @@ impl XMLHttpRequest {
 
             select! (
                 progress = progress_port.recv() => match progress.unwrap() {
-                    Payload(data) => {
+                    ProgressMsg::Payload(data) => {
                         buf.push_all(data.as_slice());
                         notify_partial_progress(fetch_type,
                                                 XHRProgress::Loading(gen_id, ByteString::new(buf.clone())));
                     },
-                    Done(Ok(()))  => {
+                    ProgressMsg::Done(Ok(()))  => {
                         notify_partial_progress(fetch_type, XHRProgress::Done(gen_id));
                         return Ok(());
                     },
-                    Done(Err(_))  => {
+                    ProgressMsg::Done(Err(_))  => {
                         notify_error_and_return!(Network);
                     }
                 },

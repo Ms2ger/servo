@@ -2,8 +2,7 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-use net_traits::LoadData;
-use net_traits::ProgressMsg::{Payload, Done};
+use net_traits::{LoadData, ProgressMsg};
 
 #[cfg(test)]
 fn assert_parse(url:          &'static str,
@@ -25,11 +24,11 @@ fn assert_parse(url:          &'static str,
 
     match data {
         None => {
-            assert_eq!(progress, Done(Err("invalid data uri".to_string())));
+            assert_eq!(progress, ProgressMsg::Done(Err("invalid data uri".to_string())));
         }
         Some(dat) => {
-            assert_eq!(progress, Payload(dat));
-            assert_eq!(response.progress_port.recv().unwrap(), Done(Ok(())));
+            assert_eq!(progress, ProgressMsg::Payload(dat));
+            assert_eq!(response.progress_port.recv().unwrap(), ProgressMsg::Done(Ok(())));
         }
     }
 }

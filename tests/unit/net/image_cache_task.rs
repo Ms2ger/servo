@@ -9,7 +9,6 @@ use net_traits::image_cache_task::Msg::*;
 use net::resource_task::start_sending;
 use net_traits::{ControlMsg, Metadata, ProgressMsg, ResourceTask};
 use net_traits::image_cache_task::{ImageCacheTask, ImageResponseMsg, Msg};
-use net_traits::ProgressMsg::{Payload, Done};
 use profile::time;
 use std::sync::mpsc::{Sender, channel, Receiver};
 use url::Url;
@@ -52,31 +51,31 @@ struct JustSendOK {
 impl Closure for JustSendOK {
     fn invoke(&self, response: Sender<ProgressMsg>) {
         self.url_requested_chan.send(()).unwrap();
-        response.send(Done(Ok(()))).unwrap();
+        response.send(ProgressMsg::Done(Ok(()))).unwrap();
     }
 }
 
 struct SendTestImage;
 impl Closure for SendTestImage {
     fn invoke(&self, response: Sender<ProgressMsg>) {
-        response.send(Payload(test_image_bin())).unwrap();
-        response.send(Done(Ok(()))).unwrap();
+        response.send(ProgressMsg::Payload(test_image_bin())).unwrap();
+        response.send(ProgressMsg::Done(Ok(()))).unwrap();
     }
 }
 
 struct SendBogusImage;
 impl Closure for SendBogusImage {
     fn invoke(&self, response: Sender<ProgressMsg>) {
-        response.send(Payload(vec!())).unwrap();
-        response.send(Done(Ok(()))).unwrap();
+        response.send(ProgressMsg::Payload(vec!())).unwrap();
+        response.send(ProgressMsg::Done(Ok(()))).unwrap();
     }
 }
 
 struct SendTestImageErr;
 impl Closure for SendTestImageErr {
     fn invoke(&self, response: Sender<ProgressMsg>) {
-        response.send(Payload(test_image_bin())).unwrap();
-        response.send(Done(Err("".to_string()))).unwrap();
+        response.send(ProgressMsg::Payload(test_image_bin())).unwrap();
+        response.send(ProgressMsg::Done(Err("".to_string()))).unwrap();
     }
 }
 
@@ -88,8 +87,8 @@ impl Closure for WaitSendTestImage {
         // Don't send the data until after the client requests
         // the image
         self.wait_port.recv().unwrap();
-        response.send(Payload(test_image_bin())).unwrap();
-        response.send(Done(Ok(()))).unwrap();
+        response.send(ProgressMsg::Payload(test_image_bin())).unwrap();
+        response.send(ProgressMsg::Done(Ok(()))).unwrap();
     }
 }
 
@@ -101,8 +100,8 @@ impl Closure for WaitSendTestImageErr {
         // Don't send the data until after the client requests
         // the image
         self.wait_port.recv().unwrap();
-        response.send(Payload(test_image_bin())).unwrap();
-        response.send(Done(Err("".to_string()))).unwrap();
+        response.send(ProgressMsg::Payload(test_image_bin())).unwrap();
+        response.send(ProgressMsg::Done(Err("".to_string()))).unwrap();
     }
 }
 
@@ -283,8 +282,8 @@ fn should_not_request_image_from_resource_task_if_image_is_already_available() {
                 ControlMsg::Load(response) => {
                     let chan = start_sending(response.consumer, Metadata::default(
                         Url::parse("file:///fake").unwrap()));
-                    chan.send(Payload(test_image_bin()));
-                    chan.send(Done(Ok(())));
+                    chan.send(ProgressMsg::Payload(test_image_bin()));
+                    chan.send(ProgressMsg::Done(Ok(())));
                     image_bin_sent_chan.send(());
                 }
                 ControlMsg::Exit => {
@@ -332,8 +331,8 @@ fn should_not_request_image_from_resource_task_if_image_fetch_already_failed() {
                 ControlMsg::Load(response) => {
                     let chan = start_sending(response.consumer, Metadata::default(
                         Url::parse("file:///fake").unwrap()));
-                    chan.send(Payload(test_image_bin()));
-                    chan.send(Done(Err("".to_string())));
+                    chan.send(ProgressMsg::Payload(test_image_bin()));
+                    chan.send(ProgressMsg::Done(Err("".to_string())));
                     image_bin_sent_chan.send(());
                 }
                 ControlMsg::Exit => {

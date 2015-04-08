@@ -14,7 +14,6 @@ use mime_classifier::MIMEClassifier;
 
 use net_traits::{ControlMsg, LoadData, LoadResponse};
 use net_traits::{Metadata, ProgressMsg, ResourceTask};
-use net_traits::ProgressMsg::Done;
 use util::opts;
 use util::task::spawn_named;
 
