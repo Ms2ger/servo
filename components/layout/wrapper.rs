@@ -388,15 +388,9 @@ impl<'ln> TNode<'ln> for LayoutNode<'ln> {
     /// If this is an element, accesses the element data. Fails if this is not an element node.
     #[inline]
     fn as_element(self) -> LayoutElement<'ln> {
-        unsafe {
-            let elem: LayoutJS<Element> = match ElementCast::to_layout_js(&self.node) {
-                Some(elem) => elem,
-                None => panic!("not an element")
-            };
-
-            LayoutElement {
-                element: &*elem.unsafe_get(),
-            }
+        LayoutElement {
+            element: ElementCast::to_layout_js(&self.node).expect("not an element"),
+            chain: PhantomData,
         }
     }
 
@@ -521,13 +515,14 @@ impl<'a> Iterator for LayoutTreeIterator<'a> {
 /// A wrapper around elements that ensures layout can only ever access safe properties.
 #[derive(Copy)]
 pub struct LayoutElement<'le> {
-    element: &'le Element,
+    element: LayoutJS<Element>,
+    chain: PhantomData<&'le Element>,
 }
 
 impl<'le> LayoutElement<'le> {
     pub fn style_attribute(&self) -> &'le Option<PropertyDeclarationBlock> {
         let style: &Option<PropertyDeclarationBlock> = unsafe {
-            &*self.element.style_attribute().borrow_for_layout()
+            &*(*self.element.unsafe_get()).style_attribute().borrow_for_layout()
         };
         style
     }
@@ -536,46 +531,52 @@ impl<'le> LayoutElement<'le> {
 impl<'le> TElement<'le> for LayoutElement<'le> {
     #[inline]
     fn get_local_name(self) -> &'le Atom {
-        self.element.local_name()
+        unsafe {
+            (*self.element.unsafe_get()).local_name()
+        }
     }
 
     #[inline]
     fn get_namespace(self) -> &'le Namespace {
-        self.element.namespace()
+        unsafe {
+            (*self.element.unsafe_get()).namespace()
+        }
     }
 
     #[inline]
     fn get_attr(self, namespace: &Namespace, name: &Atom) -> Option<&'le str> {
-        unsafe { self.element.get_attr_val_for_layout(namespace, name) }
+        unsafe {
+            (*self.element.unsafe_get()).get_attr_val_for_layout(namespace, name)
+        }
     }
 
     #[inline]
     fn get_attrs(self, name: &Atom) -> Vec<&'le str> {
         unsafe {
-            self.element.get_attr_vals_for_layout(name)
+            (*self.element.unsafe_get()).get_attr_vals_for_layout(name)
         }
     }
 
     fn get_link(self) -> Option<&'le str> {
         // FIXME: This is HTML only.
-        let node: &Node = NodeCast::from_actual(self.element);
-        match node.type_id_for_layout() {
-            // https://html.spec.whatwg.org/multipage/#selector-link
-            NodeTypeId::Element(ElementTypeId::HTMLElement(HTMLElementTypeId::HTMLAnchorElement)) |
-            NodeTypeId::Element(ElementTypeId::HTMLElement(HTMLElementTypeId::HTMLAreaElement)) |
-            NodeTypeId::Element(ElementTypeId::HTMLElement(HTMLElementTypeId::HTMLLinkElement)) => {
-                unsafe {
-                    self.element.get_attr_val_for_layout(&ns!(""), &atom!("href"))
+        unsafe {
+            let node: &Node = &*NodeCast::from_layout_js(&self.element).unsafe_get();
+            match node.type_id_for_layout() {
+                // https://html.spec.whatwg.org/multipage/#selector-link
+                NodeTypeId::Element(ElementTypeId::HTMLElement(HTMLElementTypeId::HTMLAnchorElement)) |
+                NodeTypeId::Element(ElementTypeId::HTMLElement(HTMLElementTypeId::HTMLAreaElement)) |
+                NodeTypeId::Element(ElementTypeId::HTMLElement(HTMLElementTypeId::HTMLLinkElement)) => {
+                    (*self.element.unsafe_get()).get_attr_val_for_layout(&ns!(""), &atom!("href"))
                 }
+                _ => None,
             }
-            _ => None,
         }
     }
 
     #[inline]
     fn get_hover_state(self) -> bool {
         unsafe {
-            let node: &Node = NodeCast::from_actual(self.element);
+            let node: &Node = NodeCast::from_actual(&*self.element.unsafe_get());
             node.get_hover_state_for_layout()
         }
     }
@@ -583,7 +584,7 @@ impl<'le> TElement<'le> for LayoutElement<'le> {
     #[inline]
     fn get_focus_state(self) -> bool {
         unsafe {
-            let node: &Node = NodeCast::from_actual(self.element);
+            let node: &Node = NodeCast::from_actual(&*self.element.unsafe_get());
             node.get_focus_state_for_layout()
         }
     }
@@ -591,14 +592,14 @@ impl<'le> TElement<'le> for LayoutElement<'le> {
     #[inline]
     fn get_id(self) -> Option<Atom> {
         unsafe {
-            self.element.get_attr_atom_for_layout(&ns!(""), &atom!("id"))
+            (*self.element.unsafe_get()).get_attr_atom_for_layout(&ns!(""), &atom!("id"))
         }
     }
 
     #[inline]
     fn get_disabled_state(self) -> bool {
         unsafe {
-            let node: &Node = NodeCast::from_actual(self.element);
+            let node: &Node = NodeCast::from_actual(&*self.element.unsafe_get());
             node.get_disabled_state_for_layout()
         }
     }
@@ -606,7 +607,7 @@ impl<'le> TElement<'le> for LayoutElement<'le> {
     #[inline]
     fn get_enabled_state(self) -> bool {
         unsafe {
-            let node: &Node = NodeCast::from_actual(self.element);
+            let node: &Node = NodeCast::from_actual(&*self.element.unsafe_get());
             node.get_enabled_state_for_layout()
         }
     }
@@ -614,28 +615,28 @@ impl<'le> TElement<'le> for LayoutElement<'le> {
     #[inline]
     fn get_checked_state(self) -> bool {
         unsafe {
-            self.element.get_checked_state_for_layout()
+            (*self.element.unsafe_get()).get_checked_state_for_layout()
         }
     }
 
     #[inline]
     fn get_indeterminate_state(self) -> bool {
         unsafe {
-            self.element.get_indeterminate_state_for_layout()
+            (*self.element.unsafe_get()).get_indeterminate_state_for_layout()
         }
     }
 
     #[inline]
     fn has_class(self, name: &Atom) -> bool {
         unsafe {
-            self.element.has_class_for_layout(name)
+            (*self.element.unsafe_get()).has_class_for_layout(name)
         }
     }
 
     #[inline(always)]
     fn each_class<F>(self, mut callback: F) where F: FnMut(&Atom) {
         unsafe {
-            match self.element.get_classes_for_layout() {
+            match (*self.element.unsafe_get()).get_classes_for_layout() {
                 None => {}
                 Some(ref classes) => {
                     for class in classes.iter() {
@@ -649,7 +650,7 @@ impl<'le> TElement<'le> for LayoutElement<'le> {
     #[inline]
     fn has_nonzero_border(self) -> bool {
         unsafe {
-            match self.element.get_unsigned_integer_attribute_for_layout(
+            match (*self.element.unsafe_get()).get_unsigned_integer_attribute_for_layout(
                     UnsignedIntegerAttribute::Border) {
                 None | Some(0) => false,
                 _ => true,
@@ -661,25 +662,25 @@ impl<'le> TElement<'le> for LayoutElement<'le> {
 impl<'le> TElementAttributes for LayoutElement<'le> {
     fn get_length_attribute(self, length_attribute: LengthAttribute) -> LengthOrPercentageOrAuto {
         unsafe {
-            self.element.get_length_attribute_for_layout(length_attribute)
+            (&*self.element.unsafe_get()).get_length_attribute_for_layout(length_attribute)
         }
     }
 
     fn get_integer_attribute(self, integer_attribute: IntegerAttribute) -> Option<i32> {
         unsafe {
-            self.element.get_integer_attribute_for_layout(integer_attribute)
+            (*self.element.unsafe_get()).get_integer_attribute_for_layout(integer_attribute)
         }
     }
 
     fn get_unsigned_integer_attribute(self, attribute: UnsignedIntegerAttribute) -> Option<u32> {
         unsafe {
-            self.element.get_unsigned_integer_attribute_for_layout(attribute)
+            (*self.element.unsafe_get()).get_unsigned_integer_attribute_for_layout(attribute)
         }
     }
 
     fn get_simple_color_attribute(self, attribute: SimpleColorAttribute) -> Option<RGBA> {
         unsafe {
-            self.element.get_simple_color_attribute_for_layout(attribute)
+            (*self.element.unsafe_get()).get_simple_color_attribute_for_layout(attribute)
         }
     }
 }
