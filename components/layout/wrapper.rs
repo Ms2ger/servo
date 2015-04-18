@@ -521,26 +521,22 @@ pub struct LayoutElement<'le> {
 
 impl<'le> LayoutElement<'le> {
     pub fn style_attribute(&self) -> &'le Option<PropertyDeclarationBlock> {
-        let style: &Option<PropertyDeclarationBlock> = unsafe {
-            &*(*self.element.unsafe_get()).style_attribute().borrow_for_layout()
-        };
-        style
+        let attribute = self.element.style_attribute();
+        unsafe {
+            &*attribute.borrow_for_layout()
+        }
     }
 }
 
 impl<'le> TElement<'le> for LayoutElement<'le> {
     #[inline]
     fn get_local_name(self) -> &'le Atom {
-        unsafe {
-            (*self.element.unsafe_get()).local_name()
-        }
+        self.element.local_name()
     }
 
     #[inline]
     fn get_namespace(self) -> &'le Namespace {
-        unsafe {
-            (*self.element.unsafe_get()).namespace()
-        }
+        self.element.namespace()
     }
 
     #[inline]

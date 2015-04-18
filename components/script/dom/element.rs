@@ -164,9 +164,6 @@ pub trait RawLayoutElementHelpers {
                                                         -> Option<u32>;
     unsafe fn get_simple_color_attribute_for_layout(&self, attribute: SimpleColorAttribute)
                                                     -> Option<RGBA>;
-    fn local_name<'a>(&'a self) -> &'a Atom;
-    fn namespace<'a>(&'a self) -> &'a Namespace;
-    fn style_attribute<'a>(&'a self) -> &'a DOMRefCell<Option<PropertyDeclarationBlock>>;
 }
 
 #[inline]
@@ -378,23 +375,13 @@ impl RawLayoutElementHelpers for Element {
             }
         }
     }
-
-    // Getters used in components/layout/wrapper.rs
-
-    fn local_name<'a>(&'a self) -> &'a Atom {
-        &self.local_name
-    }
-
-    fn namespace<'a>(&'a self) -> &'a Namespace {
-        &self.namespace
-    }
-
-    fn style_attribute<'a>(&'a self) -> &'a DOMRefCell<Option<PropertyDeclarationBlock>> {
-        &self.style_attribute
-    }
 }
 
 pub trait LayoutElementHelpers {
+    fn local_name<'a>(&'a self) -> &'a Atom;
+    fn namespace<'a>(&'a self) -> &'a Namespace;
+    fn style_attribute<'a>(&'a self) -> &'a DOMRefCell<Option<PropertyDeclarationBlock>>;
+
     #[allow(unsafe_code)]
     unsafe fn html_element_in_html_document_for_layout(&self) -> bool;
     #[allow(unsafe_code)]
@@ -402,6 +389,27 @@ pub trait LayoutElementHelpers {
 }
 
 impl LayoutElementHelpers for LayoutJS<Element> {
+    #[allow(unsafe_code)]
+    fn local_name<'a>(&'a self) -> &'a Atom {
+        unsafe {
+            &(*self.unsafe_get()).local_name
+        }
+    }
+
+    #[allow(unsafe_code)]
+    fn namespace<'a>(&'a self) -> &'a Namespace {
+        unsafe {
+            &(*self.unsafe_get()).namespace
+        }
+    }
+
+    #[allow(unsafe_code)]
+    fn style_attribute<'a>(&'a self) -> &'a DOMRefCell<Option<PropertyDeclarationBlock>> {
+        unsafe {
+            &(*self.unsafe_get()).style_attribute
+        }
+    }
+
     #[inline]
     #[allow(unsafe_code)]
     unsafe fn html_element_in_html_document_for_layout(&self) -> bool {
