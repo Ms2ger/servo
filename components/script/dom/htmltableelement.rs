@@ -2,23 +2,27 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-use dom::attr::{Attr, AttrHelpers};
+use dom::attr::{Attr, AttrHelpers, AttrHelpersForLayout, AttrValue};
 use dom::bindings::codegen::Bindings::HTMLTableElementBinding::HTMLTableElementMethods;
 use dom::bindings::codegen::Bindings::HTMLTableElementBinding;
 use dom::bindings::codegen::Bindings::NodeBinding::NodeMethods;
-use dom::bindings::codegen::InheritTypes::{HTMLElementCast, HTMLTableCaptionElementCast};
+use dom::bindings::codegen::InheritTypes::{ElementCast, HTMLElementCast};
+use dom::bindings::codegen::InheritTypes::HTMLTableCaptionElementCast;
 use dom::bindings::codegen::InheritTypes::{HTMLTableElementDerived, NodeCast};
 use dom::bindings::js::{JSRef, Temporary};
 use dom::document::Document;
 use dom::eventtarget::{EventTarget, EventTargetTypeId};
-use dom::element::ElementTypeId;
+use dom::element::{ElementTypeId, get_attr_for_layout};
 use dom::htmlelement::{HTMLElement, HTMLElementTypeId};
 use dom::htmltablecaptionelement::HTMLTableCaptionElement;
 use dom::node::{Node, NodeHelpers, NodeTypeId};
 use dom::virtualmethods::VirtualMethods;
 
-use cssparser::RGBA;
 use util::str::{self, DOMString, LengthOrPercentageOrAuto};
+
+use cssparser::RGBA;
+use string_cache::Atom;
+
 use std::cell::Cell;
 
 #[dom_struct]
@@ -26,7 +30,6 @@ pub struct HTMLTableElement {
     htmlelement: HTMLElement,
     background_color: Cell<Option<RGBA>>,
     border: Cell<Option<u32>>,
-    cellspacing: Cell<Option<u32>>,
     width: Cell<LengthOrPercentageOrAuto>,
 }
 
@@ -46,7 +49,6 @@ impl HTMLTableElement {
                                                     document),
             background_color: Cell::new(None),
             border: Cell::new(None),
-            cellspacing: Cell::new(None),
             width: Cell::new(LengthOrPercentageOrAuto::Auto),
         }
     }
@@ -108,8 +110,18 @@ impl HTMLTableElementHelpers for HTMLTableElement {
         self.border.get()
     }
 
+    #[allow(unsafe_code)]
     fn get_cellspacing(&self) -> Option<u32> {
-        self.cellspacing.get()
+        let element = ElementCast::from_actual(self);
+        unsafe {
+            get_attr_for_layout(&element, &ns!(""), &atom!("cellspacing")).map(|attr| {
+                match *(*attr.unsafe_get()).value() {
+                    AttrValue::UInt(_, value) => value,
+                    _ => panic!("Expected an AttrValue::UInt: \
+                                 implement parse_plain_attribute"),
+                }
+            })
+        }
     }
 
     fn get_width(&self) -> LengthOrPercentageOrAuto {
@@ -138,9 +150,6 @@ impl<'a> VirtualMethods for JSRef<'a, HTMLTableElement> {
                                                                      .as_slice()
                                                                      .chars()).unwrap_or(1)))
             }
-            &atom!("cellspacing") => {
-                self.cellspacing.set(str::parse_unsigned_integer(attr.value().as_slice().chars()))
-            }
             &atom!("width") => self.width.set(str::parse_length(attr.value().as_slice())),
             _ => ()
         }
@@ -154,10 +163,15 @@ impl<'a> VirtualMethods for JSRef<'a, HTMLTableElement> {
         match attr.local_name() {
             &atom!("bgcolor") => self.background_color.set(None),
             &atom!("border") => self.border.set(None),
-            &atom!("cellspacing") => self.cellspacing.set(None),
             &atom!("width") => self.width.set(LengthOrPercentageOrAuto::Auto),
             _ => ()
         }
     }
-}
 
+    fn parse_plain_attribute(&self, name: &Atom, value: DOMString) -> AttrValue {
+        match name {
+            &atom!("cellspacing") => AttrValue::from_u32(value, 0),
+            _ => self.super_type().unwrap().parse_plain_attribute(name, value),
+        }
+    }
+}
