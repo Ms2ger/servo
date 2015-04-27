@@ -1,7 +1,7 @@
 {"host": "%(host)s",
- "ports":{"http":[8000, 8001],
-          "https":[8443],
-          "ws":[8888]},
+ "ports":{"http":[9000, 9001],
+          "https":[9443],
+          "ws":[9999]},
  "check_subdomains":false,
  "bind_hostname":%(bind_hostname)s,
  "ssl":{}}
