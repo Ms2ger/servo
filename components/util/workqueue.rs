@@ -180,10 +180,14 @@ impl<QueueData: Send, WorkData: Send> WorkerThread<QueueData, WorkData> {
                 }
 
                 // At this point, we have some work. Perform it.
+                // `ref_count` and `queue_data` live in the stack frame of
+                // `WorkQueue::run`, which won't exit until we've responded to
+                // its `WorkerMsg::Stop` message by sending a
+                // `SupervisorMsg::ReturnDeque` below the loop.
                 let mut proxy = WorkerProxy {
                     worker: &mut deque,
-                    ref_count: ref_count,
-                    queue_data: queue_data,
+                    ref_count: unsafe { &*ref_count },
+                    queue_data: unsafe { &*queue_data },
                     worker_index: self.index as u8,
                 };
                 (work_unit.fun)(work_unit.data, &mut proxy);
@@ -206,8 +210,8 @@ impl<QueueData: Send, WorkData: Send> WorkerThread<QueueData, WorkData> {
 /// A handle to the work queue that individual work units have.
 pub struct WorkerProxy<'a, QueueData: 'a, WorkData: 'a> {
     worker: &'a mut Worker<WorkUnit<QueueData, WorkData>>,
-    ref_count: *mut AtomicUsize,
-    queue_data: *const QueueData,
+    ref_count: &'a AtomicUsize,
+    queue_data: &'a QueueData,
     worker_index: u8,
 }
 
@@ -215,18 +219,14 @@ impl<'a, QueueData: 'static, WorkData: Send + 'static> WorkerProxy<'a, QueueData
     /// Enqueues a block into the work queue.
     #[inline]
     pub fn push(&mut self, work_unit: WorkUnit<QueueData, WorkData>) {
-        unsafe {
-            drop((*self.ref_count).fetch_add(1, Ordering::Relaxed));
-        }
+        drop((*self.ref_count).fetch_add(1, Ordering::Relaxed));
         self.worker.push(work_unit);
     }
 
     /// Retrieves the queue user data.
     #[inline]
-    pub fn user_data<'b>(&'b self) -> &'b QueueData {
-        unsafe {
-            mem::transmute(self.queue_data)
-        }
+    pub fn user_data(&self) -> &'a QueueData {
+        self.queue_data
     }
 
     /// Retrieves the index of the worker.
