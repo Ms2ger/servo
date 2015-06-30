@@ -24,7 +24,7 @@ use std::cell::{RefCell, RefMut};
 use std::collections::HashMap;
 use std::collections::hash_state::DefaultState;
 use std::rc::Rc;
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc, Mutex, RwLock};
 use std::sync::mpsc::{channel, Sender};
 use style::selector_matching::Stylist;
 use url::Url;
@@ -98,9 +98,7 @@ pub struct SharedLayoutContext {
     pub font_cache_task: FontCacheTask,
 
     /// The CSS selector stylist.
-    ///
-    /// FIXME(#2604): Make this no longer an unsafe pointer once we have fast `RWArc`s.
-    pub stylist: *const Stylist,
+    pub stylist: Arc<RwLock<Stylist>>,
 
     /// The root node at which we're starting the layout.
     pub reflow_root: Option<OpaqueNode>,

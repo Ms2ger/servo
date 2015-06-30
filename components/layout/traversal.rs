@@ -166,7 +166,7 @@ impl<'a> PreorderDomTraversal for RecalcStyleForNode<'a> {
 
                     if node.as_element().is_some() {
                         // Perform the CSS selector matching.
-                        let stylist = unsafe { &*self.layout_context.shared.stylist };
+                        let stylist = &*self.layout_context.shared.stylist.read().unwrap();
                         node.match_node(stylist,
                                         &some_bf,
                                         &mut applicable_declarations,
