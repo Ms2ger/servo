@@ -81,6 +81,7 @@ impl MessageEvent {
     pub fn dispatch_jsval(target: &EventTarget,
                           scope: GlobalRef,
                           message: HandleValue) {
+        println!("MessageEvent::PostMessage dispatch_jsval");
         let messageevent = MessageEvent::new(
             scope, "message".to_owned(), false, false, message,
             "".to_owned(), "".to_owned());

@@ -98,6 +98,7 @@ impl Worker {
 
     pub fn handle_message(address: TrustedWorkerAddress,
                           data: StructuredCloneData) {
+        println!("Worker::handle_message");
         let worker = address.root();
 
         let global = worker.r().global.root();
@@ -162,6 +163,7 @@ impl WorkerMessageHandler {
 
 impl Runnable for WorkerMessageHandler {
     fn handler(self: Box<WorkerMessageHandler>) {
+        println!("WorkerMessageHandler::handler");
         let this = *self;
         Worker::handle_message(this.addr, this.data);
     }

@@ -282,10 +282,12 @@ impl<'a> PrivateDedicatedWorkerGlobalScopeHelpers for &'a DedicatedWorkerGlobalS
 impl<'a> DedicatedWorkerGlobalScopeMethods for &'a DedicatedWorkerGlobalScope {
     // https://html.spec.whatwg.org/multipage/#dom-dedicatedworkerglobalscope-postmessage
     fn PostMessage(self, cx: *mut JSContext, message: HandleValue) -> ErrorResult {
+        println!("DedicatedWorkerGlobalScopeMethods::PostMessage");
         let data = try!(StructuredCloneData::write(cx, message));
         let worker = self.worker.borrow().as_ref().unwrap().clone();
         self.parent_sender.send(ScriptMsg::RunnableMsg(
             box WorkerMessageHandler::new(worker, data))).unwrap();
+        println!("DedicatedWorkerGlobalScopeMethods::PostMessage done");
         Ok(())
     }
 
