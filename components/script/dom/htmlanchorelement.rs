@@ -159,3 +159,30 @@ impl<'a> Activatable for &'a HTMLAnchorElement {
     fn implicit_submission(&self, _ctrlKey: bool, _shiftKey: bool, _altKey: bool, _metaKey: bool) {
     }
 }
+
+fn follow_hyperlink(subject: &Element) {
+    // Step 1.
+    let replace = false;
+
+    // Step 2.
+    let document = document_from_node(subject);
+    let window = document.window();
+    let source = window.browser_context();
+
+    // Step 3.
+    let target = source;
+
+    // Step 4.
+/*
+    let href = 
+    Resolve the URL given by the href attribute of that element, relative to that element.
+
+    If that is successful, let URL be the resulting absolute URL.
+
+    Otherwise, if resolving the URL failed, the user agent may report the error to the user in a user-agent-specific manner, may queue a task to navigate the target browsing context to an error page to report the error, or may ignore the error and do nothing. In any case, the user agent must then abort these steps.
+
+    In the case of server-side image maps, append the hyperlink suffix to URL.
+
+    Queue a task to navigate the target browsing context to URL. If replace is true, the navigation must be performed with replacement enabled. The source browsing context must be source.
+*/
+}
