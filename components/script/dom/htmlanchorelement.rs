@@ -162,9 +162,16 @@ impl<'a> Activatable for &'a HTMLAnchorElement {
 
 /// https://html.spec.whatwg.org/multipage/#following-hyperlinks-2
 fn follow_hyperlink(subject: &Element, hyperlink_suffix: Option<DOMString>) {
-    // Step 1: replace.
-    // Step 2: source browsing context.
-    // Step 3: target browsing context.
+    // Step 1.
+    let replace = false;
+
+    // Step 2.
+    let document = document_from_node(subject);
+    let window = document.window();
+    let source = window.browsing_context();
+
+    // Step 3.
+    let target = source;
 
     // Step 4.
     let attribute = subject.get_attribute(&ns!(""), &atom!("href")).unwrap();
@@ -177,7 +184,6 @@ fn follow_hyperlink(subject: &Element, hyperlink_suffix: Option<DOMString>) {
     }
 
     // Step 4-5.
-    let document = document_from_node(subject);
     let url = match UrlParser::new().base_url(&document.url()).parse(&href) {
         Ok(url) => url,
         Err(_) => return,
@@ -185,6 +191,5 @@ fn follow_hyperlink(subject: &Element, hyperlink_suffix: Option<DOMString>) {
 
     // Step 7.
     debug!("following hyperlink to {}", url.serialize());
-    let window = document.window();
     window.load_url(url);
 }
