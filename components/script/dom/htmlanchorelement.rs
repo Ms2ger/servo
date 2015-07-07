@@ -160,7 +160,7 @@ impl<'a> Activatable for &'a HTMLAnchorElement {
     }
 }
 
-fn follow_hyperlink(subject: &Element) {
+fn follow_hyperlink(subject: &Element, hyperlink_suffix: Option<DOMString>) {
     // Step 1.
     let replace = false;
 
@@ -172,17 +172,21 @@ fn follow_hyperlink(subject: &Element) {
     // Step 3.
     let target = source;
 
-    // Step 4.
+    let mut href = element.get_attribute(&ns!(""), &atom!("href")).unwrap();
+
+    // Step 6.
+    // https://www.w3.org/Bugs/Public/show_bug.cgi?id=28925
+    if let Some(suffix) = hyperlink_suffix {
+        href.push_str(&suffix);
+    }
+
+    // Step 4-5.
+    let url = match UrlParser::new().base_url(&document.base_url()).parse(&href) {
+        Ok(url) => url,
+        Err(_) => return,
+    };
+
 /*
-    let href = 
-    Resolve the URL given by the href attribute of that element, relative to that element.
-
-    If that is successful, let URL be the resulting absolute URL.
-
-    Otherwise, if resolving the URL failed, the user agent may report the error to the user in a user-agent-specific manner, may queue a task to navigate the target browsing context to an error page to report the error, or may ignore the error and do nothing. In any case, the user agent must then abort these steps.
-
-    In the case of server-side image maps, append the hyperlink suffix to URL.
-
     Queue a task to navigate the target browsing context to URL. If replace is true, the navigation must be performed with replacement enabled. The source browsing context must be source.
 */
 }
