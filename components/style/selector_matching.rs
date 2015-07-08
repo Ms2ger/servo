@@ -23,6 +23,23 @@ use viewport::{ViewportConstraints, ViewportRuleCascade};
 
 pub type DeclarationBlock = GenericDeclarationBlock<Vec<PropertyDeclaration>>;
 
+pub struct Maps {
+    element_map: PerPseudoElementSelectorMap,
+    before_map: PerPseudoElementSelectorMap,
+    after_map: PerPseudoElementSelectorMap,
+    rules_source_order: usize,
+}
+
+impl Maps {
+    fn new() -> Maps {
+        Maps {
+            element_map: PerPseudoElementSelectorMap::new(),
+            before_map: PerPseudoElementSelectorMap::new(),
+            after_map: PerPseudoElementSelectorMap::new(),
+            rules_source_order: 0,
+        }
+    }
+}
 
 pub struct Stylist {
     // List of stylesheets (including all media rules)
@@ -37,10 +54,7 @@ pub struct Stylist {
 
     // The current selector maps, after evaluating media
     // rules against the current device.
-    element_map: PerPseudoElementSelectorMap,
-    before_map: PerPseudoElementSelectorMap,
-    after_map: PerPseudoElementSelectorMap,
-    rules_source_order: usize,
+    maps: Maps,
 }
 
 impl Stylist {
@@ -50,11 +64,7 @@ impl Stylist {
             stylesheets: vec!(),
             device: device,
             is_dirty: true,
-
-            element_map: PerPseudoElementSelectorMap::new(),
-            before_map: PerPseudoElementSelectorMap::new(),
-            after_map: PerPseudoElementSelectorMap::new(),
-            rules_source_order: 0,
+            maps: Maps::new(),
         };
         // FIXME: Add iso-8859-9.css when the document’s encoding is ISO-8859-8.
         // FIXME: presentational-hints.css should be at author origin with zero specificity.
@@ -89,30 +99,27 @@ impl Stylist {
 
     pub fn update(&mut self) -> bool {
         if self.is_dirty {
-            self.element_map = PerPseudoElementSelectorMap::new();
-            self.before_map = PerPseudoElementSelectorMap::new();
-            self.after_map = PerPseudoElementSelectorMap::new();
-            self.rules_source_order = 0;
+            self.maps = Maps::new();
 
             for stylesheet in self.stylesheets.iter() {
                 let (mut element_map, mut before_map, mut after_map) = match stylesheet.origin {
                     Origin::UserAgent => (
-                        &mut self.element_map.user_agent,
-                        &mut self.before_map.user_agent,
-                        &mut self.after_map.user_agent,
+                        &mut self.maps.element_map.user_agent,
+                        &mut self.maps.before_map.user_agent,
+                        &mut self.maps.after_map.user_agent,
                     ),
                     Origin::Author => (
-                        &mut self.element_map.author,
-                        &mut self.before_map.author,
-                        &mut self.after_map.author,
+                        &mut self.maps.element_map.author,
+                        &mut self.maps.before_map.author,
+                        &mut self.maps.after_map.author,
                     ),
                     Origin::User => (
-                        &mut self.element_map.user,
-                        &mut self.before_map.user,
-                        &mut self.after_map.user,
+                        &mut self.maps.element_map.user,
+                        &mut self.maps.before_map.user,
+                        &mut self.maps.after_map.user,
                     ),
                 };
-                let mut rules_source_order = self.rules_source_order;
+                let mut rules_source_order = self.maps.rules_source_order;
 
                 // Take apart the StyleRule into individual Rules and insert
                 // them into the SelectorMap of that priority.
@@ -143,7 +150,7 @@ impl Stylist {
                     append!(style_rule, important);
                     rules_source_order += 1;
                 }
-                self.rules_source_order = rules_source_order;
+                self.maps.rules_source_order = rules_source_order;
             }
 
             self.is_dirty = false;
@@ -205,9 +212,9 @@ impl Stylist {
                 "Style attributes do not apply to pseudo-elements");
 
         let map = match pseudo_element {
-            None => &self.element_map,
-            Some(PseudoElement::Before) => &self.before_map,
-            Some(PseudoElement::After) => &self.after_map,
+            None => &self.maps.element_map,
+            Some(PseudoElement::Before) => &self.maps.before_map,
+            Some(PseudoElement::After) => &self.maps.after_map,
         };
 
         let mut shareable = true;
