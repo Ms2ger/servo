@@ -12,7 +12,6 @@ use canvas_traits::CanvasMsg;
 use msg::compositor_msg::LayerId;
 use fnv::FnvHasher;
 use euclid::{Rect, Size2D};
-use gfx::display_list::OpaqueNode;
 use gfx::font_cache_task::FontCacheTask;
 use gfx::font_context::FontContext;
 use msg::constellation_msg::ConstellationChan;
@@ -101,9 +100,6 @@ pub struct SharedLayoutContext {
     ///
     /// FIXME(#2604): Make this no longer an unsafe pointer once we have fast `RWArc`s.
     pub stylist: *const Stylist,
-
-    /// The root node at which we're starting the layout.
-    pub reflow_root: Option<OpaqueNode>,
 
     /// The URL.
     pub url: Url,
