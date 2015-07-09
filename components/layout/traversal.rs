@@ -49,7 +49,7 @@ type Generation = u32;
 /// are removed.
 ///
 /// Since a work-stealing queue is used for styling, sometimes, the bloom filter
-/// will no longer be the for the parent of the node we're currently on. When
+/// will no longer be the XXX for the parent of the node we're currently on. When
 /// this happens, the task local bloom filter will be thrown away and rebuilt.
 thread_local!(
     static STYLE_BLOOM: RefCell<Option<(Box<BloomFilter>, UnsafeLayoutNode, Generation)>> = RefCell::new(None));
