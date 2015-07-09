@@ -18,6 +18,7 @@ use wrapper::{layout_node_to_unsafe_layout_node, LayoutNode};
 use wrapper::{PostorderNodeMutTraversal, ThreadSafeLayoutNode, UnsafeLayoutNode};
 use wrapper::{PreorderDomTraversal, PostorderDomTraversal};
 
+use gfx::display_list::OpaqueNode;
 use selectors::bloom::BloomFilter;
 use selectors::Node;
 use util::opts;
@@ -57,7 +58,9 @@ thread_local!(
 ///
 /// If one does not exist, a new one will be made for you. If it is out of date,
 /// it will be cleared and reused.
-fn take_task_local_bloom_filter(parent_node: Option<LayoutNode>, layout_context: &LayoutContext)
+fn take_task_local_bloom_filter(parent_node: Option<LayoutNode>,
+                                root: OpaqueNode,
+                                layout_context: &LayoutContext)
                                 -> Box<BloomFilter> {
     STYLE_BLOOM.with(|style_bloom| {
         match (parent_node, style_bloom.borrow_mut().take()) {
@@ -69,7 +72,7 @@ fn take_task_local_bloom_filter(parent_node: Option<LayoutNode>, layout_context:
             // No bloom filter for this thread yet.
             (Some(parent), None) => {
                 let mut bloom_filter = box BloomFilter::new();
-                insert_ancestors_into_bloom_filter(&mut bloom_filter, parent, layout_context);
+                insert_ancestors_into_bloom_filter(&mut bloom_filter, parent, root);
                 bloom_filter
             }
             // Found cached bloom filter.
@@ -82,7 +85,7 @@ fn take_task_local_bloom_filter(parent_node: Option<LayoutNode>, layout_context:
                     // Oh no. the cached parent is stale. I guess we need a new one. Reuse the existing
                     // allocation to avoid malloc churn.
                     bloom_filter.clear();
-                    insert_ancestors_into_bloom_filter(&mut bloom_filter, parent, layout_context);
+                    insert_ancestors_into_bloom_filter(&mut bloom_filter, parent, root);
                 }
                 bloom_filter
             },
@@ -103,14 +106,14 @@ fn put_task_local_bloom_filter(bf: Box<BloomFilter>,
 /// "Ancestors" in this context is inclusive of ourselves.
 fn insert_ancestors_into_bloom_filter(bf: &mut Box<BloomFilter>,
                                       mut n: LayoutNode,
-                                      layout_context: &LayoutContext) {
+                                      root: OpaqueNode) {
     debug!("[{}] Inserting ancestors.", tid());
     let mut ancestors = 0;
     loop {
         ancestors += 1;
 
         n.insert_into_bloom_filter(&mut **bf);
-        n = match n.layout_parent_node(layout_context.shared) {
+        n = match n.layout_parent_node(root) {
             None => break,
             Some(p) => p,
         };
@@ -123,6 +126,7 @@ fn insert_ancestors_into_bloom_filter(bf: &mut Box<BloomFilter>,
 #[derive(Copy, Clone)]
 pub struct RecalcStyleForNode<'a> {
     pub layout_context: &'a LayoutContext<'a>,
+    pub root: OpaqueNode,
 }
 
 impl<'a> PreorderDomTraversal for RecalcStyleForNode<'a> {
@@ -135,10 +139,10 @@ impl<'a> PreorderDomTraversal for RecalcStyleForNode<'a> {
         node.initialize_layout_data();
 
         // Get the parent node.
-        let parent_opt = node.layout_parent_node(self.layout_context.shared);
+        let parent_opt = node.layout_parent_node(self.root);
 
         // Get the style bloom filter.
-        let bf = take_task_local_bloom_filter(parent_opt, self.layout_context);
+        let bf = take_task_local_bloom_filter(parent_opt, self.root, self.layout_context);
 
         // Just needs to be wrapped in an option for `match_node`.
         let some_bf = Some(bf);
@@ -215,6 +219,7 @@ impl<'a> PreorderDomTraversal for RecalcStyleForNode<'a> {
 #[derive(Copy, Clone)]
 pub struct ConstructFlows<'a> {
     pub layout_context: &'a LayoutContext<'a>,
+    pub root: OpaqueNode,
 }
 
 impl<'a> PostorderDomTraversal for ConstructFlows<'a> {
@@ -259,7 +264,7 @@ impl<'a> PostorderDomTraversal for ConstructFlows<'a> {
         assert_eq!(old_node, unsafe_layout_node);
         assert_eq!(old_generation, self.layout_context.shared.generation);
 
-        match node.layout_parent_node(self.layout_context.shared) {
+        match node.layout_parent_node(self.root) {
             None => {
                 debug!("[{}] - {:X}, and deleting BF.", tid(), unsafe_layout_node.0);
                 // If this is the reflow root, eat the task-local bloom filter.
