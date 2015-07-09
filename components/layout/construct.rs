@@ -1614,12 +1614,12 @@ pub fn strip_ignorable_whitespace_from_start(this: &mut LinkedList<Fragment>) {
         return   // Fast path.
     }
 
-    while let Some(front) = this.front() {
+    while let Some(front) = this.pop_front() {
         if !front.is_ignorable_whitespace() {
+            this.push_front(front);
             return;
         }
         debug!("stripping ignorable whitespace from start");
-        drop(this.pop_front());
     }
 }
 
