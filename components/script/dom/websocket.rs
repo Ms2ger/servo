@@ -126,55 +126,41 @@ impl WebSocket {
         // implementation is fixed to follow the RFC 6455 properly.
         let (url, _, _, _, _) = try!(parse_web_socket_url(&url));
 
-        /*TODO: This constructor is only a prototype, it does not accomplish the specs
-          defined here:
-          http://html.spec.whatwg.org
-          The remaining 8 items must be satisfied.
-          TODO: This constructor should be responsible for spawning a thread for the
-          receive loop after ws.r().Open() - See comment
-        */
+        // Step 2: Disallow https -> ws connections.
+        // Step 3: Potentially block access to some ports.
+        // Step 4-5: Protocols.
+        // Step 6: Origin.
+
+        // Step 7.
         let ws = reflect_dom_object(box WebSocket::new_inherited(global, url.clone()),
                                     global,
                                     WebSocketBinding::Wrap);
+        let address = Trusted::new(global.get_cx(), &ws, global.script_chan());
 
-        // TODO Client::connect does not conform to RFC 6455
-        // see https://github.com/cyderize/rust-websocket/issues/38
-        let request = match Client::connect(url) {
-            Ok(request) => request,
-            Err(_) => {
-                let global_root = ws.r().global.root();
-                let address = Trusted::new(global_root.r().get_cx(), ws.r(), global_root.r().script_chan().clone());
-                let task = box WebSocketTaskHandler::new(address, WebSocketTask::Close);
-                global_root.r().script_chan().send(ScriptMsg::RunnableMsg(task)).unwrap();
-                return Ok(ws);
-            }
-        };
-        let response = request.send().unwrap();
-        response.validate().unwrap();
+        let sender = global.script_chan();
+        spawn_named(format!("WebSocket connection to {}", url.serialize()), move || {
+            // Step 8: Protocols.
 
-        let (temp_sender, temp_receiver) = response.begin().split();
-        *ws.r().sender.borrow_mut() = Some(temp_sender);
-        *ws.r().receiver.borrow_mut() = Some(temp_receiver);
+            // Step 9.
+            // TODO Client::connect does not conform to RFC 6455
+            // see https://github.com/cyderize/rust-websocket/issues/38
+            let request = match Client::connect(url) {
+                Ok(request) => request,
+                Err(_) => {
+                    let task = box WebSocketTaskHandler::new(address, WebSocketTask::Close);
+                    global_root.r().script_chan().send(ScriptMsg::RunnableMsg(task)).unwrap();
+                    return;
+                }
+            };
 
-        //Create everything necessary for starting the open asynchronous task, then begin the task.
-        let global_root = ws.r().global.root();
-        let addr: Trusted<WebSocket> =
-            Trusted::new(global_root.r().get_cx(), ws.r(), global_root.r().script_chan().clone());
-        let open_task = box WebSocketTaskHandler::new(addr, WebSocketTask::ConnectionEstablished);
-        global_root.r().script_chan().send(ScriptMsg::RunnableMsg(open_task)).unwrap();
-        //TODO: Spawn thread here for receive loop
-        /*TODO: Add receive loop here and make new thread run this
-          Receive is an infinite loop "similiar" the one shown here:
-          https://github.com/cyderize/rust-websocket/blob/master/examples/client.rs#L64
-          TODO: The receive loop however does need to follow the spec. These are outlined here
-          under "WebSocket message has been received" items 1-5:
-          https://github.com/cyderize/rust-websocket/blob/master/examples/client.rs#L64
-          TODO: The receive loop also needs to dispatch an asynchronous event as stated here:
-          https://github.com/cyderize/rust-websocket/blob/master/examples/client.rs#L64
-          TODO: When the receive loop receives a close message from the server,
-          it confirms the websocket is now closed. This requires the close event
-          to be fired (dispatch_close fires the close event - see implementation below)
-        */
+            let response = request.send().unwrap();
+            response.validate().unwrap();
+
+            let open_task = box WebSocketTaskHandler::new(address, WebSocketTask::ConnectionEstablished);
+            sender.send(ScriptMsg::RunnableMsg(open_task)).unwrap();
+        });
+
+        // Step 7.
         Ok(ws)
     }
 
