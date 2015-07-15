@@ -8,6 +8,7 @@ use dom::bindings::codegen::Bindings::WebSocketBinding::WebSocketMethods;
 use dom::bindings::codegen::Bindings::EventHandlerBinding::EventHandlerNonNull;
 use dom::bindings::codegen::InheritTypes::EventTargetCast;
 use dom::bindings::codegen::InheritTypes::EventCast;
+use dom::bindings::conversions::ToJSValConvertible;
 use dom::bindings::error::{Error, Fallible};
 use dom::bindings::error::Error::{InvalidAccess, Syntax};
 use dom::bindings::global::{GlobalField, GlobalRef};
@@ -15,10 +16,12 @@ use dom::bindings::js::Root;
 use dom::bindings::refcounted::Trusted;
 use dom::bindings::str::USVString;
 use dom::bindings::trace::JSTraceable;
-use dom::bindings::utils::reflect_dom_object;
+use dom::bindings::utils::{reflect_dom_object, Reflectable};
+use dom::blob::Blob;
 use dom::closeevent::CloseEvent;
 use dom::event::{Event, EventBubbles, EventCancelable, EventHelpers};
 use dom::eventtarget::{EventTarget, EventTargetHelpers, EventTargetTypeId};
+use dom::messageevent::MessageEvent;
 use script_task::Runnable;
 use script_task::ScriptMsg;
 use std::cell::{Cell, RefCell};
@@ -26,6 +29,8 @@ use std::borrow::ToOwned;
 use util::str::DOMString;
 use util::task::spawn_named;
 
+use js::jsapi::{RootedValue, JSAutoRequest, JSAutoCompartment};
+use js::jsval::UndefinedValue;
 use hyper::header::Host;
 use websocket::Message;
 use websocket::ws::sender::Sender as Sender_Object;
@@ -36,6 +41,7 @@ use websocket::client::request::Url;
 use websocket::Client;
 use websocket::header::Origin;
 use websocket::result::WebSocketResult;
+use websocket::ws::receiver::Receiver as WSReceiver;
 use websocket::ws::util::url::parse_url;
 
 #[derive(JSTraceable, PartialEq, Copy, Clone)]
@@ -143,7 +149,7 @@ impl WebSocket {
 
             // Step 9.
             let channel = establish_a_websocket_connection(url, origin);
-            let (temp_sender, _temp_receiver) = match channel {
+            let (temp_sender, mut receiver) = match channel {
                 Ok(channel) => channel,
                 Err(e) => {
                     debug!("Failed to establish a WebSocket connection: {:?}", e);
@@ -156,10 +162,18 @@ impl WebSocket {
             };
 
             let open_task = box ConnectionEstablishedTask {
-                addr: address,
+                addr: address.clone(),
                 sender: temp_sender,
             };
             sender.send(ScriptMsg::RunnableMsg(open_task)).unwrap();
+
+            for message in receiver.incoming_messages() {
+                let message_task = box MessageReceivedTask {
+                    address: address.clone(),
+                    message: message,
+                };
+                sender.send(ScriptMsg::RunnableMsg(message_task)).unwrap();
+            }
         });
 
         // Step 7.
@@ -327,5 +341,39 @@ impl Runnable for CloseTask {
         let target = EventTargetCast::from_ref(ws);
         let event = EventCast::from_ref(close_event.r());
         event.fire(target);
+    }
+}
+
+struct MessageReceivedTask {
+    address: Trusted<WebSocket>,
+    message: WebSocketResult<Message>,
+}
+
+impl Runnable for MessageReceivedTask {
+    fn handler(self: Box<Self>) {
+        let ws = self.address.root();
+
+        // Step 1.
+        if ws.ready_state.get() != WebSocketRequestState::Open {
+            return;
+        }
+
+        // Step 2-5.
+        let global = ws.global.root();
+        let cx = global.r().get_cx();
+        let _ar = JSAutoRequest::new(cx);
+        let _ac = JSAutoCompartment::new(cx, ws.reflector().get_jsobject().get());
+        let mut message = RootedValue::new(cx, UndefinedValue());
+        match self.message {
+            Ok(Message::Text(text)) => text.to_jsval(cx, message.handle_mut()),
+            Ok(Message::Binary(data)) => {
+                let blob = Blob::new(global.r(), Some(data), "");
+                blob.to_jsval(cx, message.handle_mut());
+            },
+            _ => unreachable!(),
+        }
+
+        let target = EventTargetCast::from_ref(ws.r());
+        MessageEvent::dispatch_jsval(target, global.r(), message.handle());
     }
 }
