@@ -599,66 +599,61 @@ impl PseudoElementType {
 /// A thread-safe version of `LayoutNode`, used during flow construction. This type of layout
 /// node does not allow any parents or siblings of nodes to be accessed, to avoid races.
 #[derive(Copy, Clone)]
-pub struct ThreadSafeLayoutNode<'ln> {
-    /// The wrapped node.
-    node: LayoutNode<'ln>,
-
-    pseudo: PseudoElementType,
+pub enum ThreadSafeLayoutNode<'ln> {
+    Normal(LayoutNode<'ln>),
+    Before(LayoutNode<'ln>, display::T),
+    After(LayoutNode<'ln>, display::T),
 }
 
 impl<'ln> ThreadSafeLayoutNode<'ln> {
     /// Creates a new layout node with the same lifetime as this layout node.
     pub unsafe fn new_with_this_lifetime(&self, node: &LayoutJS<Node>) -> ThreadSafeLayoutNode<'ln> {
-        ThreadSafeLayoutNode {
-            node: self.node.new_with_this_lifetime(node),
-            pseudo: PseudoElementType::Normal,
-        }
+        ThreadSafeLayoutNode::Normal(LayoutNode {
+            node: *node,
+            chain: PhantomData,
+        })
     }
 
     /// Creates a new `ThreadSafeLayoutNode` from the given `LayoutNode`.
     pub fn new<'a>(node: &LayoutNode<'a>) -> ThreadSafeLayoutNode<'a> {
-        ThreadSafeLayoutNode {
-            node: node.clone(),
-            pseudo: PseudoElementType::Normal,
-        }
-    }
-
-    /// Creates a new `ThreadSafeLayoutNode` for the same `LayoutNode`
-    /// with a different pseudo-element type.
-    fn with_pseudo(&self, pseudo: PseudoElementType) -> ThreadSafeLayoutNode<'ln> {
-        ThreadSafeLayoutNode {
-            node: self.node.clone(),
-            pseudo: pseudo,
-        }
-    }
-
-    /// Returns the interior of this node as a `LayoutJS`. This is highly unsafe for layout to
-    /// call and as such is marked `unsafe`.
-    unsafe fn get_jsmanaged<'a>(&'a self) -> &'a LayoutJS<Node> {
-        self.node.get_jsmanaged()
+        ThreadSafeLayoutNode::Normal(node.clone())
     }
 
     /// Converts self into an `OpaqueNode`.
     pub fn opaque(&self) -> OpaqueNode {
-        OpaqueNodeMethods::from_jsmanaged(unsafe { self.get_jsmanaged() })
+        let node = match *self {
+            ThreadSafeLayoutNode::Before(ref parent, _) => parent,
+            ThreadSafeLayoutNode::Normal(ref node) => node,
+            ThreadSafeLayoutNode::After(ref parent, _) => parent,
+        };
+        OpaqueNodeMethods::from_jsmanaged(unsafe { node.get_jsmanaged() })
     }
 
     /// Returns the type ID of this node.
     /// Returns `None` if this is a pseudo-element; otherwise, returns `Some`.
     pub fn type_id(&self) -> Option<NodeTypeId> {
-        if self.pseudo != PseudoElementType::Normal {
-            return None
+        match *self {
+            ThreadSafeLayoutNode::Normal(ref node) => Some(node.type_id()),
+            _ => None,
         }
-
-        Some(self.node.type_id())
     }
 
     pub fn debug_id(self) -> usize {
-        self.node.debug_id()
+        let node = match self {
+            ThreadSafeLayoutNode::Before(ref parent, _) => parent,
+            ThreadSafeLayoutNode::Normal(ref node) => node,
+            ThreadSafeLayoutNode::After(ref parent, _) => parent,
+        };
+        node.debug_id()
     }
 
     pub fn flow_debug_id(self) -> usize {
-        self.node.flow_debug_id()
+        let node = match self {
+            ThreadSafeLayoutNode::Before(ref parent, _) => parent,
+            ThreadSafeLayoutNode::Normal(ref node) => node,
+            ThreadSafeLayoutNode::After(ref parent, _) => parent,
+        };
+        node.flow_debug_id()
     }
 
     /// Returns an iterator over this node's children.
@@ -669,8 +664,12 @@ impl<'ln> ThreadSafeLayoutNode<'ln> {
     /// If this is an element, accesses the element data. Fails if this is not an element node.
     #[inline]
     pub fn as_element(&self) -> ThreadSafeLayoutElement<'ln> {
+        let node = match *self {
+            ThreadSafeLayoutNode::Normal(node) => node,
+            _ => unreachable!(),
+        };
         unsafe {
-            let element = match ElementCast::to_layout_js(self.get_jsmanaged()) {
+            let element = match ElementCast::to_layout_js(node.get_jsmanaged()) {
                 Some(e) => e.unsafe_get(),
                 None => panic!("not an element")
             };
@@ -684,32 +683,56 @@ impl<'ln> ThreadSafeLayoutNode<'ln> {
 
     #[inline]
     pub fn get_pseudo_element_type(&self) -> PseudoElementType {
-        self.pseudo
+        match *self {
+            ThreadSafeLayoutNode::Before(_, display) => {
+                PseudoElementType::Before(display)
+            },
+            ThreadSafeLayoutNode::Normal(_) => {
+                PseudoElementType::Normal
+            },
+            ThreadSafeLayoutNode::After(_, display) => {
+                PseudoElementType::After(display)
+            }
+        }
     }
 
     #[inline]
     pub fn get_before_pseudo(&self) -> Option<ThreadSafeLayoutNode<'ln>> {
-        let layout_data_ref = self.borrow_layout_data();
-        let node_layout_data_wrapper = layout_data_ref.as_ref().unwrap();
-        node_layout_data_wrapper.data.before_style.as_ref().map(|style| {
-            self.with_pseudo(PseudoElementType::Before(style.get_box().display))
-        })
+        match *self {
+            ThreadSafeLayoutNode::Normal(node) => {
+                let layout_data_ref = node.borrow_layout_data();
+                let node_layout_data_wrapper = layout_data_ref.as_ref().unwrap();
+                node_layout_data_wrapper.data.before_style.as_ref().map(|style| {
+                    ThreadSafeLayoutNode::Before(node, style.get_box().display)
+                })
+            }
+            _ => None,
+        }
     }
 
     #[inline]
     pub fn get_after_pseudo(&self) -> Option<ThreadSafeLayoutNode<'ln>> {
-        let layout_data_ref = self.borrow_layout_data();
-        let node_layout_data_wrapper = layout_data_ref.as_ref().unwrap();
-        node_layout_data_wrapper.data.after_style.as_ref().map(|style| {
-            self.with_pseudo(PseudoElementType::After(style.get_box().display))
-        })
+        match *self {
+            ThreadSafeLayoutNode::Normal(node) => {
+                let layout_data_ref = node.borrow_layout_data();
+                let node_layout_data_wrapper = layout_data_ref.as_ref().unwrap();
+                node_layout_data_wrapper.data.after_style.as_ref().map(|style| {
+                    ThreadSafeLayoutNode::After(node, style.get_box().display)
+                })
+            }
+            _ => None,
+        }
     }
 
     /// Borrows the layout data without checking.
     #[inline(always)]
     fn borrow_layout_data_unchecked<'a>(&'a self) -> *const Option<LayoutDataWrapper> {
+        let node = match *self {
+            ThreadSafeLayoutNode::Normal(ref node) => node,
+            _ => unreachable!(),
+        };
         unsafe {
-            self.node.borrow_layout_data_unchecked()
+            node.borrow_layout_data_unchecked()
         }
     }
 
@@ -718,7 +741,11 @@ impl<'ln> ThreadSafeLayoutNode<'ln> {
     /// TODO(pcwalton): Make this private. It will let us avoid borrow flag checks in some cases.
     #[inline(always)]
     pub fn borrow_layout_data<'a>(&'a self) -> Ref<'a,Option<LayoutDataWrapper>> {
-        self.node.borrow_layout_data()
+        let node = match *self {
+            ThreadSafeLayoutNode::Normal(ref node) => node,
+            _ => unreachable!(),
+        };
+        node.borrow_layout_data()
     }
 
     /// Borrows the layout data mutably. Fails on a conflicting borrow.
@@ -726,12 +753,20 @@ impl<'ln> ThreadSafeLayoutNode<'ln> {
     /// TODO(pcwalton): Make this private. It will let us avoid borrow flag checks in some cases.
     #[inline(always)]
     pub fn mutate_layout_data<'a>(&'a self) -> RefMut<'a,Option<LayoutDataWrapper>> {
-        self.node.mutate_layout_data()
+        let node = match *self {
+            ThreadSafeLayoutNode::Normal(ref node) => node,
+            _ => unreachable!(),
+        };
+        node.mutate_layout_data()
     }
 
     pub fn is_ignorable_whitespace(&self) -> bool {
+        let node = match *self {
+            ThreadSafeLayoutNode::Normal(ref node) => node,
+            _ => unreachable!(),
+        };
         unsafe {
-            let text: LayoutJS<Text> = match TextCast::to_layout_js(self.get_jsmanaged()) {
+            let text: LayoutJS<Text> = match TextCast::to_layout_js(node.get_jsmanaged()) {
                 Some(text) => text,
                 None => return false
             };
@@ -754,8 +789,12 @@ impl<'ln> ThreadSafeLayoutNode<'ln> {
     }
 
     pub fn get_input_value(&self) -> String {
+        let node = match *self {
+            ThreadSafeLayoutNode::Normal(ref node) => node,
+            _ => unreachable!(),
+        };
         unsafe {
-            let input: Option<LayoutJS<HTMLInputElement>> = HTMLInputElementCast::to_layout_js(self.get_jsmanaged());
+            let input: Option<LayoutJS<HTMLInputElement>> = HTMLInputElementCast::to_layout_js(node.get_jsmanaged());
             match input {
                 Some(input) => input.get_value_for_layout(),
                 None => panic!("not an input element!")
@@ -764,8 +803,12 @@ impl<'ln> ThreadSafeLayoutNode<'ln> {
     }
 
     pub fn get_input_size(&self) -> u32 {
+        let node = match *self {
+            ThreadSafeLayoutNode::Normal(ref node) => node,
+            _ => unreachable!(),
+        };
         unsafe {
-            match HTMLInputElementCast::to_layout_js(self.get_jsmanaged()) {
+            match HTMLInputElementCast::to_layout_js(node.get_jsmanaged()) {
                 Some(input) => input.get_size_for_layout(),
                 None => panic!("not an input element!")
             }
@@ -774,8 +817,12 @@ impl<'ln> ThreadSafeLayoutNode<'ln> {
 
     pub fn get_unsigned_integer_attribute(self, attribute: UnsignedIntegerAttribute)
                                           -> Option<u32> {
+        let node = match self {
+            ThreadSafeLayoutNode::Normal(node) => node,
+            _ => unreachable!(),
+        };
         unsafe {
-            let elem: Option<LayoutJS<Element>> = ElementCast::to_layout_js(self.get_jsmanaged());
+            let elem: Option<LayoutJS<Element>> = ElementCast::to_layout_js(node.get_jsmanaged());
             match elem {
                 Some(element) => {
                     (*element.unsafe_get()).get_unsigned_integer_attribute_for_layout(attribute)
@@ -843,11 +890,12 @@ impl<'ln> ThreadSafeLayoutNode<'ln> {
     ///
     /// FIXME(pcwalton): This might have too much copying and/or allocation. Profile this.
     pub fn text_content(&self) -> Vec<ContentItem> {
-        if self.pseudo != PseudoElementType::Normal {
-            let layout_data_ref = self.borrow_layout_data();
+        fn from_style(parent: &LayoutNode, is_before: bool)
+                      -> Vec<ContentItem> {
+            let layout_data_ref = parent.borrow_layout_data();
             let data = &layout_data_ref.as_ref().unwrap().data;
 
-            let style = if self.pseudo.is_before() {
+            let style = if is_before {
                 &data.before_style
             } else {
                 &data.after_style
@@ -857,57 +905,78 @@ impl<'ln> ThreadSafeLayoutNode<'ln> {
                 _ => vec![],
             };
         }
+        match *self {
+            ThreadSafeLayoutNode::Before(parent, _) => from_style(&parent, true),
+            ThreadSafeLayoutNode::Normal(node) => {
+                let this = unsafe { node.get_jsmanaged() };
+                let text = TextCast::to_layout_js(this);
+                if let Some(text) = text {
+                    let data = unsafe {
+                        CharacterDataCast::from_layout_js(&text).data_for_layout().to_owned()
+                    };
+                    return vec![ContentItem::String(data)];
+                }
+                let input = HTMLInputElementCast::to_layout_js(this);
+                if let Some(input) = input {
+                    let data = unsafe { input.get_value_for_layout() };
+                    return vec![ContentItem::String(data)];
+                }
+                let area = HTMLTextAreaElementCast::to_layout_js(this);
+                if let Some(area) = area {
+                    let data = unsafe { area.get_value_for_layout() };
+                    return vec![ContentItem::String(data)];
+                }
 
-        let this = unsafe { self.get_jsmanaged() };
-        let text = TextCast::to_layout_js(this);
-        if let Some(text) = text {
-            let data = unsafe {
-                CharacterDataCast::from_layout_js(&text).data_for_layout().to_owned()
-            };
-            return vec![ContentItem::String(data)];
+                panic!("not text!")
+            },
+            ThreadSafeLayoutNode::After(parent, _) => from_style(&parent, false),
         }
-        let input = HTMLInputElementCast::to_layout_js(this);
-        if let Some(input) = input {
-            let data = unsafe { input.get_value_for_layout() };
-            return vec![ContentItem::String(data)];
-        }
-        let area = HTMLTextAreaElementCast::to_layout_js(this);
-        if let Some(area) = area {
-            let data = unsafe { area.get_value_for_layout() };
-            return vec![ContentItem::String(data)];
-        }
-
-        panic!("not text!")
     }
 
     /// If this is an image element, returns its URL. If this is not an image element, fails.
     ///
     /// FIXME(pcwalton): Don't copy URLs.
     pub fn image_url(&self) -> Option<Url> {
+        let node = match *self {
+            ThreadSafeLayoutNode::Normal(ref node) => node,
+            _ => unreachable!(),
+        };
         unsafe {
-            HTMLImageElementCast::to_layout_js(self.get_jsmanaged())
+            HTMLImageElementCast::to_layout_js(node.get_jsmanaged())
                 .expect("not an image!")
                 .image_url()
         }
     }
 
     pub fn renderer(&self) -> Option<Sender<CanvasMsg>> {
+        let node = match *self {
+            ThreadSafeLayoutNode::Normal(ref node) => node,
+            _ => unreachable!(),
+        };
         unsafe {
-            let canvas_element = HTMLCanvasElementCast::to_layout_js(self.get_jsmanaged());
+            let canvas_element = HTMLCanvasElementCast::to_layout_js(node.get_jsmanaged());
             canvas_element.and_then(|elem| elem.get_renderer())
         }
     }
 
     pub fn canvas_width(&self) -> u32 {
+        let node = match *self {
+            ThreadSafeLayoutNode::Normal(ref node) => node,
+            _ => unreachable!(),
+        };
         unsafe {
-            let canvas_element = HTMLCanvasElementCast::to_layout_js(self.get_jsmanaged());
+            let canvas_element = HTMLCanvasElementCast::to_layout_js(node.get_jsmanaged());
             canvas_element.unwrap().get_canvas_width()
         }
     }
 
     pub fn canvas_height(&self) -> u32 {
+        let node = match *self {
+            ThreadSafeLayoutNode::Normal(ref node) => node,
+            _ => unreachable!(),
+        };
         unsafe {
-            let canvas_element = HTMLCanvasElementCast::to_layout_js(self.get_jsmanaged());
+            let canvas_element = HTMLCanvasElementCast::to_layout_js(node.get_jsmanaged());
             canvas_element.unwrap().get_canvas_height()
         }
     }
@@ -915,8 +984,12 @@ impl<'ln> ThreadSafeLayoutNode<'ln> {
     /// If this node is an iframe element, returns its pipeline and subpage IDs. If this node is
     /// not an iframe element, fails.
     pub fn iframe_pipeline_and_subpage_ids(&self) -> (PipelineId, SubpageId) {
+        let node = match *self {
+            ThreadSafeLayoutNode::Normal(ref node) => node,
+            _ => unreachable!(),
+        };
         unsafe {
-            let iframe_element = HTMLIFrameElementCast::to_layout_js(self.get_jsmanaged())
+            let iframe_element = HTMLIFrameElementCast::to_layout_js(node.get_jsmanaged())
                 .expect("not an iframe element!");
             ((*iframe_element.unsafe_get()).containing_page_pipeline_id().unwrap(),
              (*iframe_element.unsafe_get()).subpage_id().unwrap())
@@ -933,16 +1006,18 @@ impl<'a> ThreadSafeLayoutNodeChildrenIterator<'a> {
     fn new(parent: ThreadSafeLayoutNode<'a>) -> ThreadSafeLayoutNodeChildrenIterator<'a> {
         fn first_child<'a>(parent: ThreadSafeLayoutNode<'a>)
                            -> Option<ThreadSafeLayoutNode<'a>> {
-            if parent.pseudo != PseudoElementType::Normal {
-                return None
+            match parent {
+                ThreadSafeLayoutNode::Before(..) => None,
+                ThreadSafeLayoutNode::Normal(parent_node) => {
+                    parent.get_before_pseudo().or_else(|| {
+                        unsafe {
+                            parent_node.get_jsmanaged().first_child_ref()
+                                       .map(|node| parent.new_with_this_lifetime(&node))
+                        }
+                    })
+                },
+                ThreadSafeLayoutNode::After(..) => None,
             }
-
-            parent.get_before_pseudo().or_else(|| {
-                unsafe {
-                    parent.get_jsmanaged().first_child_ref()
-                          .map(|node| parent.new_with_this_lifetime(&node))
-                }
-            })
         }
 
         ThreadSafeLayoutNodeChildrenIterator {
@@ -958,9 +1033,9 @@ impl<'a> Iterator for ThreadSafeLayoutNodeChildrenIterator<'a> {
         let node = self.current_node.clone();
 
         if let Some(ref node) = node {
-            self.current_node = match node.pseudo {
-                PseudoElementType::Before(_) => {
-                    match unsafe { self.parent_node.get_jsmanaged().first_child_ref() } {
+            self.current_node = match *node {
+                ThreadSafeLayoutNode::Before(parent, _) => {
+                    match unsafe { parent.get_jsmanaged().first_child_ref() } {
                         Some(first) => {
                             Some(unsafe {
                                 self.parent_node.new_with_this_lifetime(&first)
@@ -969,7 +1044,7 @@ impl<'a> Iterator for ThreadSafeLayoutNodeChildrenIterator<'a> {
                         None => self.parent_node.get_after_pseudo(),
                     }
                 },
-                PseudoElementType::Normal => {
+                ThreadSafeLayoutNode::Normal(ref node) => {
                     match unsafe { node.get_jsmanaged().next_sibling_ref() } {
                         Some(next) => {
                             Some(unsafe {
@@ -979,7 +1054,7 @@ impl<'a> Iterator for ThreadSafeLayoutNodeChildrenIterator<'a> {
                         None => self.parent_node.get_after_pseudo(),
                     }
                 },
-                PseudoElementType::After(_) => {
+                ThreadSafeLayoutNode::After(..) => {
                     None
                 },
             };
