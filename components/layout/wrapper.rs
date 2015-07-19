@@ -969,9 +969,17 @@ impl<'a> Iterator for ThreadSafeLayoutNodeChildrenIterator<'a> {
         if let Some(ref node) = node {
             self.current_node = match node.pseudo {
                 PseudoElementType::Before(_) => {
-                    unsafe {
-                        self.parent_node.get_jsmanaged().first_child_ref()
-                            .map(|child| self.parent_node.new_with_this_lifetime(&child))
+                    match self.parent_node.get_jsmanaged().first_child_ref() {
+                        Some(first) => self.parent_node.new_with_this_lifetime(&first),
+                        None => {
+                            if self.parent_node.has_after_pseudo() {
+                                let pseudo = PseudoElementType::After(
+                                    self.parent_node.get_after_display());
+                                Some(self.parent_node.with_pseudo(pseudo))
+                            } else {
+                                None
+                            }
+                        }
                     }
                 },
                 PseudoElementType::Normal => {
