@@ -1869,6 +1869,7 @@ impl DocumentProgressHandler {
 
     fn dispatch_load(&self) {
         let document = self.addr.root();
+        debug!("({:p}).dispatch_load()", &*document);
         let window = document.r().window();
         let event = Event::new(GlobalRef::Window(window.r()), "load".to_owned(),
                                EventBubbles::DoesNotBubble,
@@ -1883,6 +1884,7 @@ impl DocumentProgressHandler {
         let browser_context = browser_context.as_ref().unwrap();
 
         browser_context.frame_element().map(|frame_element| {
+            debug!("Dispatching load event on frame element");
             let frame_window = window_from_node(frame_element.r());
             let event = Event::new(GlobalRef::Window(frame_window.r()), "load".to_owned(),
                                    EventBubbles::DoesNotBubble,

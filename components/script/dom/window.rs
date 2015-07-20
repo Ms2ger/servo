@@ -777,6 +777,7 @@ impl<'a> WindowHelpers for &'a Window {
     }
 
     fn init_browser_context(self, doc: &Document, frame_element: Option<&Element>) {
+        debug!("Initializing browser context: {:p} {}", doc, frame_element.is_some());
         let mut browser_context = self.browser_context.borrow_mut();
         *browser_context = Some(BrowserContext::new(doc, frame_element));
         (*browser_context).as_mut().unwrap().create_window_proxy();
