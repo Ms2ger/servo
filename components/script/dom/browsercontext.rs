@@ -27,8 +27,7 @@ use js::{JSTrue, JSFalse};
 use std::ptr;
 use std::default::Default;
 
-#[derive(JSTraceable)]
-#[privatize]
+#[dom_struct]
 #[allow(raw_pointer_derive)]
 pub struct BrowsingContext {
     history: Vec<SessionHistoryEntry>,
@@ -45,6 +44,40 @@ impl BrowsingContext {
             window_proxy: Heap::default(),
             frame_element: frame_element.map(JS::from_ref),
         }
+    }
+
+    pub fn new(document: &Document, frame_element: Option<&Element>) -> Root<BrowsingContext> {
+        let window = document.window();
+
+        let WindowProxyHandler(handler) = window.windowproxy_handler();
+        assert!(!handler.is_null());
+
+        let cx = window.get_cx();
+        let _ar = JSAutoRequest::new(cx);
+        let parent = window.reflector().get_jsobject();
+        assert!(!window.get().is_null());
+        assert!(((*JS_GetClass(window.get())).flags & JSCLASS_IS_GLOBAL) != 0);
+        let _ac = JSAutoCompartment::new(cx, parent.get());
+        let wrapper = RootedObject::new(cx, unsafe {
+            WrapperNew(cx, parent, handler)
+        });
+        assert!(!wrapper.ptr.is_null());
+        self.window_proxy.set(wrapper);
+
+
+        unsafe {
+
+            let mut raw = Box::into_raw(object);
+            let _rt = RootedTraceable::new(&*raw);
+
+            JS_SetReservedSlot(obj.ptr, DOM_OBJECT_SLOT,
+                               PrivateValue(raw as *const libc::c_void));
+
+            (*raw).init_reflector(obj.ptr);
+
+            Root::from_ref(&*raw)
+        }
+    
     }
 
     pub fn active_document(&self) -> Root<Document> {
@@ -90,7 +123,7 @@ impl BrowsingContext {
 #[derive(JSTraceable)]
 pub struct SessionHistoryEntry {
     document: JS<Document>,
-    children: Vec<BrowsingContext>
+    children: Vec<JS<BrowsingContext>>
 }
 
 impl SessionHistoryEntry {
