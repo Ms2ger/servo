@@ -742,8 +742,9 @@ impl<'ln> ThreadSafeLayoutNode<'ln> {
     #[inline(always)]
     pub fn borrow_layout_data<'a>(&'a self) -> Ref<'a,Option<LayoutDataWrapper>> {
         let node = match *self {
+            ThreadSafeLayoutNode::Before(ref parent, _) => parent,
             ThreadSafeLayoutNode::Normal(ref node) => node,
-            _ => unreachable!(),
+            ThreadSafeLayoutNode::After(ref parent, _) => parent,
         };
         node.borrow_layout_data()
     }
@@ -754,8 +755,9 @@ impl<'ln> ThreadSafeLayoutNode<'ln> {
     #[inline(always)]
     pub fn mutate_layout_data<'a>(&'a self) -> RefMut<'a,Option<LayoutDataWrapper>> {
         let node = match *self {
+            ThreadSafeLayoutNode::Before(ref parent, _) => parent,
             ThreadSafeLayoutNode::Normal(ref node) => node,
-            _ => unreachable!(),
+            ThreadSafeLayoutNode::After(ref parent, _) => parent,
         };
         node.mutate_layout_data()
     }
@@ -763,7 +765,7 @@ impl<'ln> ThreadSafeLayoutNode<'ln> {
     pub fn is_ignorable_whitespace(&self) -> bool {
         let node = match *self {
             ThreadSafeLayoutNode::Normal(ref node) => node,
-            _ => unreachable!(),
+            _ => return false,
         };
         unsafe {
             let text: LayoutJS<Text> = match TextCast::to_layout_js(node.get_jsmanaged()) {
