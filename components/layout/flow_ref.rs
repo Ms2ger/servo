@@ -70,6 +70,9 @@ impl<'a> Deref for FlowRef {
 impl DerefMut for FlowRef {
     fn deref_mut<'a>(&mut self) -> &mut (Flow + 'a) {
         unsafe {
+            let base = flow::base(&**self);
+            assert_eq!(base.strong_ref_count().load(Ordering::SeqCst), 1);
+            assert_eq!(base.weak_ref_count().load(Ordering::SeqCst), 1);
             mem::transmute_copy::<raw::TraitObject, &mut (Flow + 'a)>(&self.object)
         }
     }
