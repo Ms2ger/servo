@@ -1328,7 +1328,7 @@ impl<'a> PostorderNodeMutTraversal for FlowConstructor<'a> {
                 // Pseudo-element.
                 let style = node.style();
                 let display = match node.get_pseudo_element_type() {
-                    PseudoElementType::Normal => display::T::inline,
+                    PseudoElementType::Normal => unreachable!(),
                     PseudoElementType::Before(display) => display,
                     PseudoElementType::After(display) => display,
                 };
