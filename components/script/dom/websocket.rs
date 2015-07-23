@@ -54,6 +54,11 @@ enum WebSocketRequestState {
 
 no_jsmanaged_fields!(Sender<WebSocketStream>);
 
+enum MessageData {
+    Text(String),
+    Binary(Vec<u8>),
+}
+
 #[dom_struct]
 pub struct WebSocket {
     eventtarget: EventTarget,
@@ -149,7 +154,7 @@ impl WebSocket {
 
             // Step 9.
             let channel = establish_a_websocket_connection(url, origin);
-            let (temp_sender, mut receiver) = match channel {
+            let (mut ws_sender, mut receiver) = match channel {
                 Ok(channel) => channel,
                 Err(e) => {
                     debug!("Failed to establish a WebSocket connection: {:?}", e);
@@ -163,11 +168,29 @@ impl WebSocket {
 
             let open_task = box ConnectionEstablishedTask {
                 addr: address.clone(),
-                sender: temp_sender,
+                sender: ws_sender.clone(),
             };
             sender.send(ScriptMsg::RunnableMsg(open_task)).unwrap();
 
             for message in receiver.incoming_messages() {
+                let message = match message {
+                    Ok(Message::Text(text)) => MessageData::Text(text),
+                    Ok(Message::Binary(data)) => MessageData::Binary(data),
+                    Ok(Message::Ping(data)) => {
+                        ws_sender.send_message(Message::Pong(data));
+                        continue;
+                    },
+                    Ok(Message::Pong(_)) => continue,
+                    Ok(Message::Close(data)) => {
+                        ws_sender.send_message(Message::Close(data));
+                        let task = box CloseTask {
+                            addr: address,
+                        };
+                        sender.send(ScriptMsg::RunnableMsg(task)).unwrap();
+                        break;
+                    },
+                    Err(_) => break,
+                };
                 let message_task = box MessageReceivedTask {
                     address: address.clone(),
                     message: message,
@@ -346,7 +369,7 @@ impl Runnable for CloseTask {
 
 struct MessageReceivedTask {
     address: Trusted<WebSocket>,
-    message: WebSocketResult<Message>,
+    message: MessageData,
 }
 
 impl Runnable for MessageReceivedTask {
@@ -365,12 +388,11 @@ impl Runnable for MessageReceivedTask {
         let _ac = JSAutoCompartment::new(cx, ws.reflector().get_jsobject().get());
         let mut message = RootedValue::new(cx, UndefinedValue());
         match self.message {
-            Ok(Message::Text(text)) => text.to_jsval(cx, message.handle_mut()),
-            Ok(Message::Binary(data)) => {
+            MessageTask::Text(text) => text.to_jsval(cx, message.handle_mut()),
+            MessageTask::Binary(data) => {
                 let blob = Blob::new(global.r(), Some(data), "");
                 blob.to_jsval(cx, message.handle_mut());
             },
-            _ => unreachable!(),
         }
 
         let target = EventTargetCast::from_ref(ws.r());
