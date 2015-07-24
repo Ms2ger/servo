@@ -43,10 +43,9 @@ use script::dom::bindings::codegen::InheritTypes::{CharacterDataCast, ElementCas
 use script::dom::bindings::codegen::InheritTypes::{HTMLIFrameElementCast, HTMLCanvasElementCast};
 use script::dom::bindings::codegen::InheritTypes::{HTMLImageElementCast, HTMLInputElementCast};
 use script::dom::bindings::codegen::InheritTypes::{HTMLTextAreaElementCast, NodeCast, TextCast};
-use script::dom::bindings::js::LayoutJS;
+use script::dom::bindings::js::{JS, LayoutJS};
 use script::dom::characterdata::{CharacterDataTypeId, LayoutCharacterDataHelpers};
-use script::dom::element::{Element, ElementTypeId};
-use script::dom::element::{LayoutElementHelpers, RawLayoutElementHelpers};
+use script::dom::element::{Element, ElementTypeId, LayoutElementHelpers};
 use script::dom::htmlelement::HTMLElementTypeId;
 use script::dom::htmlcanvaselement::LayoutHTMLCanvasElementHelpers;
 use script::dom::htmlimageelement::LayoutHTMLImageElementHelpers;
@@ -444,7 +443,7 @@ impl<'le> ::selectors::Element for LayoutElement<'le> {
             NodeTypeId::Element(ElementTypeId::HTMLElement(HTMLElementTypeId::HTMLAreaElement)) |
             NodeTypeId::Element(ElementTypeId::HTMLElement(HTMLElementTypeId::HTMLLinkElement)) => {
                 unsafe {
-                    (*self.element.unsafe_get()).get_attr_val_for_layout(&ns!(""), &atom!("href")).is_some()
+                    self.element.get_attr_val_for_layout(&ns!(""), &atom!("href")).is_some()
                 }
             }
             _ => false,
@@ -476,7 +475,7 @@ impl<'le> ::selectors::Element for LayoutElement<'le> {
     #[inline]
     fn get_id(&self) -> Option<Atom> {
         unsafe {
-            (*self.element.unsafe_get()).get_attr_atom_for_layout(&ns!(""), &atom!("id"))
+            self.element.get_attr_atom_for_layout(&ns!(""), &atom!("id"))
         }
     }
 
@@ -505,14 +504,14 @@ impl<'le> ::selectors::Element for LayoutElement<'le> {
     #[inline]
     fn has_class(&self, name: &Atom) -> bool {
         unsafe {
-            (*self.element.unsafe_get()).has_class_for_layout(name)
+            self.element.has_class_for_layout(name)
         }
     }
 
     #[inline(always)]
     fn each_class<F>(&self, mut callback: F) where F: FnMut(&Atom) {
         unsafe {
-            match (*self.element.unsafe_get()).get_classes_for_layout() {
+            match self.element.get_classes_for_layout() {
                 None => {}
                 Some(ref classes) => {
                     for class in classes.iter() {
@@ -526,7 +525,7 @@ impl<'le> ::selectors::Element for LayoutElement<'le> {
     #[inline]
     fn has_servo_nonzero_border(&self) -> bool {
         unsafe {
-            match (*self.element.unsafe_get()).get_attr_for_layout(&ns!(""), &atom!("border")) {
+            match self.element.get_attr_for_layout(&ns!(""), &atom!("border")) {
                 None | Some(&AttrValue::UInt(_, 0)) => false,
                 _ => true,
             }
@@ -561,27 +560,27 @@ impl<'le> TElementAttributes for LayoutElement<'le> {
         where V: VecLike<DeclarationBlock<Vec<PropertyDeclaration>>>
     {
         unsafe {
-            (*self.element.unsafe_get()).synthesize_presentational_hints_for_legacy_attributes(hints);
+            self.element.synthesize_presentational_hints_for_legacy_attributes(hints);
         }
     }
 
     fn get_unsigned_integer_attribute(&self, attribute: UnsignedIntegerAttribute) -> Option<u32> {
         unsafe {
-            (*self.element.unsafe_get()).get_unsigned_integer_attribute_for_layout(attribute)
+            self.element.get_unsigned_integer_attribute_for_layout(attribute)
         }
     }
 
     #[inline]
     fn get_attr<'a>(&'a self, namespace: &Namespace, name: &Atom) -> Option<&'a str> {
         unsafe {
-            (*self.element.unsafe_get()).get_attr_val_for_layout(namespace, name)
+            self.element.get_attr_val_for_layout(namespace, name)
         }
     }
 
     #[inline]
     fn get_attrs<'a>(&'a self, name: &Atom) -> Vec<&'a str> {
         unsafe {
-            (*self.element.unsafe_get()).get_attr_vals_for_layout(name)
+            self.element.get_attr_vals_for_layout(name)
         }
     }
 }
@@ -785,7 +784,7 @@ impl<'ln> ThreadSafeLayoutNode<'ln> {
             let elem: Option<LayoutJS<Element>> = ElementCast::to_layout_js(self.get_jsmanaged());
             match elem {
                 Some(element) => {
-                    (*element.unsafe_get()).get_unsigned_integer_attribute_for_layout(attribute)
+                    element.get_unsigned_integer_attribute_for_layout(attribute)
                 }
                 None => panic!("not an element!")
             }
@@ -1007,7 +1006,7 @@ impl<'le> ThreadSafeLayoutElement<'le> {
     #[inline]
     pub fn get_attr(&self, namespace: &Namespace, name: &Atom) -> Option<&str> {
         unsafe {
-            (*self.element.unsafe_get()).get_attr_val_for_layout(namespace, name)
+            self.element.get_attr_val_for_layout(namespace, name)
         }
     }
 }

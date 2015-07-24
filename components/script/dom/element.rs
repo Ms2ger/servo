@@ -177,10 +177,7 @@ pub trait LayoutElementHelpers {
     fn namespace<'a>(&'a self) -> &'a Namespace;
     fn get_checked_state_for_layout(&self) -> bool;
     fn get_indeterminate_state_for_layout(&self) -> bool;
-}
 
-#[allow(unsafe_code)]
-pub trait RawLayoutElementHelpers {
     unsafe fn get_attr_for_layout<'a>(&'a self, namespace: &Namespace, name: &Atom)
                                       -> Option<&'a AttrValue>;
     unsafe fn get_attr_val_for_layout<'a>(&'a self, namespace: &Namespace, name: &Atom)
@@ -263,28 +260,25 @@ impl LayoutElementHelpers for LayoutJS<Element> {
             None => false,
         }
     }
-}
 
-#[allow(unsafe_code)]
-impl RawLayoutElementHelpers for Element {
     #[inline]
     unsafe fn get_attr_for_layout<'a>(&'a self, namespace: &Namespace, name: &Atom)
                                       -> Option<&'a AttrValue> {
-        get_attr_for_layout(self, namespace, name).map(|attr| {
+        get_attr_for_layout(&*self.unsafe_get(), namespace, name).map(|attr| {
             attr.value_forever()
         })
     }
 
     unsafe fn get_attr_val_for_layout<'a>(&'a self, namespace: &Namespace, name: &Atom)
                                           -> Option<&'a str> {
-        get_attr_for_layout(self, namespace, name).map(|attr| {
+        get_attr_for_layout(&*self.unsafe_get(), namespace, name).map(|attr| {
             attr.value_ref_forever()
         })
     }
 
     #[inline]
     unsafe fn get_attr_vals_for_layout<'a>(&'a self, name: &Atom) -> Vec<&'a str> {
-        let attrs = self.attrs.borrow_for_layout();
+        let attrs = (*self.unsafe_get()).attrs.borrow_for_layout();
         (*attrs).iter().filter_map(|attr: &JS<Attr>| {
             let attr = attr.to_layout();
             if *name == attr.local_name_atom_forever() {
@@ -298,21 +292,21 @@ impl RawLayoutElementHelpers for Element {
     #[inline]
     unsafe fn get_attr_atom_for_layout(&self, namespace: &Namespace, name: &Atom)
                                       -> Option<Atom> {
-        get_attr_for_layout(self, namespace, name).and_then(|attr| {
+        get_attr_for_layout(&*self.unsafe_get(), namespace, name).and_then(|attr| {
             attr.value_atom_forever()
         })
     }
 
     #[inline]
     unsafe fn has_class_for_layout(&self, name: &Atom) -> bool {
-        get_attr_for_layout(self, &ns!(""), &atom!("class")).map_or(false, |attr| {
+        get_attr_for_layout(&*self.unsafe_get(), &ns!(""), &atom!("class")).map_or(false, |attr| {
             attr.value_tokens_forever().unwrap().iter().any(|atom| atom == name)
         })
     }
 
     #[inline]
     unsafe fn get_classes_for_layout(&self) -> Option<&'static [Atom]> {
-        get_attr_for_layout(self, &ns!(""), &atom!("class")).map(|attr| {
+        get_attr_for_layout(&*self.unsafe_get(), &ns!(""), &atom!("class")).map(|attr| {
             attr.value_tokens_forever().unwrap()
         })
     }
@@ -320,20 +314,21 @@ impl RawLayoutElementHelpers for Element {
     unsafe fn synthesize_presentational_hints_for_legacy_attributes<V>(&self, hints: &mut V)
         where V: VecLike<DeclarationBlock<Vec<PropertyDeclaration>>>
     {
-        let bgcolor = if self.is_htmlbodyelement() {
-            let this: &HTMLBodyElement = mem::transmute(self);
+        let self_ = &*self.unsafe_get();
+        let bgcolor = if self_.is_htmlbodyelement() {
+            let this: &HTMLBodyElement = mem::transmute(self_);
             this.get_background_color()
-        } else if self.is_htmltableelement() {
-            let this: &HTMLTableElement = mem::transmute(self);
+        } else if self_.is_htmltableelement() {
+            let this: &HTMLTableElement = mem::transmute(self_);
             this.get_background_color()
-        } else if self.is_htmltabledatacellelement() {
-            let this: &HTMLTableCellElement = mem::transmute(self);
+        } else if self_.is_htmltabledatacellelement() {
+            let this: &HTMLTableCellElement = mem::transmute(self_);
             this.get_background_color()
-        } else if self.is_htmltablerowelement() {
-            let this: &HTMLTableRowElement = mem::transmute(self);
+        } else if self_.is_htmltablerowelement() {
+            let this: &HTMLTableRowElement = mem::transmute(self_);
             this.get_background_color()
-        } else if self.is_htmltablesectionelement() {
-            let this: &HTMLTableSectionElement = mem::transmute(self);
+        } else if self_.is_htmltablesectionelement() {
+            let this: &HTMLTableSectionElement = mem::transmute(self_);
             this.get_background_color()
         } else {
             None
@@ -345,8 +340,8 @@ impl RawLayoutElementHelpers for Element {
                     CSSColor { parsed: Color::RGBA(color), authored: None }))));
         }
 
-        let color = if self.is_htmlfontelement() {
-            let this: &HTMLFontElement = mem::transmute(self);
+        let color = if self_.is_htmlfontelement() {
+            let this: &HTMLFontElement = mem::transmute(self_);
             this.get_color()
         } else {
             None
@@ -360,8 +355,8 @@ impl RawLayoutElementHelpers for Element {
                 }))));
         }
 
-        let cellspacing = if self.is_htmltableelement() {
-            let this: &HTMLTableElement = mem::transmute(self);
+        let cellspacing = if self_.is_htmltableelement() {
+            let this: &HTMLTableElement = mem::transmute(self_);
             this.get_cellspacing()
         } else {
             None
@@ -378,13 +373,13 @@ impl RawLayoutElementHelpers for Element {
         }
 
 
-        let size = if self.is_htmlinputelement() {
+        let size = if self_.is_htmlinputelement() {
             // FIXME(pcwalton): More use of atoms, please!
             // FIXME(Ms2ger): this is nonsense! Invalid values also end up as
             //                a text field
             match self.get_attr_val_for_layout(&ns!(""), &atom!("type")) {
                 Some("text") | Some("password") => {
-                    let this: &HTMLInputElement = mem::transmute(self);
+                    let this: &HTMLInputElement = mem::transmute(self_);
                     match this.get_size_for_layout() {
                         0 => None,
                         s => Some(s as i32),
@@ -405,14 +400,14 @@ impl RawLayoutElementHelpers for Element {
         }
 
 
-        let width = if self.is_htmliframeelement() {
-            let this: &HTMLIFrameElement = mem::transmute(self);
+        let width = if self_.is_htmliframeelement() {
+            let this: &HTMLIFrameElement = mem::transmute(self_);
             this.get_width()
-        } else if self.is_htmltableelement() {
-            let this: &HTMLTableElement = mem::transmute(self);
+        } else if self_.is_htmltableelement() {
+            let this: &HTMLTableElement = mem::transmute(self_);
             this.get_width()
-        } else if self.is_htmltabledatacellelement() {
-            let this: &HTMLTableCellElement = mem::transmute(self);
+        } else if self_.is_htmltabledatacellelement() {
+            let this: &HTMLTableCellElement = mem::transmute(self_);
             this.get_width()
         } else {
             LengthOrPercentageOrAuto::Auto
@@ -434,8 +429,8 @@ impl RawLayoutElementHelpers for Element {
         }
 
 
-        let height = if self.is_htmliframeelement() {
-            let this: &HTMLIFrameElement = mem::transmute(self);
+        let height = if self_.is_htmliframeelement() {
+            let this: &HTMLIFrameElement = mem::transmute(self_);
             this.get_height()
         } else {
             LengthOrPercentageOrAuto::Auto
@@ -457,8 +452,8 @@ impl RawLayoutElementHelpers for Element {
         }
 
 
-        let cols = if self.is_htmltextareaelement() {
-            let this: &HTMLTextAreaElement = mem::transmute(self);
+        let cols = if self_.is_htmltextareaelement() {
+            let this: &HTMLTextAreaElement = mem::transmute(self_);
             match this.get_cols_for_layout() {
                 0 => None,
                 c => Some(c as i32),
@@ -480,8 +475,8 @@ impl RawLayoutElementHelpers for Element {
         }
 
 
-        let rows = if self.is_htmltextareaelement() {
-            let this: &HTMLTextAreaElement = mem::transmute(self);
+        let rows = if self_.is_htmltextareaelement() {
+            let this: &HTMLTextAreaElement = mem::transmute(self_);
             match this.get_rows_for_layout() {
                 0 => None,
                 r => Some(r as i32),
@@ -502,8 +497,8 @@ impl RawLayoutElementHelpers for Element {
         }
 
 
-        let border = if self.is_htmltableelement() {
-            let this: &HTMLTableElement = mem::transmute(self);
+        let border = if self_.is_htmltableelement() {
+            let this: &HTMLTableElement = mem::transmute(self_);
             this.get_border()
         } else {
             None
@@ -529,10 +524,11 @@ impl RawLayoutElementHelpers for Element {
     unsafe fn get_unsigned_integer_attribute_for_layout(&self,
                                                         attribute: UnsignedIntegerAttribute)
                                                         -> Option<u32> {
+        let self_ = &*self.unsafe_get();
         match attribute {
             UnsignedIntegerAttribute::ColSpan => {
-                if self.is_htmltablecellelement() {
-                    let this: &HTMLTableCellElement = mem::transmute(self);
+                if self_.is_htmltablecellelement() {
+                    let this: &HTMLTableCellElement = mem::transmute(self_);
                     this.get_colspan()
                 } else {
                     // Don't panic since `display` can cause this to be called on arbitrary
