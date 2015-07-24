@@ -18,7 +18,7 @@ use dom::bindings::global::GlobalRef;
 use dom::bindings::js::{JS, LayoutJS, Root, RootedReference};
 use dom::document::{Document, DocumentHelpers};
 use dom::element::{AttributeHandlers, Element};
-use dom::element::{RawLayoutElementHelpers, ActivationElementHelpers};
+use dom::element::{LayoutElementHelpers, ActivationElementHelpers};
 use dom::event::{Event, EventBubbles, EventCancelable, EventHelpers};
 use dom::eventtarget::{EventTarget, EventTargetTypeId};
 use dom::element::ElementTypeId;
@@ -172,8 +172,7 @@ impl LayoutHTMLInputElementHelpers for LayoutJS<HTMLInputElement> {
         #[allow(unsafe_code)]
         unsafe fn get_raw_attr_value(input: LayoutJS<HTMLInputElement>) -> Option<String> {
             let elem = ElementCast::from_layout_js(&input);
-            (*elem.unsafe_get()).get_attr_val_for_layout(&ns!(""), &atom!("value"))
-                                .map(|s| s.to_owned())
+            elem.get_attr_val_for_layout(&ns!(""), &atom!("value")).map(|s| s.to_owned())
         }
 
         match (*self.unsafe_get()).input_type.get() {
