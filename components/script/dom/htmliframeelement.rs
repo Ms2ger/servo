@@ -13,7 +13,7 @@ use dom::bindings::conversions::ToJSValConvertible;
 use dom::bindings::error::{ErrorResult, Fallible};
 use dom::bindings::error::Error::NotSupported;
 use dom::bindings::global::GlobalRef;
-use dom::bindings::js::{Root};
+use dom::bindings::js::{Root, LayoutJS};
 use dom::bindings::js::layout::LayoutJSInternals;
 use dom::bindings::utils::Reflectable;
 use dom::customevent::CustomEvent;
