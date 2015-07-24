@@ -169,6 +169,17 @@ impl Element {
 }
 
 #[allow(unsafe_code)]
+pub trait LayoutElementHelpers {
+    unsafe fn html_element_in_html_document_for_layout(&self) -> bool;
+    unsafe fn has_attr_for_layout(&self, namespace: &Namespace, name: &Atom) -> bool;
+    fn style_attribute(&self) -> *const Option<PropertyDeclarationBlock>;
+    fn local_name<'a>(&'a self) -> &'a Atom;
+    fn namespace<'a>(&'a self) -> &'a Namespace;
+    fn get_checked_state_for_layout(&self) -> bool;
+    fn get_indeterminate_state_for_layout(&self) -> bool;
+}
+
+#[allow(unsafe_code)]
 pub trait RawLayoutElementHelpers {
     unsafe fn get_attr_for_layout<'a>(&'a self, namespace: &Namespace, name: &Atom)
                                       -> Option<&'a AttrValue>;
@@ -196,6 +207,62 @@ pub unsafe fn get_attr_for_layout<'a>(elem: &'a Element, namespace: &Namespace, 
         *name == attr.local_name_atom_forever() &&
         (*attr.unsafe_get()).namespace() == namespace
     }).map(|attr| attr.to_layout())
+}
+
+#[allow(unsafe_code)]
+impl LayoutElementHelpers for LayoutJS<Element> {
+    #[inline]
+    unsafe fn html_element_in_html_document_for_layout(&self) -> bool {
+        if (*self.unsafe_get()).namespace != ns!(HTML) {
+            return false
+        }
+        let node = NodeCast::from_layout_js(&self);
+        node.owner_doc_for_layout().is_html_document_for_layout()
+    }
+
+    unsafe fn has_attr_for_layout(&self, namespace: &Namespace, name: &Atom) -> bool {
+        get_attr_for_layout(&*self.unsafe_get(), namespace, name).is_some()
+    }
+
+    fn style_attribute(&self) -> *const Option<PropertyDeclarationBlock> {
+        unsafe {
+            (*self.unsafe_get()).style_attribute.borrow_for_layout()
+        }
+    }
+
+    fn local_name<'a>(&'a self) -> &'a Atom {
+        unsafe {
+            &(*self.unsafe_get()).local_name
+        }
+    }
+
+    fn namespace<'a>(&'a self) -> &'a Namespace {
+        unsafe {
+            &(*self.unsafe_get()).namespace
+        }
+    }
+
+    #[inline]
+    fn get_checked_state_for_layout(&self) -> bool {
+        // TODO option and menuitem can also have a checked state.
+        match HTMLInputElementCast::to_layout_js(self) {
+            Some(input) => unsafe {
+                (*input.unsafe_get()).get_checked_state_for_layout()
+            },
+            None => false,
+        }
+    }
+
+    #[inline]
+    fn get_indeterminate_state_for_layout(&self) -> bool {
+        // TODO progress elements can also be matched with :indeterminate
+        match HTMLInputElementCast::to_layout_js(self) {
+            Some(input) => unsafe {
+                (*input.unsafe_get()).get_indeterminate_state_for_layout()
+            },
+            None => false,
+        }
+    }
 }
 
 #[allow(unsafe_code)]
@@ -486,73 +553,6 @@ impl RawLayoutElementHelpers for Element {
                     None
                 }
             }
-        }
-    }
-}
-
-#[allow(unsafe_code)]
-pub trait LayoutElementHelpers {
-    unsafe fn html_element_in_html_document_for_layout(&self) -> bool;
-    unsafe fn has_attr_for_layout(&self, namespace: &Namespace, name: &Atom) -> bool;
-    fn style_attribute(&self) -> *const Option<PropertyDeclarationBlock>;
-    fn local_name<'a>(&'a self) -> &'a Atom;
-    fn namespace<'a>(&'a self) -> &'a Namespace;
-    fn get_checked_state_for_layout(&self) -> bool;
-    fn get_indeterminate_state_for_layout(&self) -> bool;
-}
-
-#[allow(unsafe_code)]
-impl LayoutElementHelpers for LayoutJS<Element> {
-    #[inline]
-    unsafe fn html_element_in_html_document_for_layout(&self) -> bool {
-        if (*self.unsafe_get()).namespace != ns!(HTML) {
-            return false
-        }
-        let node = NodeCast::from_layout_js(&self);
-        node.owner_doc_for_layout().is_html_document_for_layout()
-    }
-
-    unsafe fn has_attr_for_layout(&self, namespace: &Namespace, name: &Atom) -> bool {
-        get_attr_for_layout(&*self.unsafe_get(), namespace, name).is_some()
-    }
-
-    fn style_attribute(&self) -> *const Option<PropertyDeclarationBlock> {
-        unsafe {
-            (*self.unsafe_get()).style_attribute.borrow_for_layout()
-        }
-    }
-
-    fn local_name<'a>(&'a self) -> &'a Atom {
-        unsafe {
-            &(*self.unsafe_get()).local_name
-        }
-    }
-
-    fn namespace<'a>(&'a self) -> &'a Namespace {
-        unsafe {
-            &(*self.unsafe_get()).namespace
-        }
-    }
-
-    #[inline]
-    fn get_checked_state_for_layout(&self) -> bool {
-        // TODO option and menuitem can also have a checked state.
-        match HTMLInputElementCast::to_layout_js(self) {
-            Some(input) => unsafe {
-                (*input.unsafe_get()).get_checked_state_for_layout()
-            },
-            None => false,
-        }
-    }
-
-    #[inline]
-    fn get_indeterminate_state_for_layout(&self) -> bool {
-        // TODO progress elements can also be matched with :indeterminate
-        match HTMLInputElementCast::to_layout_js(self) {
-            Some(input) => unsafe {
-                (*input.unsafe_get()).get_indeterminate_state_for_layout()
-            },
-            None => false,
         }
     }
 }
