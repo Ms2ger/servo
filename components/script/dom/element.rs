@@ -490,10 +490,9 @@ impl RawLayoutElementHelpers for Element {
     }
 }
 
+#[allow(unsafe_code)]
 pub trait LayoutElementHelpers {
-    #[allow(unsafe_code)]
     unsafe fn html_element_in_html_document_for_layout(&self) -> bool;
-    #[allow(unsafe_code)]
     unsafe fn has_attr_for_layout(&self, namespace: &Namespace, name: &Atom) -> bool;
     fn style_attribute(&self) -> *const Option<PropertyDeclarationBlock>;
     fn local_name<'a>(&'a self) -> &'a Atom;
@@ -502,9 +501,9 @@ pub trait LayoutElementHelpers {
     fn get_indeterminate_state_for_layout(&self) -> bool;
 }
 
+#[allow(unsafe_code)]
 impl LayoutElementHelpers for LayoutJS<Element> {
     #[inline]
-    #[allow(unsafe_code)]
     unsafe fn html_element_in_html_document_for_layout(&self) -> bool {
         if (*self.unsafe_get()).namespace != ns!(HTML) {
             return false
@@ -513,26 +512,22 @@ impl LayoutElementHelpers for LayoutJS<Element> {
         node.owner_doc_for_layout().is_html_document_for_layout()
     }
 
-    #[allow(unsafe_code)]
     unsafe fn has_attr_for_layout(&self, namespace: &Namespace, name: &Atom) -> bool {
         get_attr_for_layout(&*self.unsafe_get(), namespace, name).is_some()
     }
 
-    #[allow(unsafe_code)]
     fn style_attribute(&self) -> *const Option<PropertyDeclarationBlock> {
         unsafe {
             (*self.unsafe_get()).style_attribute.borrow_for_layout()
         }
     }
 
-    #[allow(unsafe_code)]
     fn local_name<'a>(&'a self) -> &'a Atom {
         unsafe {
             &(*self.unsafe_get()).local_name
         }
     }
 
-    #[allow(unsafe_code)]
     fn namespace<'a>(&'a self) -> &'a Namespace {
         unsafe {
             &(*self.unsafe_get()).namespace
@@ -540,7 +535,6 @@ impl LayoutElementHelpers for LayoutJS<Element> {
     }
 
     #[inline]
-    #[allow(unsafe_code)]
     fn get_checked_state_for_layout(&self) -> bool {
         // TODO option and menuitem can also have a checked state.
         match HTMLInputElementCast::to_layout_js(self) {
@@ -552,7 +546,6 @@ impl LayoutElementHelpers for LayoutJS<Element> {
     }
 
     #[inline]
-    #[allow(unsafe_code)]
     fn get_indeterminate_state_for_layout(&self) -> bool {
         // TODO progress elements can also be matched with :indeterminate
         match HTMLInputElementCast::to_layout_js(self) {
