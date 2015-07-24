@@ -356,6 +356,28 @@ impl<'a> HTMLIFrameElementMethods for &'a HTMLIFrameElement {
     make_setter!(SetHeight, "height");
 }
 
+pub trait LayoutHTMLIFrameElementHelpers {
+    fn containing_page_pipeline_id(&self) -> Option<PipelineId>;
+    fn subpage_id(&self) -> Option<SubpageId>;
+}
+
+#[allow(unsafe_code)]
+impl LayoutHTMLIFrameElementHelpers for LayoutJS<HTMLIFrameElement> {
+    #[inline]
+    fn containing_page_pipeline_id(&self) -> Option<PipelineId> {
+        unsafe {
+            (*self.unsafe_get()).containing_page_pipeline_id.get()
+        }
+    }
+
+    #[inline]
+    fn subpage_id(&self) -> Option<SubpageId> {
+        unsafe {
+            (*self.unsafe_get()).subpage_id.get()
+        }
+    }
+}
+
 impl<'a> VirtualMethods for &'a HTMLIFrameElement {
     fn super_type<'b>(&'b self) -> Option<&'b VirtualMethods> {
         let htmlelement: &&HTMLElement = HTMLElementCast::from_borrowed_ref(self);
