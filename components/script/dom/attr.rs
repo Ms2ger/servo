@@ -8,6 +8,7 @@ use dom::bindings::codegen::InheritTypes::NodeCast;
 use dom::bindings::global::GlobalRef;
 use dom::bindings::js::{JS, MutNullableHeap};
 use dom::bindings::js::{Root, RootedReference, LayoutJS};
+use dom::bindings::js::layout::LayoutJSInternals;
 use dom::bindings::utils::{Reflector, reflect_dom_object};
 use dom::element::{Element, AttributeHandlers};
 use dom::window::Window;

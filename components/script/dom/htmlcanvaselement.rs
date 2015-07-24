@@ -13,6 +13,7 @@ use dom::bindings::codegen::UnionTypes::CanvasRenderingContext2DOrWebGLRendering
 use dom::bindings::codegen::Bindings::WebGLRenderingContextBinding::WebGLContextAttributes;
 use dom::bindings::global::GlobalRef;
 use dom::bindings::js::{JS, LayoutJS, MutNullableHeap, HeapGCValue, Root};
+use dom::bindings::js::layout::LayoutJSInternals;
 use dom::bindings::utils::{Reflectable};
 use dom::canvasrenderingcontext2d::{CanvasRenderingContext2D, LayoutCanvasRenderingContext2DHelpers};
 use dom::document::Document;

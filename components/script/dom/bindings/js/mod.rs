@@ -23,6 +23,10 @@
 //! originating `Root<T>`.
 //!
 
+// DO NOT MAKE THIS MODULE PUBLIC! That would allow layout access to the
+// internals of the DOM.
+mod layout;
+
 use dom::bindings::trace::JSTraceable;
 use dom::bindings::trace::trace_reflector;
 use dom::bindings::utils::{Reflector, Reflectable};
@@ -284,15 +288,6 @@ impl<T: HeapGCValue+Copy> Default for MutNullableHeap<T> {
         MutNullableHeap {
             ptr: Cell::new(None)
         }
-    }
-}
-
-impl<T: Reflectable> LayoutJS<T> {
-    /// Returns an unsafe pointer to the interior of this JS object. This is
-    /// the only method that be safely accessed from layout. (The fact that
-    /// this is unsafe is what necessitates the layout wrappers.)
-    pub unsafe fn unsafe_get(&self) -> *const T {
-        *self.ptr
     }
 }
 

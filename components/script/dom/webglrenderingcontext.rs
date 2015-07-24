@@ -12,6 +12,7 @@ use dom::bindings::codegen::Bindings::WebGLRenderingContextBinding::WebGLRenderi
 
 use dom::bindings::global::{GlobalRef, GlobalField};
 use dom::bindings::js::{JS, LayoutJS, Root};
+use dom::bindings::js::layout::LayoutJSInternals;
 use dom::bindings::utils::{Reflector, reflect_dom_object};
 use dom::bindings::conversions::ToJSValConvertible;
 use dom::htmlcanvaselement::{HTMLCanvasElement};

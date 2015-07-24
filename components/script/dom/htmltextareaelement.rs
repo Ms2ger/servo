@@ -14,6 +14,7 @@ use dom::bindings::codegen::InheritTypes::{HTMLTextAreaElementDerived, HTMLField
 use dom::bindings::codegen::InheritTypes::{KeyboardEventCast, TextDerived};
 use dom::bindings::global::GlobalRef;
 use dom::bindings::js::{LayoutJS, Root};
+use dom::bindings::js::layout::LayoutJSInternals;
 use dom::bindings::refcounted::Trusted;
 use dom::document::{Document, DocumentHelpers};
 use dom::element::{Element, AttributeHandlers};

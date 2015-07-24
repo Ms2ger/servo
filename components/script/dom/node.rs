@@ -28,6 +28,7 @@ use dom::bindings::global::GlobalRef;
 use dom::bindings::js::{JS, LayoutJS, MutNullableHeap};
 use dom::bindings::js::Root;
 use dom::bindings::js::RootedReference;
+use dom::bindings::js::layout::LayoutJSInternals;
 use dom::bindings::trace::JSTraceable;
 use dom::bindings::trace::RootedVec;
 use dom::bindings::utils::{namespace_from_domstring, Reflectable, reflect_dom_object};

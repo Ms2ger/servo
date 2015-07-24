@@ -34,6 +34,7 @@ use dom::bindings::error::Error::{InvalidCharacter, Syntax};
 use dom::bindings::error::Error::NoModificationAllowed;
 use dom::bindings::js::{JS, LayoutJS, MutNullableHeap};
 use dom::bindings::js::{Root, RootedReference};
+use dom::bindings::js::layout::LayoutJSInternals;
 use dom::bindings::trace::RootedVec;
 use dom::bindings::utils::{namespace_from_domstring, xml_name_type, validate_and_extract};
 use dom::bindings::utils::XMLName::InvalidXMLName;
