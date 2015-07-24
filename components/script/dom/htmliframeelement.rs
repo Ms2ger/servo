@@ -13,7 +13,7 @@ use dom::bindings::conversions::ToJSValConvertible;
 use dom::bindings::error::{ErrorResult, Fallible};
 use dom::bindings::error::Error::NotSupported;
 use dom::bindings::global::GlobalRef;
-use dom::bindings::js::{Root};
+use dom::bindings::js::{Root, LayoutJS};
 use dom::bindings::utils::Reflectable;
 use dom::customevent::CustomEvent;
 use dom::document::Document;
@@ -361,6 +361,28 @@ impl<'a> HTMLIFrameElementMethods for &'a HTMLIFrameElement {
     make_getter!(Height);
 
     make_setter!(SetHeight, "height");
+}
+
+pub trait LayoutHTMLIFrameElementHelpers {
+    fn containing_page_pipeline_id(&self) -> Option<PipelineId>;
+    fn subpage_id(&self) -> Option<SubpageId>;
+}
+
+#[allow(unsafe_code)]
+impl LayoutHTMLIFrameElementHelpers for LayoutJS<HTMLIFrameElement> {
+    #[inline]
+    fn containing_page_pipeline_id(&self) -> Option<PipelineId> {
+        unsafe {
+            (*self.unsafe_get()).containing_page_pipeline_id.get()
+        }
+    }
+
+    #[inline]
+    fn subpage_id(&self) -> Option<SubpageId> {
+        unsafe {
+            (*self.unsafe_get()).subpage_id.get()
+        }
+    }
 }
 
 impl<'a> VirtualMethods for &'a HTMLIFrameElement {

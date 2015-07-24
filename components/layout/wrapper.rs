@@ -48,6 +48,7 @@ use script::dom::characterdata::{CharacterDataTypeId, LayoutCharacterDataHelpers
 use script::dom::element::{Element, ElementTypeId, LayoutElementHelpers};
 use script::dom::htmlelement::HTMLElementTypeId;
 use script::dom::htmlcanvaselement::LayoutHTMLCanvasElementHelpers;
+use script::dom::htmliframeelement::LayoutHTMLIFrameElementHelpers;
 use script::dom::htmlimageelement::LayoutHTMLImageElementHelpers;
 use script::dom::htmlinputelement::{HTMLInputElement, LayoutHTMLInputElementHelpers};
 use script::dom::htmltextareaelement::LayoutHTMLTextAreaElementHelpers;
@@ -960,12 +961,11 @@ impl<'ln> ThreadSafeLayoutNode<'ln> {
     /// If this node is an iframe element, returns its pipeline and subpage IDs. If this node is
     /// not an iframe element, fails.
     pub fn iframe_pipeline_and_subpage_ids(&self) -> (PipelineId, SubpageId) {
-        unsafe {
-            let iframe_element = HTMLIFrameElementCast::to_layout_js(self.get_jsmanaged())
-                .expect("not an iframe element!");
-            ((*iframe_element.unsafe_get()).containing_page_pipeline_id().unwrap(),
-             (*iframe_element.unsafe_get()).subpage_id().unwrap())
-        }
+        let iframe_element = HTMLIFrameElementCast::to_layout_js(unsafe {
+            self.get_jsmanaged()
+        }).expect("not an iframe element!");
+        (iframe_element.containing_page_pipeline_id().unwrap(),
+         iframe_element.subpage_id().unwrap())
     }
 }
 
