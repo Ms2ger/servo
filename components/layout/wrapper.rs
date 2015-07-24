@@ -683,14 +683,8 @@ impl<'ln> ThreadSafeLayoutNode<'ln> {
     #[inline]
     pub fn as_element(&self) -> ThreadSafeLayoutElement<'ln> {
         unsafe {
-            let element = match ElementCast::to_layout_js(self.get_jsmanaged()) {
-                Some(e) => e.unsafe_get(),
-                None => panic!("not an element")
-            };
-            // FIXME(pcwalton): Workaround until Rust gets multiple lifetime parameters on
-            // implementations.
             ThreadSafeLayoutElement {
-                element: &*element,
+                element: ElementCast::to_layout_js(self.get_jsmanaged()).expect("not an element"),
             }
         }
     }
@@ -1005,14 +999,15 @@ impl<'a> Iterator for ThreadSafeLayoutNodeChildrenIterator<'a> {
 /// A wrapper around elements that ensures layout can only ever access safe properties and cannot
 /// race on elements.
 pub struct ThreadSafeLayoutElement<'le> {
-    element: &'le Element,
+    element: LayoutJS<Element>,
+    chain: PhantomData<&'le ()>,
 }
 
 impl<'le> ThreadSafeLayoutElement<'le> {
     #[inline]
-    pub fn get_attr(&self, namespace: &Namespace, name: &Atom) -> Option<&'le str> {
+    pub fn get_attr(&self, namespace: &Namespace, name: &Atom) -> Option<&str> {
         unsafe {
-            self.element.get_attr_val_for_layout(namespace, name)
+            (*self.element.unsafe_get()).get_attr_val_for_layout(namespace, name)
         }
     }
 }
