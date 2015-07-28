@@ -228,7 +228,12 @@ pub trait DocumentHelpers<'a> {
     fn encoding_name(self) -> Ref<'a, DOMString>;
     fn is_html_document(self) -> bool;
     fn is_fully_active(self) -> bool;
+    /// https://dom.spec.whatwg.org/#concept-document-url
     fn url(self) -> Url;
+    /// https://html.spec.whatwg.org/multipage/infrastructure.html#fallback-base-url
+    fn fallback_base_url(self) -> Url;
+    /// https://html.spec.whatwg.org/multipage/infrastructure.html#document-base-url
+    fn base_url(self) -> Url;
     fn quirks_mode(self) -> QuirksMode;
     fn set_quirks_mode(self, mode: QuirksMode);
     fn set_encoding_name(self, name: DOMString);
@@ -332,9 +337,25 @@ impl<'a> DocumentHelpers<'a> for &'a Document {
         true
     }
 
-    // https://dom.spec.whatwg.org/#dom-document-url
+    // https://dom.spec.whatwg.org/#concept-document-url
     fn url(self) -> Url {
         self.url.clone()
+    }
+
+    // https://html.spec.whatwg.org/multipage/infrastructure.html#fallback-base-url
+    fn fallback_base_url(self) -> Url {
+        // Step 1: iframe srcdoc (#4767).
+        // Step 2: about:blank with a creator browsing context.
+        // Step 3.
+        self.url()
+    }
+
+    // https://html.spec.whatwg.org/multipage/infrastructure.html#document-base-url
+    fn base_url(self) -> Url {
+        // Step 1.
+        self.fallback_base_url()
+
+        // Step 2: base element
     }
 
     fn quirks_mode(self) -> QuirksMode {
