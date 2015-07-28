@@ -22,6 +22,7 @@ use dom::bindings::codegen::InheritTypes::{HTMLAnchorElementDerived, HTMLAppletE
 use dom::bindings::codegen::InheritTypes::{HTMLAreaElementDerived, HTMLEmbedElementDerived};
 use dom::bindings::codegen::InheritTypes::{HTMLFormElementDerived, HTMLImageElementDerived};
 use dom::bindings::codegen::InheritTypes::{HTMLScriptElementDerived, HTMLTitleElementDerived};
+use dom::bindings::codegen::InheritTypes::HTMLBaseElementCast;
 use dom::bindings::codegen::InheritTypes::ElementDerived;
 use dom::bindings::codegen::UnionTypes::NodeOrString;
 use dom::bindings::error::{ErrorResult, Fallible};
@@ -45,6 +46,7 @@ use dom::element::{ElementTypeId, ActivationElementHelpers, FocusElementHelpers}
 use dom::event::{Event, EventBubbles, EventCancelable, EventHelpers};
 use dom::eventtarget::{EventTarget, EventTargetTypeId, EventTargetHelpers};
 use dom::htmlanchorelement::HTMLAnchorElement;
+use dom::htmlbaseelement::HTMLBaseElement;
 use dom::htmlcollection::{HTMLCollection, CollectionFilter};
 use dom::htmlelement::{HTMLElement, HTMLElementTypeId};
 use dom::htmlheadelement::HTMLHeadElement;
@@ -150,6 +152,8 @@ pub struct Document {
     current_parser: MutNullableHeap<JS<ServoHTMLParser>>,
     /// When we should kick off a reflow. This happens during parsing.
     reflow_timeout: Cell<Option<u64>>,
+    /// The cached first `base` element with an `href` attribute.
+    base_element: MutNullableHeap<JS<HTMLBaseElement>>,
 }
 
 impl PartialEq for Document {
@@ -234,6 +238,11 @@ pub trait DocumentHelpers<'a> {
     fn fallback_base_url(self) -> Url;
     /// https://html.spec.whatwg.org/multipage/infrastructure.html#document-base-url
     fn base_url(self) -> Url;
+    /// Returns the first base element in the DOM.
+    fn base_element(self) -> Option<Root<HTMLBaseElement>>;
+    /// Refresh the cached first base element in the DOM.
+    fn refresh_base_element(self);
+
     fn quirks_mode(self) -> QuirksMode;
     fn set_quirks_mode(self, mode: QuirksMode);
     fn set_encoding_name(self, name: DOMString);
@@ -356,6 +365,22 @@ impl<'a> DocumentHelpers<'a> for &'a Document {
         self.fallback_base_url()
 
         // Step 2: base element
+    }
+
+    /// Returns the first base element in the DOM.
+    fn base_element(self) -> Option<Root<HTMLBaseElement>> {
+        self.base_element.get().map(Root::from_rooted)
+    }
+
+    /// Refresh the cached first base element in the DOM.
+    fn refresh_base_element(self) {
+        let base = NodeCast::from_ref(self)
+            .traverse_preorder()
+            .filter_map(HTMLBaseElementCast::to_root)
+            .filter(|element| ElementCast::from_ref(&**element).has_attribute(&atom!("href")))
+            .next()
+            .map(|element| JS::from_ref(&*element));
+        self.base_element.set(base);
     }
 
     fn quirks_mode(self) -> QuirksMode {
@@ -1102,6 +1127,7 @@ impl Document {
             loader: DOMRefCell::new(doc_loader),
             current_parser: Default::default(),
             reflow_timeout: Cell::new(None),
+            base_element: Default::default(),
         }
     }
 
