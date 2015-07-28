@@ -24,10 +24,13 @@ use dom::node::{Node, NodeHelpers, NodeTypeId, document_from_node, window_from_n
 use dom::virtualmethods::VirtualMethods;
 use dom::window::WindowHelpers;
 
-use num::ToPrimitive;
-use std::default::Default;
-use string_cache::Atom;
 use util::str::DOMString;
+
+use num::ToPrimitive;
+use string_cache::Atom;
+use url::UrlParser;
+
+use std::default::Default;
 
 #[dom_struct]
 pub struct HTMLAnchorElement {
@@ -167,12 +170,12 @@ fn follow_hyperlink(subject: &Element, hyperlink_suffix: Option<DOMString>) {
     // Step 2.
     let document = document_from_node(subject);
     let window = document.window();
-    let source = window.browser_context();
+    let source = window.browsing_context();
 
     // Step 3.
     let target = source;
 
-    let mut href = element.get_attribute(&ns!(""), &atom!("href")).unwrap();
+    let mut href = subject.get_attribute(&ns!(""), &atom!("href")).unwrap().Value();
 
     // Step 6.
     // https://www.w3.org/Bugs/Public/show_bug.cgi?id=28925
