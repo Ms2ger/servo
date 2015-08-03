@@ -15,7 +15,7 @@ use dom::bindings::trace::JSTraceable;
 use dom::bindings::utils::{Reflectable, reflect_dom_object};
 use dom::bindings::js::Root;
 use dom::window::WindowHelpers;
-use dom::dedicatedworkerglobalscope::DedicatedWorkerGlobalScope;
+use dom::dedicatedworkerglobalscope::{DedicatedWorkerGlobalScope, RunAWorkerArguments};
 use dom::errorevent::ErrorEvent;
 use dom::event::{Event, EventBubbles, EventCancelable, EventHelpers};
 use dom::eventtarget::{EventTarget, EventTargetHelpers, EventTargetTypeId};
@@ -95,10 +95,23 @@ impl Worker {
             None => None,
         };
 
-        DedicatedWorkerGlobalScope::run_worker_scope(
-            worker_url, global.pipeline(), global.mem_profiler_chan(), global.devtools_chan(),
-            optional_sender, devtools_receiver, worker_ref, resource_task,
-            constellation_chan, global.script_chan(), sender, receiver, Some(worker_id));
+
+        let arguments = RunAWorkerArguments {
+            worker_url: worker_url,
+            id: global.pipeline(),
+            mem_profiler_chan: global.mem_profiler_chan(),
+            devtools_chan: global.devtools_chan(),
+            devtools_ipc_chan: optional_sender,
+            devtools_ipc_port: devtools_receiver,
+            worker: worker_ref,
+            resource_task: resource_task,
+            constellation_chan: constellation_chan,
+            parent_sender: global.script_chan(),
+            own_sender: sender,
+            receiver: receiver,
+            worker_id: worker_id,
+        };
+        DedicatedWorkerGlobalScope::run_worker_scope(arguments);
 
         Ok(worker)
     }

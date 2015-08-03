@@ -94,6 +94,22 @@ impl<'a> Drop for AutoWorkerReset<'a> {
     }
 }
 
+pub struct RunAWorkerArguments {
+    pub worker_url: Url,
+    pub id: PipelineId,
+    pub mem_profiler_chan: mem::ProfilerChan,
+    pub devtools_chan: Option<IpcSender<ScriptToDevtoolsControlMsg>>,
+    pub devtools_ipc_chan: Option<IpcSender<DevtoolScriptControlMsg>>,
+    pub devtools_ipc_port: IpcReceiver<DevtoolScriptControlMsg>,
+    pub worker: TrustedWorkerAddress,
+    pub resource_task: ResourceTask,
+    pub constellation_chan: ConstellationChan,
+    pub parent_sender: Box<ScriptChan+Send>,
+    pub own_sender: Sender<(TrustedWorkerAddress, ScriptMsg)>,
+    pub receiver: Receiver<(TrustedWorkerAddress, ScriptMsg)>,
+    pub worker_id: WorkerId,
+}
+
 // https://html.spec.whatwg.org/multipage/#dedicatedworkerglobalscope
 #[dom_struct]
 pub struct DedicatedWorkerGlobalScope {
@@ -158,31 +174,19 @@ impl DedicatedWorkerGlobalScope {
 
 impl DedicatedWorkerGlobalScope {
     #[allow(unsafe_code)]
-    pub fn run_worker_scope(worker_url: Url,
-                            id: PipelineId,
-                            mem_profiler_chan: mem::ProfilerChan,
-                            devtools_chan: Option<IpcSender<ScriptToDevtoolsControlMsg>>,
-                            devtools_ipc_chan: Option<IpcSender<DevtoolScriptControlMsg>>,
-                            devtools_ipc_port: IpcReceiver<DevtoolScriptControlMsg>,
-                            worker: TrustedWorkerAddress,
-                            resource_task: ResourceTask,
-                            constellation_chan: ConstellationChan,
-                            parent_sender: Box<ScriptChan+Send>,
-                            own_sender: Sender<(TrustedWorkerAddress, ScriptMsg)>,
-                            receiver: Receiver<(TrustedWorkerAddress, ScriptMsg)>,
-                            worker_id: Option<WorkerId>) {
-        let serialized_worker_url = worker_url.serialize();
+    pub fn run_worker_scope(arguments: RunAWorkerArguments) {
+        let serialized_worker_url = arguments.worker_url.serialize();
         spawn_named(format!("WebWorker for {}", serialized_worker_url), move || {
             task_state::initialize(SCRIPT | IN_WORKER);
 
             let roots = RootCollection::new();
             let _stack_roots_tls = StackRootTLS::new(&roots);
 
-            let (url, source) = match load_whole_resource(&resource_task, worker_url) {
+            let (url, source) = match load_whole_resource(&arguments.resource_task, arguments.worker_url) {
                 Err(_) => {
                     println!("error loading script {}", serialized_worker_url);
-                    parent_sender.send(ScriptMsg::RunnableMsg(
-                        box WorkerEventHandler::new(worker))).unwrap();
+                    arguments.parent_sender.send(ScriptMsg::RunnableMsg(
+                        box WorkerEventHandler::new(arguments.worker))).unwrap();
                     return;
                 }
                 Ok((metadata, bytes)) => {
@@ -192,22 +196,22 @@ impl DedicatedWorkerGlobalScope {
 
             let runtime = Rc::new(ScriptTask::new_rt_and_cx());
             let serialized_url = url.serialize();
-            let parent_sender_for_reporter = parent_sender.clone();
+            let parent_sender_for_reporter = arguments.parent_sender.clone();
 
             let (devtools_mpsc_chan, devtools_mpsc_port) = channel();
-            ROUTER.route_ipc_receiver_to_mpsc_sender(devtools_ipc_port, devtools_mpsc_chan);
+            ROUTER.route_ipc_receiver_to_mpsc_sender(arguments.devtools_ipc_port, devtools_mpsc_chan);
 
             let global = DedicatedWorkerGlobalScope::new(
-                url, id, mem_profiler_chan.clone(), devtools_chan, devtools_ipc_chan, devtools_mpsc_port,
-                runtime.clone(), resource_task, constellation_chan, parent_sender, own_sender, receiver,
-                worker_id);
+                url, arguments.id, arguments.mem_profiler_chan.clone(), arguments.devtools_chan, arguments.devtools_ipc_chan, devtools_mpsc_port,
+                runtime.clone(), arguments.resource_task, arguments.constellation_chan, arguments.parent_sender, arguments.own_sender, arguments.receiver,
+                Some(arguments.worker_id));
             // FIXME(njn): workers currently don't have a unique ID suitable for using in reporter
             // registration (#6631), so we instead use a random number and cross our fingers.
             let scope = WorkerGlobalScopeCast::from_ref(global.r());
             let reporter_name = format!("worker-reporter-{}", random::<u64>());
 
             {
-                let _ar = AutoWorkerReset::new(global.r(), worker);
+                let _ar = AutoWorkerReset::new(global.r(), arguments.worker);
 
                 match runtime.evaluate_script(
                     global.r().reflector().get_jsobject(), source, serialized_url, 1) {
@@ -230,7 +234,7 @@ impl DedicatedWorkerGlobalScope {
                     parent_sender_for_reporter.send(ScriptMsg::CollectReports(
                             reporter_request.reports_channel)).unwrap()
                 });
-                mem_profiler_chan.send(mem::ProfilerMsg::RegisterReporter(
+                arguments.mem_profiler_chan.send(mem::ProfilerMsg::RegisterReporter(
                         reporter_name.clone(),
                         Reporter(reporter_sender)));
             }
@@ -292,7 +296,7 @@ impl DedicatedWorkerGlobalScope {
 
             // Unregister this task as a memory reporter.
             let msg = mem::ProfilerMsg::UnregisterReporter(reporter_name);
-            mem_profiler_chan.send(msg);
+            arguments.mem_profiler_chan.send(msg);
         });
     }
 }
