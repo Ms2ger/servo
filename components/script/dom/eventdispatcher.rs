@@ -2,7 +2,7 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-use devtools_traits::{StartedTimelineMarker, TimelineMarker, TimelineMarkerType};
+use devtools_traits::{StartedTimelineMarker, TimelineMarker, TimelineMarkerType, TimelineMarkerData};
 use dom::bindings::callback::ExceptionHandling::Report;
 use dom::bindings::codegen::Bindings::EventBinding::EventMethods;
 use dom::bindings::global::{GlobalRoot, global_root_from_reflector};
@@ -21,10 +21,13 @@ struct AutoDOMEventMarker {
 }
 
 impl AutoDOMEventMarker {
-    fn new(window: &Window) -> AutoDOMEventMarker {
+    fn new(window: &Window, event: &Event) -> AutoDOMEventMarker {
         AutoDOMEventMarker {
             window: Root::from_ref(window),
-            marker: Some(TimelineMarker::start("DOMEvent".to_owned())),
+            marker: Some(TimelineMarker::start(TimelineMarkerData::DOMEvent {
+                __type__: event.Type(),
+                phase: event.EventPhase(),
+            })),
         }
     }
 }
@@ -39,7 +42,7 @@ fn handle_event(window: Option<&Window>, listener: &EventListenerType,
                 current_target: &EventTarget, event: &Event) {
     let _marker;
     if let Some(window) = window {
-        _marker = AutoDOMEventMarker::new(window);
+        _marker = AutoDOMEventMarker::new(window, event);
     }
 
     listener.call_or_handle_event(current_target, event, Report);

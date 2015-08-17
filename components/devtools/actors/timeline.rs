@@ -5,16 +5,18 @@
 use actor::{Actor, ActorMessageStatus, ActorRegistry};
 use actors::framerate::FramerateActor;
 use actors::memory::{MemoryActor, TimelineMemoryReply};
+use actors::performance_recording::{PerformanceRecording, PerformanceRecordingActor};
 use devtools_traits::DevtoolScriptControlMsg;
 use devtools_traits::DevtoolScriptControlMsg::{DropTimelineMarkers, SetTimelineMarkers};
-use devtools_traits::{PreciseTime, TimelineMarker, TimelineMarkerType};
+use devtools_traits::{PreciseTime, TimelineMarker, TimelineMarkerType, TimelineMarkerData};
 use ipc_channel::ipc::{self, IpcReceiver, IpcSender};
 use msg::constellation_msg::PipelineId;
 use protocol::JsonPacketStream;
 use rustc_serialize::{Encodable, Encoder, json};
+use rustc_serialize::json::ToJson;
 use std::cell::RefCell;
+use std::collections::BTreeMap;
 use std::net::TcpStream;
-use std::sync::mpsc::channel;
 use std::sync::{Arc, Mutex};
 use std::thread;
 use std::time::Duration;
@@ -32,7 +34,7 @@ pub struct TimelineActor {
     memory_actor: RefCell<Option<String>>,
 }
 
-struct Emitter {
+pub struct Emitter {
     from: String,
     stream: TcpStream,
     registry: Arc<Mutex<ActorRegistry>>,
@@ -40,6 +42,7 @@ struct Emitter {
 
     framerate_actor: Option<String>,
     memory_actor: Option<String>,
+    recordings: Vec<PerformanceRecording>,
 }
 
 #[derive(RustcEncodable)]
@@ -60,21 +63,77 @@ struct StopReply {
     value: HighResolutionStamp,
 }
 
-#[derive(RustcEncodable)]
-struct TimelineMarkerReply {
-    name: String,
+#[derive(Debug)]
+pub struct TimelineMarkerReply {
     start: HighResolutionStamp,
     end: HighResolutionStamp,
     stack: Option<Vec<()>>,
     endStack: Option<Vec<()>>,
+    data: TimelineMarkerData,
+}
+
+impl Encodable for TimelineMarkerReply {
+    fn encode<S: Encoder>(&self, s: &mut S) -> Result<(), S::Error> {
+        let mut map = BTreeMap::new();
+        map.insert("name", self.data.name().to_json());
+        map.insert("start", self.start.0.to_json());
+        map.insert("end", self.end.0.to_json());
+        map.insert("stack", self.stack.to_json());
+        map.insert("endStack", self.endStack.to_json());
+        match self.data {
+            TimelineMarkerData::Reflow => (),
+            TimelineMarkerData::DOMEvent { ref __type__, ref phase } => {
+                map.insert("type", __type__.to_json());
+                map.insert("eventPhase", phase.to_json());
+            },
+        }
+        map.encode(s)
+    }
+}
+#[derive(RustcEncodable)]
+struct MarkersData {
+    markers: Vec<TimelineMarkerReply>,
+    endTime: HighResolutionStamp,
 }
 
 #[derive(RustcEncodable)]
 struct MarkersEmitterReply {
     __type__: String,
-    markers: Vec<TimelineMarkerReply>,
+    name: String,
     from: String,
-    endTime: HighResolutionStamp,
+    data: MarkersData,
+    recordings: Vec<PerformanceRecording>,
+}
+
+#[derive(RustcEncodable)]
+struct FramesData {
+    frames: Vec<Option<()>>,
+    delta: HighResolutionStamp,
+}
+
+#[derive(RustcEncodable)]
+struct FramesEmitterReply {
+    __type__: String,
+    name: String,
+    from: String,
+    data: FramesData,
+    recordings: Vec<PerformanceRecording>,
+}
+
+#[derive(RustcEncodable)]
+struct TicksData {
+    timestamps: Vec<HighResolutionStamp>,
+    delta: HighResolutionStamp,
+}
+
+#[derive(RustcEncodable)]
+//XXX struct EmitterReply<T: RustcEncodable{
+struct TicksEmitterReply {
+    __type__: String,
+    name: String,
+    from: String,
+    data: TicksData,
+    recordings: Vec<PerformanceRecording>,
 }
 
 #[derive(RustcEncodable)]
@@ -97,6 +156,7 @@ struct FramerateEmitterReply {
 /// with accuracy to microsecond that shows how much time has passed since
 /// actor registry inited
 /// analog https://w3c.github.io/hr-time/#sec-DOMHighResTimeStamp
+#[derive(Debug)]
 pub struct HighResolutionStamp(f64);
 
 impl HighResolutionStamp {
@@ -180,6 +240,7 @@ impl Actor for TimelineActor {
                 **self.is_recording.lock().as_mut().unwrap() = true;
 
                 let (tx, rx) = ipc::channel::<TimelineMarker>().unwrap();
+                panic!();
                 self.script_sender.send(SetTimelineMarkers(self.pipeline,
                                                            self.marker_types.clone(),
                                                            tx)).unwrap();
@@ -275,12 +336,13 @@ impl Emitter {
 
             framerate_actor: framerate_actor_name,
             memory_actor: memory_actor_name,
+            recordings: vec![],
         }
     }
 
-    fn marker(&self, payload: TimelineMarker) -> TimelineMarkerReply {
+    pub fn marker(&self, payload: TimelineMarker) -> TimelineMarkerReply {
         TimelineMarkerReply {
-            name: payload.name,
+            data: payload.data,
             start: HighResolutionStamp::new(self.start_stamp, payload.start_time),
             end: HighResolutionStamp::new(self.start_stamp, payload.end_time),
             stack: payload.start_stack,
@@ -288,13 +350,34 @@ impl Emitter {
         }
     }
 
-    fn send(&mut self, markers: Vec<TimelineMarkerReply>) -> () {
+    pub fn add_recording(&mut self, recording: &PerformanceRecordingActor) {
+        self.recordings.push(recording.encodable());
+    }
+
+    pub fn send(&mut self, markers: Vec<TimelineMarkerReply>) -> () {
+        println!("Emitter::send({:?})", markers);
         let end_time = PreciseTime::now();
-        let reply = MarkersEmitterReply {
-            __type__: "markers".to_owned(),
-            markers: markers,
+        let reply = FramesEmitterReply {
+            __type__: "timeline-data".to_owned(),
+            name: "frames".to_owned(),
+            data: FramesData {
+                frames: vec![None; markers.len()],
+                delta: HighResolutionStamp::new(self.start_stamp, end_time),
+            },
             from: self.from.clone(),
-            endTime: HighResolutionStamp::new(self.start_stamp, end_time),
+            recordings: self.recordings.clone(),
+        };
+        self.stream.write_json_packet(&reply);
+
+        let reply = MarkersEmitterReply {
+            __type__: "timeline-data".to_owned(),
+            name: "markers".to_owned(),
+            data: MarkersData {
+                markers: markers,
+                endTime: HighResolutionStamp::new(self.start_stamp, end_time),
+            },
+            from: self.from.clone(),
+            recordings: self.recordings.clone(),
         };
         self.stream.write_json_packet(&reply);
 
@@ -302,13 +385,17 @@ impl Emitter {
             let mut lock = self.registry.lock();
             let registry = lock.as_mut().unwrap();
             let framerate_actor = registry.find_mut::<FramerateActor>(actor_name);
-            let framerateReply = FramerateEmitterReply {
-                __type__: "framerate".to_owned(),
-                from: framerate_actor.name(),
-                delta: HighResolutionStamp::new(self.start_stamp, end_time),
-                timestamps: framerate_actor.take_pending_ticks(),
+            let reply = TicksEmitterReply {
+                __type__: "timeline-data".to_owned(),
+                name: "ticks".to_owned(),
+                data: TicksData {
+                    delta: HighResolutionStamp::new(self.start_stamp, end_time),
+                    timestamps: framerate_actor.take_pending_ticks(),
+                },
+                from: self.from.clone(),
+                recordings: self.recordings.clone(),
             };
-            self.stream.write_json_packet(&framerateReply);
+            self.stream.write_json_packet(&reply);
         }
 
         if let Some(ref actor_name) = self.memory_actor {

@@ -121,18 +121,33 @@ pub struct NodeInfo {
 }
 
 pub struct StartedTimelineMarker {
-    name: String,
     start_time: PreciseTime,
     start_stack: Option<Vec<()>>,
+    data: TimelineMarkerData,
 }
 
-#[derive(Deserialize, Serialize)]
+#[derive(Debug, Deserialize, Serialize)]
+pub enum TimelineMarkerData {
+    Reflow,
+    DOMEvent { __type__: String, phase: u16 },
+}
+
+impl TimelineMarkerData {
+    pub fn name(&self) -> &'static str {
+        match *self {
+            TimelineMarkerData::Reflow => "Reflow",
+            TimelineMarkerData::DOMEvent {..} => "DOMEvent",
+        }
+    }
+}
+
+#[derive(Debug, Deserialize, Serialize)]
 pub struct TimelineMarker {
-    pub name: String,
     pub start_time: PreciseTime,
     pub start_stack: Option<Vec<()>>,
     pub end_time: PreciseTime,
     pub end_stack: Option<Vec<()>>,
+    pub data: TimelineMarkerData,
 }
 
 #[derive(PartialEq, Eq, Hash, Clone, Deserialize, Serialize)]
@@ -280,11 +295,11 @@ pub enum NetworkEvent {
 }
 
 impl TimelineMarker {
-    pub fn start(name: String) -> StartedTimelineMarker {
+    pub fn start(data: TimelineMarkerData) -> StartedTimelineMarker {
         StartedTimelineMarker {
-            name: name,
             start_time: PreciseTime::now(),
             start_stack: None,
+            data: data,
         }
     }
 }
@@ -292,7 +307,7 @@ impl TimelineMarker {
 impl StartedTimelineMarker {
     pub fn end(self) -> TimelineMarker {
         TimelineMarker {
-            name: self.name,
+            data: self.data,
             start_time: self.start_time,
             start_stack: self.start_stack,
             end_time: PreciseTime::now(),
@@ -307,7 +322,7 @@ impl StartedTimelineMarker {
 /// library, which definitely can't have any dependencies on `serde`. But `serde` can't implement
 /// `Deserialize` and `Serialize` itself, because `time::PreciseTime` is opaque! A Catch-22. So I'm
 /// duplicating the definition here.
-#[derive(Copy, Clone, Deserialize, Serialize)]
+#[derive(Debug, Copy, Clone, Deserialize, Serialize)]
 pub struct PreciseTime(u64);
 
 impl PreciseTime {

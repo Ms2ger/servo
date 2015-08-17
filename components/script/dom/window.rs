@@ -3,7 +3,7 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 use app_units::Au;
-use devtools_traits::{ScriptToDevtoolsControlMsg, TimelineMarker, TimelineMarkerType, WorkerId};
+use devtools_traits::{ScriptToDevtoolsControlMsg, TimelineMarker, TimelineMarkerType, WorkerId, TimelineMarkerData};
 use dom::bindings::callback::ExceptionHandling;
 use dom::bindings::cell::DOMRefCell;
 use dom::bindings::codegen::Bindings::DocumentBinding::DocumentMethods;
@@ -46,8 +46,8 @@ use msg::compositor_msg::{LayerId, ScriptToCompositorMsg};
 use msg::constellation_msg::ScriptMsg as ConstellationMsg;
 use msg::constellation_msg::{ConstellationChan, LoadData, PipelineId, SubpageId, WindowSizeData};
 use msg::webdriver_msg::{WebDriverJSError, WebDriverJSResult};
-use net_traits::ResourceTask;
 use net_traits::image_cache_task::{ImageCacheChan, ImageCacheTask};
+use net_traits::ResourceTask;
 use net_traits::storage_task::{StorageTask, StorageType};
 use num::traits::ToPrimitive;
 use page::Page;
@@ -75,9 +75,9 @@ use style_traits::ParseErrorReporter;
 use time;
 use timers::{ActiveTimers, IsInterval, ScheduledCallback, TimerCallback, TimerHandle};
 use url::Url;
-use util::geometry::{self, MAX_RECT};
-use util::str::{DOMString, HTML_SPACE_CHARACTERS};
 use util::{breakpoint, opts};
+use util::geometry::{self, Au, MAX_RECT};
+use util::str::{DOMString, HTML_SPACE_CHARACTERS};
 use webdriver_handlers::jsval_to_webdriver;
 
 /// Current state of the window object
@@ -929,7 +929,7 @@ impl Window {
         debug!("script: performing reflow for goal {:?} reason {:?}", goal, reason);
 
         let marker = if self.need_emit_timeline_marker(TimelineMarkerType::Reflow) {
-            Some(TimelineMarker::start("Reflow".to_owned()))
+            Some(TimelineMarker::start(TimelineMarkerData::Reflow))
         } else {
             None
         };
@@ -1208,7 +1208,7 @@ impl Window {
     pub fn emit_timeline_marker(&self, marker: TimelineMarker) {
         let sender = self.devtools_marker_sender.borrow();
         let sender = sender.as_ref().expect("There is no marker sender");
-        sender.send(marker).unwrap();
+        let _ = sender.send(marker);
     }
 
     pub fn set_devtools_timeline_markers(&self,

@@ -69,6 +69,7 @@ mod actors {
     pub mod network_event;
     pub mod object;
     pub mod performance;
+    pub mod performance_recording;
     pub mod profiler;
     pub mod root;
     pub mod tab;
@@ -217,10 +218,10 @@ fn run_server(sender: Sender<DevtoolsControlMsg>,
 
             let timeline = TimelineActor::new(actors.new_name("timeline"),
                                               pipeline,
-                                              script_sender);
+                                              script_sender.clone());
 
             let profiler = ProfilerActor::new(actors.new_name("profiler"));
-            let performance = PerformanceActor::new(actors.new_name("performance"));
+            let performance = PerformanceActor::new(actors.new_name("performance"), pipeline, script_sender);
 
             let DevtoolsPageInfo { title, url } = page_info;
             let tab = TabActor {
