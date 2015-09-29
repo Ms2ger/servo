@@ -42,7 +42,7 @@ use util::str::DOMString;
 #[derive(Deserialize, Serialize)]
 pub struct DevtoolsPageInfo {
     pub title: DOMString,
-    pub url: Url
+    pub url: Url,
 }
 
 /// Messages to instruct the devtools server to update its known actors/state
@@ -70,9 +70,7 @@ pub enum ChromeToDevtoolsControlMsg {
 pub enum ScriptToDevtoolsControlMsg {
     /// A new global object was created, associated with a particular pipeline.
     /// The means of communicating directly with it are provided.
-    NewGlobal((PipelineId, Option<WorkerId>),
-              IpcSender<DevtoolScriptControlMsg>,
-              DevtoolsPageInfo),
+    NewGlobal((PipelineId, Option<WorkerId>), IpcSender<DevtoolScriptControlMsg>, DevtoolsPageInfo),
     /// A particular page has invoked the console API.
     ConsoleAPI(PipelineId, ConsoleMessage, Option<WorkerId>),
     /// An animation frame with the given timestamp was processed in a script task.
@@ -89,7 +87,10 @@ pub enum EvaluateJSReply {
     BooleanValue(bool),
     NumberValue(f64),
     StringValue(String),
-    ActorValue { class: String, uuid: String },
+    ActorValue {
+        class: String,
+        uuid: String,
+    },
 }
 
 #[derive(Deserialize, Serialize)]
@@ -185,15 +186,21 @@ pub struct Modification {
 
 impl Decodable for Modification {
     fn decode<D: Decoder>(d: &mut D) -> Result<Modification, D::Error> {
-        d.read_struct("Modification", 2, |d|
-            Ok(Modification {
-                attributeName: try!(d.read_struct_field("attributeName", 0, Decodable::decode)),
-                newValue: match d.read_struct_field("newValue", 1, Decodable::decode) {
-                    Ok(opt) => opt,
-                    Err(_) => None
-                }
-            })
-        )
+        d.read_struct("Modification",
+                      2,
+                      |d| {
+                          Ok(Modification {
+                              attributeName: try!(d.read_struct_field("attributeName",
+                                                                      0,
+                                                                      Decodable::decode)),
+                              newValue: match d.read_struct_field("newValue",
+                                                                  1,
+                                                                  Decodable::decode) {
+                                  Ok(opt) => opt,
+                                  Err(_) => None,
+                              },
+                          })
+                      })
     }
 }
 
