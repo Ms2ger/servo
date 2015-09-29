@@ -57,7 +57,9 @@ impl FramerateActor {
     }
 
     pub fn add_tick(&mut self, tick: f64) {
-        self.ticks.push(HighResolutionStamp::wrap(tick));
+        let offset_ns = self.start_time.unwrap() as f64;
+        let offset_ms = offset_ns / 1000_000.;
+        self.ticks.push(HighResolutionStamp::wrap(tick - offset_ms));
 
         if self.is_recording {
             let msg = DevtoolScriptControlMsg::RequestAnimationFrame(self.pipeline,

@@ -357,29 +357,32 @@ impl Emitter {
     pub fn send(&mut self, markers: Vec<TimelineMarkerReply>) -> () {
         println!("Emitter::send({:?})", markers);
         let end_time = PreciseTime::now();
-        let reply = FramesEmitterReply {
-            __type__: "timeline-data".to_owned(),
-            name: "frames".to_owned(),
-            data: FramesData {
-                frames: vec![None; markers.len()],
-                delta: HighResolutionStamp::new(self.start_stamp, end_time),
-            },
-            from: self.from.clone(),
-            recordings: self.recordings.clone(),
-        };
-        self.stream.write_json_packet(&reply);
 
-        let reply = MarkersEmitterReply {
-            __type__: "timeline-data".to_owned(),
-            name: "markers".to_owned(),
-            data: MarkersData {
-                markers: markers,
-                endTime: HighResolutionStamp::new(self.start_stamp, end_time),
-            },
-            from: self.from.clone(),
-            recordings: self.recordings.clone(),
-        };
-        self.stream.write_json_packet(&reply);
+        if markers.len() != 0 {
+            let reply = FramesEmitterReply {
+                __type__: "timeline-data".to_owned(),
+                name: "frames".to_owned(),
+                data: FramesData {
+                    frames: vec![None; markers.len()],
+                    delta: HighResolutionStamp::new(self.start_stamp, end_time),
+                },
+                from: self.from.clone(),
+                recordings: self.recordings.clone(),
+            };
+            self.stream.write_json_packet(&reply);
+
+            let reply = MarkersEmitterReply {
+                __type__: "timeline-data".to_owned(),
+                name: "markers".to_owned(),
+                data: MarkersData {
+                    markers: markers,
+                    endTime: HighResolutionStamp::new(self.start_stamp, end_time),
+                },
+                from: self.from.clone(),
+                recordings: self.recordings.clone(),
+            };
+            self.stream.write_json_packet(&reply);
+        }
 
         if let Some(ref actor_name) = self.framerate_actor {
             let mut lock = self.registry.lock();
