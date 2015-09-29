@@ -174,7 +174,7 @@ pub enum CompositorEvent {
 
 /// An opaque wrapper around script<->layout channels to avoid leaking message types into
 /// crates that don't need to know about them.
-pub struct OpaqueScriptLayoutChannel(pub (Box<Any + Send>, Box<Any + Send>));
+pub struct OpaqueScriptLayoutChannel(pub (Box<Any+ Send>, Box<Any+ Send>));
 
 /// Data needed to construct a script thread.
 pub struct InitialScriptState {
@@ -220,6 +220,7 @@ pub trait ScriptTaskFactory {
     /// Create a script -> layout channel (`Sender`, `Receiver` pair).
     fn create_layout_channel(_phantom: Option<&mut Self>) -> OpaqueScriptLayoutChannel;
     /// Clone the `Sender` in `pair`.
-    fn clone_layout_channel(_phantom: Option<&mut Self>, pair: &OpaqueScriptLayoutChannel)
+    fn clone_layout_channel(_phantom: Option<&mut Self>,
+                            pair: &OpaqueScriptLayoutChannel)
                             -> Box<Any + Send>;
 }
