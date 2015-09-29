@@ -40,7 +40,7 @@ pub mod specified {
     #[derive(Clone, Copy, Debug, PartialEq, Eq)]
     pub enum AllowedNumericType {
         All,
-        NonNegative
+        NonNegative,
     }
 
     impl AllowedNumericType {

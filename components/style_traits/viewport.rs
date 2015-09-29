@@ -29,7 +29,7 @@ pub struct ViewportConstraints {
     pub max_zoom: Option<ScaleFactor<PagePx, ViewportPx, f32>>,
 
     pub user_zoom: UserZoom,
-    pub orientation: Orientation
+    pub orientation: Orientation,
 }
 
 impl ToCss for ViewportConstraints {
@@ -46,8 +46,10 @@ impl ToCss for ViewportConstraints {
         if let Some(max_zoom) = self.max_zoom {
             try!(write!(dest, " max-zoom: {};", max_zoom.get()));
         }
-        try!(write!(dest, " user-zoom: ")); try!(self.user_zoom.to_css(dest));
-        try!(write!(dest, "; orientation: ")); try!(self.orientation.to_css(dest));
+        try!(write!(dest, " user-zoom: "));
+        try!(self.user_zoom.to_css(dest));
+        try!(write!(dest, "; orientation: "));
+        try!(self.orientation.to_css(dest));
         write!(dest, "; }}")
     }
 }
@@ -68,7 +70,7 @@ impl ToCss for Zoom {
         match *self {
             Zoom::Number(number) => write!(dest, "{}", number),
             Zoom::Percentage(percentage) => write!(dest, "{}%", percentage * 100.),
-            Zoom::Auto => write!(dest, "auto")
+            Zoom::Auto => write!(dest, "auto"),
         }
     }
 }
@@ -78,13 +80,13 @@ impl Zoom {
         use cssparser::Token;
 
         match try!(input.next()) {
-            Token::Percentage(ref value) if AllowedNumericType::NonNegative.is_ok(value.unit_value) =>
+            Token::Percentage(ref value)
+                if AllowedNumericType::NonNegative.is_ok(value.unit_value) =>
                 Ok(Zoom::Percentage(value.unit_value)),
             Token::Number(ref value) if AllowedNumericType::NonNegative.is_ok(value.value) =>
                 Ok(Zoom::Number(value.value)),
-            Token::Ident(ref value) if value.eq_ignore_ascii_case("auto") =>
-                Ok(Zoom::Auto),
-            _ => Err(())
+            Token::Ident(ref value) if value.eq_ignore_ascii_case("auto") => Ok(Zoom::Auto),
+            _ => Err(()),
         }
     }
 
@@ -93,7 +95,7 @@ impl Zoom {
         match *self {
             Zoom::Number(number) => Some(number as f32),
             Zoom::Percentage(percentage) => Some(percentage as f32),
-            Zoom::Auto => None
+            Zoom::Auto => None,
         }
     }
 }
