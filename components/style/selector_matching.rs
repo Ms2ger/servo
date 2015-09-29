@@ -62,12 +62,14 @@ impl Stylist {
         for &filename in &["user-agent.css", "servo.css", "presentational-hints.css"] {
             match read_resource_file(&[filename]) {
                 Ok(res) => {
-                    let ua_stylesheet = Stylesheet::from_bytes(
-                        &res,
-                        Url::parse(&format!("chrome:///{:?}", filename)).unwrap(),
-                        None,
-                        None,
-                        Origin::UserAgent);
+                    let ua_stylesheet = Stylesheet::from_bytes(&res,
+                                                               Url::parse(&format!("chrome:///{\
+                                                                                    :?}",
+                                                                                   filename))
+                                                                   .unwrap(),
+                                                               None,
+                                                               None,
+                                                               Origin::UserAgent);
                     stylist.add_stylesheet(ua_stylesheet);
                 }
                 Err(..) => {
@@ -77,8 +79,11 @@ impl Stylist {
             }
         }
         for &(ref contents, ref url) in &opts::get().user_stylesheets {
-            stylist.add_stylesheet(Stylesheet::from_bytes(
-                &contents, url.clone(), None, None, Origin::User));
+            stylist.add_stylesheet(Stylesheet::from_bytes(&contents,
+                                                          url.clone(),
+                                                          None,
+                                                          None,
+                                                          Origin::User));
         }
         stylist
     }
@@ -89,9 +94,10 @@ impl Stylist {
     }
 
     pub fn constrain_viewport(&self) -> Option<ViewportConstraints> {
-        let cascaded_rule = self.stylesheets.iter()
-            .flat_map(|s| s.effective_rules(&self.device).viewport())
-            .cascade();
+        let cascaded_rule = self.stylesheets
+                                .iter()
+                                .flat_map(|s| s.effective_rules(&self.device).viewport())
+                                .cascade();
 
         ViewportConstraints::maybe_new(self.device.viewport_size, &cascaded_rule)
     }
@@ -105,21 +111,15 @@ impl Stylist {
 
             for stylesheet in &self.stylesheets {
                 let (mut element_map, mut before_map, mut after_map) = match stylesheet.origin {
-                    Origin::UserAgent => (
-                        &mut self.element_map.user_agent,
-                        &mut self.before_map.user_agent,
-                        &mut self.after_map.user_agent,
-                    ),
-                    Origin::Author => (
-                        &mut self.element_map.author,
-                        &mut self.before_map.author,
-                        &mut self.after_map.author,
-                    ),
-                    Origin::User => (
-                        &mut self.element_map.user,
-                        &mut self.before_map.user,
-                        &mut self.after_map.user,
-                    ),
+                    Origin::UserAgent => (&mut self.element_map.user_agent,
+                                          &mut self.before_map.user_agent,
+                                          &mut self.after_map.user_agent),
+                    Origin::Author => (&mut self.element_map.author,
+                                       &mut self.before_map.author,
+                                       &mut self.after_map.author),
+                    Origin::User => (&mut self.element_map.user,
+                                     &mut self.before_map.user,
+                                     &mut self.after_map.user),
                 };
                 let mut rules_source_order = self.rules_source_order;
 
@@ -163,9 +163,13 @@ impl Stylist {
     }
 
     pub fn set_device(&mut self, device: Device) {
-        let is_dirty = self.is_dirty || self.stylesheets.iter()
-            .flat_map(|stylesheet| stylesheet.rules().media())
-            .any(|media_rule| media_rule.evaluate(&self.device) != media_rule.evaluate(&device));
+        let is_dirty = self.is_dirty ||
+                       self.stylesheets
+                           .iter()
+                           .flat_map(|stylesheet| stylesheet.rules().media())
+                           .any(|media_rule| {
+                               media_rule.evaluate(&self.device) != media_rule.evaluate(&device)
+                           });
 
         self.device = device;
         self.is_dirty |= is_dirty;
@@ -174,15 +178,17 @@ impl Stylist {
     pub fn add_quirks_mode_stylesheet(&mut self) {
         match read_resource_file(&["quirks-mode.css"]) {
             Ok(res) => {
-            self.add_stylesheet(Stylesheet::from_bytes(
-                &res,
-                Url::parse("chrome:///quirks-mode.css").unwrap(),
-                None,
-                None,
-                Origin::UserAgent));
+                self.add_stylesheet(Stylesheet::from_bytes(&res,
+                                                           Url::parse("chrome:///quirks-mode.cs\
+                                                                       s")
+                                                               .unwrap(),
+                                                           None,
+                                                           None,
+                                                           Origin::UserAgent));
             }
             Err(..) => {
-                error!("Stylist::add_quirks_mode_stylesheet() failed at loading 'quirks-mode.css'!");
+                error!("Stylist::add_quirks_mode_stylesheet() failed at loading \
+                        'quirks-mode.css'!");
                 process::exit(1);
             }
         }
@@ -199,16 +205,16 @@ impl Stylist {
     /// The returned boolean indicates whether the style is *shareable*; that is, whether the
     /// matched selectors are simple enough to allow the matching logic to be reduced to the logic
     /// in `css::matching::PrivateMatchMethods::candidate_element_allows_for_style_sharing`.
-    pub fn push_applicable_declarations<E, V>(
-                                        &self,
-                                        element: &E,
-                                        parent_bf: Option<&BloomFilter>,
-                                        style_attribute: Option<&PropertyDeclarationBlock>,
-                                        pseudo_element: Option<PseudoElement>,
-                                        applicable_declarations: &mut V)
-                                        -> bool
-                                        where E: Element + TElementAttributes,
-                                              V: VecLike<DeclarationBlock> {
+    pub fn push_applicable_declarations<E, V>(&self,
+                                              element: &E,
+                                              parent_bf: Option<&BloomFilter>,
+                                              style_attribute: Option<&PropertyDeclarationBlock>,
+                                              pseudo_element: Option<PseudoElement>,
+                                              applicable_declarations: &mut V)
+                                              -> bool
+        where E: Element + TElementAttributes,
+              V: VecLike<DeclarationBlock>
+    {
         assert!(!self.is_dirty);
         assert!(style_attribute.is_none() || pseudo_element.is_none(),
                 "Style attributes do not apply to pseudo-elements");
@@ -246,8 +252,8 @@ impl Stylist {
         // Step 4: Normal style attributes.
         style_attribute.map(|sa| {
             shareable = false;
-            applicable_declarations.push(
-                GenericDeclarationBlock::from_declarations(sa.normal.clone()))
+            applicable_declarations.push(GenericDeclarationBlock::from_declarations(sa.normal
+                                                                                      .clone()))
         });
 
         // Step 5: Author-supplied `!important` rules.
@@ -259,8 +265,8 @@ impl Stylist {
         // Step 6: `!important` style attributes.
         style_attribute.map(|sa| {
             shareable = false;
-            applicable_declarations.push(
-                GenericDeclarationBlock::from_declarations(sa.important.clone()))
+            applicable_declarations.push(GenericDeclarationBlock::from_declarations(sa.important
+                                                                                      .clone()))
         });
 
         // Step 7: User and UA `!important` rules.

@@ -30,7 +30,9 @@ impl<'a> ParserContext<'a> {
 
 impl<'a> ParserContext<'a> {
     pub fn parse_url(&self, input: &str) -> Url {
-        UrlParser::new().base_url(self.base_url).parse(input)
+        UrlParser::new()
+            .base_url(self.base_url)
+            .parse(input)
             .unwrap_or_else(|_| Url::parse("about:invalid").unwrap())
     }
 }

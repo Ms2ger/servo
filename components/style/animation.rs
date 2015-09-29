@@ -17,8 +17,8 @@ use properties::longhands::transform::computed_value::ComputedOperation as Trans
 use properties::longhands::transform::computed_value::T as TransformList;
 use properties::longhands::transition_property;
 use properties::longhands::transition_property::computed_value::TransitionProperty;
-use properties::longhands::transition_timing_function::computed_value::{StartEnd};
-use properties::longhands::transition_timing_function::computed_value::{TransitionTimingFunction};
+use properties::longhands::transition_timing_function::computed_value::StartEnd;
+use properties::longhands::transition_timing_function::computed_value::TransitionTimingFunction;
 use properties::longhands::vertical_align::computed_value::T as VerticalAlign;
 use properties::longhands::visibility::computed_value::T as Visibility;
 use properties::longhands::z_index::computed_value::T as ZIndex;
@@ -46,26 +46,25 @@ impl PropertyAnimation {
                            new_style: &mut ComputedValues)
                            -> Vec<PropertyAnimation> {
         let mut result = Vec::new();
-        let transition_property =
-            new_style.get_animation().transition_property.0[transition_index];
+        let transition_property = new_style.get_animation().transition_property.0[transition_index];
         if transition_property != TransitionProperty::All {
             if let Some(property_animation) =
-                    PropertyAnimation::from_transition_property(transition_property,
-                                                                transition_index,
-                                                                old_style,
-                                                                new_style) {
+                   PropertyAnimation::from_transition_property(transition_property,
+                                                               transition_index,
+                                                               old_style,
+                                                               new_style) {
                 result.push(property_animation)
             }
             return result
         }
 
         for transition_property in
-                transition_property::computed_value::ALL_TRANSITION_PROPERTIES.iter() {
+            transition_property::computed_value::ALL_TRANSITION_PROPERTIES.iter() {
             if let Some(property_animation) =
-                    PropertyAnimation::from_transition_property(*transition_property,
-                                                                transition_index,
-                                                                old_style,
-                                                                new_style) {
+                   PropertyAnimation::from_transition_property(*transition_property,
+                                                               transition_index,
+                                                               old_style,
+                                                               new_style) {
                 result.push(property_animation)
             }
         }
@@ -159,8 +158,7 @@ impl PropertyAnimation {
 
         let property_animation = PropertyAnimation {
             property: animated_property,
-            timing_function:
-                *animation_style.transition_timing_function.0.get_mod(transition_index),
+            timing_function: *animation_style.transition_timing_function.0.get_mod(transition_index),
             duration: *animation_style.transition_duration.0.get_mod(transition_index),
         };
         if property_animation.does_not_animate() {
@@ -176,7 +174,8 @@ impl PropertyAnimation {
                 // See `WebCore::AnimationBase::solveEpsilon(double)` in WebKit.
                 let epsilon = 1.0 / (200.0 * (self.duration.seconds() as f64));
                 Bezier::new(Point2D::new(p1.x as f64, p1.y as f64),
-                            Point2D::new(p2.x as f64, p2.y as f64)).solve(time, epsilon)
+                            Point2D::new(p2.x as f64, p2.y as f64))
+                    .solve(time, epsilon)
             }
             TransitionTimingFunction::Steps(steps, StartEnd::Start) => {
                 (time * (steps as f64)).ceil() / (steps as f64)
@@ -382,11 +381,9 @@ impl <T> Interpolate for Option<T> where T: Interpolate {
     fn interpolate(&self, other: &Option<T>, time: f64) -> Option<Option<T>> {
         match (self, other) {
             (&Some(ref this), &Some(ref other)) => {
-                this.interpolate(other, time).and_then(|value| {
-                    Some(Some(value))
-                })
+                this.interpolate(other, time).and_then(|value| Some(Some(value)))
             }
-            (_, _) => None
+            (_, _) => None,
         }
     }
 }
@@ -423,8 +420,7 @@ impl Interpolate for Angle {
 
 impl Interpolate for Visibility {
     #[inline]
-    fn interpolate(&self, other: &Visibility, time: f64)
-                   -> Option<Visibility> {
+    fn interpolate(&self, other: &Visibility, time: f64) -> Option<Visibility> {
         match (*self, *other) {
             (Visibility::visible, _) | (_, Visibility::visible) => {
                 if time >= 0.0 && time <= 1.0 {
@@ -442,14 +438,11 @@ impl Interpolate for Visibility {
 
 impl Interpolate for ZIndex {
     #[inline]
-    fn interpolate(&self, other: &ZIndex, time: f64)
-                   -> Option<ZIndex> {
+    fn interpolate(&self, other: &ZIndex, time: f64) -> Option<ZIndex> {
         match (*self, *other) {
             (ZIndex::Number(ref this),
              ZIndex::Number(ref other)) => {
-                this.interpolate(other, time).and_then(|value| {
-                    Some(ZIndex::Number(value))
-                })
+                this.interpolate(other, time).and_then(|value| Some(ZIndex::Number(value)))
             }
             (_, _) => None,
         }
@@ -458,14 +451,11 @@ impl Interpolate for ZIndex {
 
 impl Interpolate for VerticalAlign {
     #[inline]
-    fn interpolate(&self, other: &VerticalAlign, time: f64)
-                   -> Option<VerticalAlign> {
+    fn interpolate(&self, other: &VerticalAlign, time: f64) -> Option<VerticalAlign> {
         match (*self, *other) {
             (VerticalAlign::Length(ref this),
              VerticalAlign::Length(ref other)) => {
-                this.interpolate(other, time).and_then(|value| {
-                    Some(VerticalAlign::Length(value))
-                })
+                this.interpolate(other, time).and_then(|value| Some(VerticalAlign::Length(value)))
             }
             (_, _) => None,
         }
@@ -474,11 +464,13 @@ impl Interpolate for VerticalAlign {
 
 impl Interpolate for BorderSpacing {
     #[inline]
-    fn interpolate(&self, other: &BorderSpacing, time: f64)
-                   -> Option<BorderSpacing> {
+    fn interpolate(&self, other: &BorderSpacing, time: f64) -> Option<BorderSpacing> {
         self.horizontal.interpolate(&other.horizontal, time).and_then(|horizontal| {
             self.vertical.interpolate(&other.vertical, time).and_then(|vertical| {
-                Some(BorderSpacing { horizontal: horizontal, vertical: vertical })
+                Some(BorderSpacing {
+                    horizontal: horizontal,
+                    vertical: vertical,
+                })
             })
         })
     }
@@ -492,9 +484,14 @@ impl Interpolate for RGBA {
                self.blue.interpolate(&other.blue, time),
                self.alpha.interpolate(&other.alpha, time)) {
             (Some(red), Some(green), Some(blue), Some(alpha)) => {
-                Some(RGBA { red: red, green: green, blue: blue, alpha: alpha })
+                Some(RGBA {
+                    red: red,
+                    green: green,
+                    blue: blue,
+                    alpha: alpha,
+                })
             }
-            (_, _, _, _) => None
+            (_, _, _, _) => None,
         }
     }
 }
@@ -504,9 +501,7 @@ impl Interpolate for Color {
     fn interpolate(&self, other: &Color, time: f64) -> Option<Color> {
         match (*self, *other) {
             (Color::RGBA(ref this), Color::RGBA(ref other)) => {
-                this.interpolate(other, time).and_then(|value| {
-                    Some(Color::RGBA(value))
-                })
+                this.interpolate(other, time).and_then(|value| Some(Color::RGBA(value)))
             }
             (_, _) => None,
         }
@@ -515,8 +510,7 @@ impl Interpolate for Color {
 
 impl Interpolate for Calc {
     #[inline]
-    fn interpolate(&self, other: &Calc, time: f64)
-                   -> Option<Calc> {
+    fn interpolate(&self, other: &Calc, time: f64) -> Option<Calc> {
         Some(Calc {
             length: self.length().interpolate(&other.length(), time),
             percentage: self.percentage().interpolate(&other.percentage(), time),
@@ -526,27 +520,23 @@ impl Interpolate for Calc {
 
 impl Interpolate for LengthOrPercentage {
     #[inline]
-    fn interpolate(&self, other: &LengthOrPercentage, time: f64)
-                   -> Option<LengthOrPercentage> {
+    fn interpolate(&self, other: &LengthOrPercentage, time: f64) -> Option<LengthOrPercentage> {
         match (*self, *other) {
             (LengthOrPercentage::Length(ref this),
              LengthOrPercentage::Length(ref other)) => {
-                this.interpolate(other, time).and_then(|value| {
-                    Some(LengthOrPercentage::Length(value))
-                })
+                this.interpolate(other, time)
+                    .and_then(|value| Some(LengthOrPercentage::Length(value)))
             }
             (LengthOrPercentage::Percentage(ref this),
              LengthOrPercentage::Percentage(ref other)) => {
-                this.interpolate(other, time).and_then(|value| {
-                    Some(LengthOrPercentage::Percentage(value))
-                })
+                this.interpolate(other, time)
+                    .and_then(|value| Some(LengthOrPercentage::Percentage(value)))
             }
             (this, other) => {
                 let this: Calc = From::from(this);
                 let other: Calc = From::from(other);
-                this.interpolate(&other, time).and_then(|value| {
-                    Some(LengthOrPercentage::Calc(value))
-                })
+                this.interpolate(&other, time)
+                    .and_then(|value| Some(LengthOrPercentage::Calc(value)))
             }
         }
     }
@@ -554,20 +544,20 @@ impl Interpolate for LengthOrPercentage {
 
 impl Interpolate for LengthOrPercentageOrAuto {
     #[inline]
-    fn interpolate(&self, other: &LengthOrPercentageOrAuto, time: f64)
+    fn interpolate(&self,
+                   other: &LengthOrPercentageOrAuto,
+                   time: f64)
                    -> Option<LengthOrPercentageOrAuto> {
         match (*self, *other) {
             (LengthOrPercentageOrAuto::Length(ref this),
              LengthOrPercentageOrAuto::Length(ref other)) => {
-                this.interpolate(other, time).and_then(|value| {
-                    Some(LengthOrPercentageOrAuto::Length(value))
-                })
+                this.interpolate(other, time)
+                    .and_then(|value| Some(LengthOrPercentageOrAuto::Length(value)))
             }
             (LengthOrPercentageOrAuto::Percentage(ref this),
              LengthOrPercentageOrAuto::Percentage(ref other)) => {
-                this.interpolate(other, time).and_then(|value| {
-                    Some(LengthOrPercentageOrAuto::Percentage(value))
-                })
+                this.interpolate(other, time)
+                    .and_then(|value| Some(LengthOrPercentageOrAuto::Percentage(value)))
             }
             (LengthOrPercentageOrAuto::Auto, LengthOrPercentageOrAuto::Auto) => {
                 Some(LengthOrPercentageOrAuto::Auto)
@@ -575,9 +565,9 @@ impl Interpolate for LengthOrPercentageOrAuto {
             (this, other) => {
                 let this: Option<Calc> = From::from(this);
                 let other: Option<Calc> = From::from(other);
-                this.interpolate(&other, time).unwrap_or(None).and_then(|value| {
-                    Some(LengthOrPercentageOrAuto::Calc(value))
-                })
+                this.interpolate(&other, time)
+                    .unwrap_or(None)
+                    .and_then(|value| Some(LengthOrPercentageOrAuto::Calc(value)))
             }
         }
     }
@@ -585,20 +575,20 @@ impl Interpolate for LengthOrPercentageOrAuto {
 
 impl Interpolate for LengthOrPercentageOrNone {
     #[inline]
-    fn interpolate(&self, other: &LengthOrPercentageOrNone, time: f64)
+    fn interpolate(&self,
+                   other: &LengthOrPercentageOrNone,
+                   time: f64)
                    -> Option<LengthOrPercentageOrNone> {
         match (*self, *other) {
             (LengthOrPercentageOrNone::Length(ref this),
              LengthOrPercentageOrNone::Length(ref other)) => {
-                this.interpolate(other, time).and_then(|value| {
-                    Some(LengthOrPercentageOrNone::Length(value))
-                })
+                this.interpolate(other, time)
+                    .and_then(|value| Some(LengthOrPercentageOrNone::Length(value)))
             }
             (LengthOrPercentageOrNone::Percentage(ref this),
              LengthOrPercentageOrNone::Percentage(ref other)) => {
-                this.interpolate(other, time).and_then(|value| {
-                    Some(LengthOrPercentageOrNone::Percentage(value))
-                })
+                this.interpolate(other, time)
+                    .and_then(|value| Some(LengthOrPercentageOrNone::Percentage(value)))
             }
             (LengthOrPercentageOrNone::None, LengthOrPercentageOrNone::None) => {
                 Some(LengthOrPercentageOrNone::None)
@@ -610,20 +600,15 @@ impl Interpolate for LengthOrPercentageOrNone {
 
 impl Interpolate for LineHeight {
     #[inline]
-    fn interpolate(&self, other: &LineHeight, time: f64)
-                   -> Option<LineHeight> {
+    fn interpolate(&self, other: &LineHeight, time: f64) -> Option<LineHeight> {
         match (*self, *other) {
             (LineHeight::Length(ref this),
              LineHeight::Length(ref other)) => {
-                this.interpolate(other, time).and_then(|value| {
-                    Some(LineHeight::Length(value))
-                })
+                this.interpolate(other, time).and_then(|value| Some(LineHeight::Length(value)))
             }
             (LineHeight::Number(ref this),
              LineHeight::Number(ref other)) => {
-                this.interpolate(other, time).and_then(|value| {
-                    Some(LineHeight::Number(value))
-                })
+                this.interpolate(other, time).and_then(|value| Some(LineHeight::Number(value)))
             }
             (LineHeight::Normal, LineHeight::Normal) => {
                 Some(LineHeight::Normal)
@@ -636,8 +621,7 @@ impl Interpolate for LineHeight {
 /// http://dev.w3.org/csswg/css-transitions/#animtype-font-weight
 impl Interpolate for FontWeight {
     #[inline]
-    fn interpolate(&self, other: &FontWeight, time: f64)
-                   -> Option<FontWeight> {
+    fn interpolate(&self, other: &FontWeight, time: f64) -> Option<FontWeight> {
         let a = (*self as u32) as f64;
         let b = (*other as u32) as f64;
         let weight = a + (b - a) * time;
@@ -665,15 +649,19 @@ impl Interpolate for FontWeight {
 
 impl Interpolate for ClipRect {
     #[inline]
-    fn interpolate(&self, other: &ClipRect, time: f64)
-                   -> Option<ClipRect> {
+    fn interpolate(&self, other: &ClipRect, time: f64) -> Option<ClipRect> {
         match (self.top.interpolate(&other.top, time),
                self.right.interpolate(&other.right, time),
                self.bottom.interpolate(&other.bottom, time),
                self.left.interpolate(&other.left, time)) {
             (Some(top), Some(right), Some(bottom), Some(left)) => {
-                Some(ClipRect { top: top, right: right, bottom: bottom, left: left })
-            },
+                Some(ClipRect {
+                    top: top,
+                    right: right,
+                    bottom: bottom,
+                    left: left,
+                })
+            }
             (_, _, _, _) => None,
         }
     }
@@ -681,13 +669,15 @@ impl Interpolate for ClipRect {
 
 impl Interpolate for BackgroundPosition {
     #[inline]
-    fn interpolate(&self, other: &BackgroundPosition, time: f64)
-                   -> Option<BackgroundPosition> {
+    fn interpolate(&self, other: &BackgroundPosition, time: f64) -> Option<BackgroundPosition> {
         match (self.horizontal.interpolate(&other.horizontal, time),
                self.vertical.interpolate(&other.vertical, time)) {
             (Some(horizontal), Some(vertical)) => {
-                Some(BackgroundPosition { horizontal: horizontal, vertical: vertical })
-            },
+                Some(BackgroundPosition {
+                    horizontal: horizontal,
+                    vertical: vertical,
+                })
+            }
             (_, _) => None,
         }
     }
@@ -695,15 +685,19 @@ impl Interpolate for BackgroundPosition {
 
 impl Interpolate for TextShadow {
     #[inline]
-    fn interpolate(&self, other: &TextShadow, time: f64)
-                   -> Option<TextShadow> {
+    fn interpolate(&self, other: &TextShadow, time: f64) -> Option<TextShadow> {
         match (self.offset_x.interpolate(&other.offset_x, time),
                self.offset_y.interpolate(&other.offset_y, time),
                self.blur_radius.interpolate(&other.blur_radius, time),
                self.color.interpolate(&other.color, time)) {
             (Some(offset_x), Some(offset_y), Some(blur_radius), Some(color)) => {
-                Some(TextShadow { offset_x: offset_x, offset_y: offset_y, blur_radius: blur_radius, color: color })
-            },
+                Some(TextShadow {
+                    offset_x: offset_x,
+                    offset_y: offset_y,
+                    blur_radius: blur_radius,
+                    color: color,
+                })
+            }
             (_, _, _, _) => None,
         }
     }
@@ -711,24 +705,33 @@ impl Interpolate for TextShadow {
 
 impl Interpolate for TextShadowList {
     #[inline]
-    fn interpolate(&self, other: &TextShadowList, time: f64)
-                   -> Option<TextShadowList> {
+    fn interpolate(&self, other: &TextShadowList, time: f64) -> Option<TextShadowList> {
         let zero = TextShadow {
             offset_x: Au(0),
             offset_y: Au(0),
             blur_radius: Au(0),
             color: Color::RGBA(RGBA {
-                red: 0.0, green: 0.0, blue: 0.0, alpha: 0.0
-            })
+                red: 0.0,
+                green: 0.0,
+                blue: 0.0,
+                alpha: 0.0,
+            }),
         };
 
-        let interpolate_each = |(a, b): (&TextShadow, &TextShadow)| {
-            a.interpolate(b, time).unwrap()
-        };
+        let interpolate_each = |(a, b): (&TextShadow, &TextShadow)| a.interpolate(b, time).unwrap();
 
         Some(TextShadowList(match self.0.len().cmp(&other.0.len()) {
-            Ordering::Less => other.0.iter().chain(repeat(&zero)).zip(other.0.iter()).map(interpolate_each).collect(),
-            _ => self.0.iter().zip(other.0.iter().chain(repeat(&zero))).map(interpolate_each).collect(),
+            Ordering::Less => other.0
+                                   .iter()
+                                   .chain(repeat(&zero))
+                                   .zip(other.0.iter())
+                                   .map(interpolate_each)
+                                   .collect(),
+            _ => self.0
+                     .iter()
+                     .zip(other.0.iter().chain(repeat(&zero)))
+                     .map(interpolate_each)
+                     .collect(),
         }))
     }
 }
@@ -736,8 +739,7 @@ impl Interpolate for TextShadowList {
 /// Check if it's possible to do a direct numerical interpolation
 /// between these two transform lists.
 /// http://dev.w3.org/csswg/css-transforms/#transform-transform-animation
-fn can_interpolate_list(from_list: &[TransformOperation],
-                        to_list: &[TransformOperation]) -> bool {
+fn can_interpolate_list(from_list: &[TransformOperation], to_list: &[TransformOperation]) -> bool {
     // Lists must be equal length
     if from_list.len() != to_list.len() {
         return false;
@@ -765,7 +767,8 @@ fn can_interpolate_list(from_list: &[TransformOperation],
 /// http://dev.w3.org/csswg/css-transforms/#interpolation-of-transforms
 fn interpolate_transform_list(from_list: &[TransformOperation],
                               to_list: &[TransformOperation],
-                              time: f64) -> TransformList {
+                              time: f64)
+                              -> TransformList {
     let mut result = vec!();
 
     if can_interpolate_list(from_list, to_list) {

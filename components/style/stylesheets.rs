@@ -75,16 +75,22 @@ pub struct StyleRule {
 
 
 impl Stylesheet {
-    pub fn from_bytes_iter<I: Iterator<Item=Vec<u8>>>(
-            input: I, base_url: Url, protocol_encoding_label: Option<&str>,
-            environment_encoding: Option<EncodingRef>, origin: Origin) -> Stylesheet {
+    pub fn from_bytes_iter<I: Iterator<Item = Vec<u8>>>(input: I,
+                                                        base_url: Url,
+                                                        protocol_encoding_label: Option<&str>,
+                                                        environment_encoding: Option<EncodingRef>,
+                                                        origin: Origin)
+                                                        -> Stylesheet {
         let mut bytes = vec![];
         // TODO: incremental decoding and tokenization/parsing
         for chunk in input {
             bytes.push_all(&chunk)
         }
-        Stylesheet::from_bytes(&bytes, base_url, protocol_encoding_label,
-                               environment_encoding, origin)
+        Stylesheet::from_bytes(&bytes,
+                               base_url,
+                               protocol_encoding_label,
+                               environment_encoding,
+                               origin)
     }
 
     pub fn from_bytes(bytes: &[u8],
@@ -94,8 +100,9 @@ impl Stylesheet {
                       origin: Origin)
                       -> Stylesheet {
         // TODO: bytes.as_slice could be bytes.container_as_bytes()
-        let (string, _) = decode_stylesheet_bytes(
-            bytes, protocol_encoding_label, environment_encoding);
+        let (string, _) = decode_stylesheet_bytes(bytes,
+                                                  protocol_encoding_label,
+                                                  environment_encoding);
         Stylesheet::from_str(&string, base_url, origin)
     }
 
@@ -112,8 +119,11 @@ impl Stylesheet {
                 Ok(rule) => {
                     if let CSSRule::Namespace(ref prefix, ref namespace) = rule {
                         if let Some(prefix) = prefix.as_ref() {
-                            iter.parser.context.selector_context.namespace_prefixes.insert(
-                                prefix.clone(), namespace.clone());
+                            iter.parser
+                                .context
+                                .selector_context
+                                .namespace_prefixes
+                                .insert(prefix.clone(), namespace.clone());
                         } else {
                             iter.parser.context.selector_context.default_namespace =
                                 Some(namespace.clone());
@@ -159,7 +169,7 @@ impl Stylesheet {
 pub struct Rules<'a> {
     // 2 because normal case is likely to be just one level of nesting (@media)
     stack: SmallVec<[slice::Iter<'a, CSSRule>; 2]>,
-    device: Option<&'a Device>
+    device: Option<&'a Device>,
 }
 
 impl<'a> Rules<'a> {
@@ -167,7 +177,10 @@ impl<'a> Rules<'a> {
         let mut stack: SmallVec<[slice::Iter<'a, CSSRule>; 2]> = SmallVec::new();
         stack.push(iter);
 
-        Rules { stack: stack, device: device }
+        Rules {
+            stack: stack,
+            device: device,
+        }
     }
 }
 
@@ -300,7 +313,8 @@ impl<'a, I> CSSRuleIteratorExt<'a> for I where I: Iterator<Item=&'a CSSRule> {
 }
 
 fn parse_nested_rules(context: &ParserContext, input: &mut Parser) -> Vec<CSSRule> {
-    let mut iter = RuleListParser::new_for_nested_rule(input, NestedRuleParser { context: context });
+    let mut iter = RuleListParser::new_for_nested_rule(input,
+                                                       NestedRuleParser { context: context });
     let mut rules = Vec::new();
     while let Some(result) = iter.next() {
         match result {
@@ -341,7 +355,9 @@ impl<'a> AtRuleParser for TopLevelRuleParser<'a> {
     type Prelude = AtRulePrelude;
     type AtRule = CSSRule;
 
-    fn parse_prelude(&self, name: &str, input: &mut Parser)
+    fn parse_prelude(&self,
+                     name: &str,
+                     input: &mut Parser)
                      -> Result<AtRuleType<AtRulePrelude, CSSRule>, ()> {
         match_ignore_ascii_case! { name,
             "charset" => {
@@ -378,12 +394,16 @@ impl<'a> AtRuleParser for TopLevelRuleParser<'a> {
         }
 
         self.state.set(State::Body);
-        AtRuleParser::parse_prelude(&NestedRuleParser { context: &self.context }, name, input)
+        AtRuleParser::parse_prelude(&NestedRuleParser { context: &self.context },
+                                    name,
+                                    input)
     }
 
     #[inline]
     fn parse_block(&self, prelude: AtRulePrelude, input: &mut Parser) -> Result<CSSRule, ()> {
-        AtRuleParser::parse_block(&NestedRuleParser { context: &self.context }, prelude, input)
+        AtRuleParser::parse_block(&NestedRuleParser { context: &self.context },
+                                  prelude,
+                                  input)
     }
 }
 
@@ -401,7 +421,8 @@ impl<'a> QualifiedRuleParser for TopLevelRuleParser<'a> {
     #[inline]
     fn parse_block(&self, prelude: Vec<Selector>, input: &mut Parser) -> Result<CSSRule, ()> {
         QualifiedRuleParser::parse_block(&NestedRuleParser { context: &self.context },
-                                         prelude, input)
+                                         prelude,
+                                         input)
     }
 }
 
@@ -415,7 +436,9 @@ impl<'a, 'b> AtRuleParser for NestedRuleParser<'a, 'b> {
     type Prelude = AtRulePrelude;
     type AtRule = CSSRule;
 
-    fn parse_prelude(&self, name: &str, input: &mut Parser)
+    fn parse_prelude(&self,
+                     name: &str,
+                     input: &mut Parser)
                      -> Result<AtRuleType<AtRulePrelude, CSSRule>, ()> {
         match_ignore_ascii_case! { name,
             "media" => {
@@ -466,7 +489,7 @@ impl<'a, 'b> QualifiedRuleParser for NestedRuleParser<'a, 'b> {
     fn parse_block(&self, prelude: Vec<Selector>, input: &mut Parser) -> Result<CSSRule, ()> {
         Ok(CSSRule::Style(StyleRule {
             selectors: prelude,
-            declarations: parse_property_declaration_list(self.context, input)
+            declarations: parse_property_declaration_list(self.context, input),
         }))
     }
 }

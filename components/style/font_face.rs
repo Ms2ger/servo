@@ -28,7 +28,8 @@ pub struct FontFaceRule {
     pub sources: Vec<Source>,
 }
 
-pub fn parse_font_face_block(context: &ParserContext, input: &mut Parser)
+pub fn parse_font_face_block(context: &ParserContext,
+                             input: &mut Parser)
                              -> Result<FontFaceRule, ()> {
     let mut family = None;
     let mut src = None;
@@ -56,7 +57,7 @@ pub fn parse_font_face_block(context: &ParserContext, input: &mut Parser)
                 sources: src,
             })
         }
-        _ => Err(())
+        _ => Err(()),
     }
 }
 
@@ -81,7 +82,10 @@ impl<'a, 'b> AtRuleParser for FontFaceRuleParser<'a, 'b> {
 impl<'a, 'b> DeclarationParser for FontFaceRuleParser<'a, 'b> {
     type Declaration = FontFaceDescriptorDeclaration;
 
-    fn parse_value(&self, name: &str, input: &mut Parser) -> Result<FontFaceDescriptorDeclaration, ()> {
+    fn parse_value(&self,
+                   name: &str,
+                   input: &mut Parser)
+                   -> Result<FontFaceDescriptorDeclaration, ()> {
         match_ignore_ascii_case! { name,
             "font-family" => {
                 Ok(FontFaceDescriptorDeclaration::Family(try!(
@@ -100,7 +104,7 @@ impl<'a, 'b> DeclarationParser for FontFaceRuleParser<'a, 'b> {
 fn parse_one_non_generic_family_name(input: &mut Parser) -> Result<Atom, ()> {
     match parse_one_family(input) {
         Ok(FontFamily::FamilyName(name)) => Ok(name.clone()),
-        _ => Err(())
+        _ => Err(()),
     }
 }
 
@@ -109,9 +113,11 @@ fn parse_one_src(context: &ParserContext, input: &mut Parser) -> Result<Source, 
     let url = match input.next() {
         // Parsing url()
         Ok(Token::Url(url)) => {
-            UrlParser::new().base_url(context.base_url).parse(&url).unwrap_or_else(
-                |_error| Url::parse("about:invalid").unwrap())
-        },
+            UrlParser::new()
+                .base_url(context.base_url)
+                .parse(&url)
+                .unwrap_or_else(|_error| Url::parse("about:invalid").unwrap())
+        }
         // Parsing local() with early return
         Ok(Token::Function(name)) => {
             if name.eq_ignore_ascii_case("local") {
@@ -120,16 +126,14 @@ fn parse_one_src(context: &ParserContext, input: &mut Parser) -> Result<Source, 
                 }))))
             }
             return Err(())
-        },
-        _ => return Err(())
+        }
+        _ => return Err(()),
     };
 
     // Parsing optional format()
     let format_hints = if input.try(|input| input.expect_function_matching("format")).is_ok() {
         try!(input.parse_nested_block(|input| {
-            input.parse_comma_separated(|input| {
-                Ok((try!(input.expect_string())).into_owned())
-            })
+            input.parse_comma_separated(|input| Ok((try!(input.expect_string())).into_owned()))
         }))
     } else {
         vec![]

@@ -49,13 +49,17 @@ pub struct ComputedValue {
 }
 
 impl ToCss for SpecifiedValue {
-    fn to_css<W>(&self, dest: &mut W) -> fmt::Result where W: fmt::Write {
+    fn to_css<W>(&self, dest: &mut W) -> fmt::Result
+        where W: fmt::Write
+    {
         dest.write_str(&self.css)
     }
 }
 
 impl ToCss for ComputedValue {
-    fn to_css<W>(&self, dest: &mut W) -> fmt::Result where W: fmt::Write {
+    fn to_css<W>(&self, dest: &mut W) -> fmt::Result
+        where W: fmt::Write
+    {
         dest.write_str(&self.css)
     }
 }
@@ -71,7 +75,9 @@ impl ComputedValue {
         }
     }
 
-    fn push(&mut self, css: &str, css_first_token_type: TokenSerializationType,
+    fn push(&mut self,
+            css: &str,
+            css_first_token_type: TokenSerializationType,
             css_last_token_type: TokenSerializationType) {
         self.first_token_type.set_if_nothing(css_first_token_type);
         // If self.first_token_type was nothing,
@@ -83,13 +89,19 @@ impl ComputedValue {
         self.last_token_type = css_last_token_type
     }
 
-    fn push_from(&mut self, position: (SourcePosition, TokenSerializationType),
-                 input: &Parser, last_token_type: TokenSerializationType) {
-        self.push(input.slice_from(position.0), position.1, last_token_type)
+    fn push_from(&mut self,
+                 position: (SourcePosition, TokenSerializationType),
+                 input: &Parser,
+                 last_token_type: TokenSerializationType) {
+        self.push(input.slice_from(position.0),
+                  position.1,
+                  last_token_type)
     }
 
     fn push_variable(&mut self, variable: &ComputedValue) {
-        self.push(&variable.css, variable.first_token_type, variable.last_token_type)
+        self.push(&variable.css,
+                  variable.first_token_type,
+                  variable.last_token_type)
     }
 }
 
@@ -106,22 +118,26 @@ pub fn parse(input: &mut Parser) -> Result<SpecifiedValue, ()> {
 }
 
 /// https://drafts.csswg.org/css-syntax-3/#typedef-declaration-value
-pub fn parse_declaration_value(input: &mut Parser, references: &mut Option<HashSet<Name>>)
+pub fn parse_declaration_value(input: &mut Parser,
+                               references: &mut Option<HashSet<Name>>)
                                -> Result<(TokenSerializationType, TokenSerializationType), ()> {
-    input.parse_until_before(Delimiter::Bang | Delimiter::Semicolon, |input| {
+    input.parse_until_before(Delimiter::Bang | Delimiter::Semicolon,
+                             |input| {
         // Need at least one token
-        let start_position = input.position();
-        try!(input.next_including_whitespace());
-        input.reset(start_position);
+                                 let start_position = input.position();
+                                 try!(input.next_including_whitespace());
+                                 input.reset(start_position);
 
-        parse_declaration_value_block(input, references)
-    })
+                                 parse_declaration_value_block(input, references)
+                             })
 }
 
 /// Like parse_declaration_value,
 /// but accept `!` and `;` since they are only invalid at the top level
-fn parse_declaration_value_block(input: &mut Parser, references: &mut Option<HashSet<Name>>)
-                                 -> Result<(TokenSerializationType, TokenSerializationType), ()> {
+fn parse_declaration_value_block
+                                 (input: &mut Parser,
+                                  references: &mut Option<HashSet<Name>>)
+                                  -> Result<(TokenSerializationType, TokenSerializationType), ()> {
     let mut first_token_type = TokenSerializationType::nothing();
     let mut last_token_type = TokenSerializationType::nothing();
     while let Ok(token) = input.next_including_whitespace_and_comments() {
@@ -141,9 +157,7 @@ fn parse_declaration_value_block(input: &mut Parser, references: &mut Option<Has
             }
 
             Token::Function(ref name) if name.eq_ignore_ascii_case("var") => {
-                try!(input.parse_nested_block(|input| {
-                    parse_var_function(input, references)
-                }));
+                try!(input.parse_nested_block(|input| parse_var_function(input, references)));
             }
 
             Token::Function(_) |
@@ -162,7 +176,8 @@ fn parse_declaration_value_block(input: &mut Parser, references: &mut Option<Has
 }
 
 // If the var function is valid, return Ok((custom_property_name, fallback))
-fn parse_var_function<'i, 't>(input: &mut Parser<'i, 't>, references: &mut Option<HashSet<Name>>)
+fn parse_var_function<'i, 't>(input: &mut Parser<'i, 't>,
+                              references: &mut Option<HashSet<Name>>)
                               -> Result<(), ()> {
     let name = try!(input.expect_ident());
     let name = try!(parse_name(&name));
@@ -188,14 +203,17 @@ pub fn cascade<'a>(custom_properties: &mut Option<HashMap<&'a Name, BorrowedSpec
             Some(ref mut map) => map,
             None => {
                 *custom_properties = Some(match *inherited {
-                    Some(ref inherited) => inherited.iter().map(|(key, inherited_value)| {
-                        (key, BorrowedSpecifiedValue {
+                    Some(ref inherited) => inherited.iter()
+                                                    .map(|(key, inherited_value)| {
+                                                        (key,
+                                                         BorrowedSpecifiedValue {
                             css: &inherited_value.css,
                             first_token_type: inherited_value.first_token_type,
                             last_token_type: inherited_value.last_token_type,
                             references: None
                         })
-                    }).collect(),
+                                                    })
+                                                    .collect(),
                     None => HashMap::new(),
                 });
                 custom_properties.as_mut().unwrap()
@@ -203,13 +221,14 @@ pub fn cascade<'a>(custom_properties: &mut Option<HashMap<&'a Name, BorrowedSpec
         };
         match *specified_value {
             DeclaredValue::Value(ref specified_value) => {
-                map.insert(name, BorrowedSpecifiedValue {
-                    css: &specified_value.css,
-                    first_token_type: specified_value.first_token_type,
-                    last_token_type: specified_value.last_token_type,
-                    references: Some(&specified_value.references),
-                });
-            },
+                map.insert(name,
+                           BorrowedSpecifiedValue {
+                               css: &specified_value.css,
+                               first_token_type: specified_value.first_token_type,
+                               last_token_type: specified_value.last_token_type,
+                               references: Some(&specified_value.references),
+                           });
+            }
             DeclaredValue::WithVariables { .. } => unreachable!(),
             DeclaredValue::Initial => {
                 map.remove(&name);
@@ -282,9 +301,13 @@ fn substitute_all(specified_values_map: HashMap<&Name, BorrowedSpecifiedValue>,
     for (&name, value) in &specified_values_map {
         // If this value is invalid at computed-time it won’t be inserted in computed_values_map.
         // Nothing else to do.
-        let _ = substitute_one(
-            name, value, &specified_values_map, inherited, None,
-            &mut computed_values_map, &mut invalid);
+        let _ = substitute_one(name,
+                               value,
+                               &specified_values_map,
+                               inherited,
+                               None,
+                               &mut computed_values_map,
+                               &mut invalid);
     }
     computed_values_map
 }
@@ -315,17 +338,23 @@ fn substitute_one(name: &Name,
         let mut partial_computed_value = ComputedValue::empty();
         let mut input = Parser::new(&specified_value.css);
         let mut position = (input.position(), specified_value.first_token_type);
-        let result = substitute_block(
-            &mut input, &mut position, &mut partial_computed_value,
-            &mut |name, partial_computed_value| {
-                if let Some(other_specified_value) = specified_values_map.get(name) {
-                    substitute_one(name, other_specified_value, specified_values_map, inherited,
-                                   Some(partial_computed_value), computed_values_map, invalid)
-                } else {
-                    Err(())
-                }
-            }
-        );
+        let result = substitute_block(&mut input,
+                                      &mut position,
+                                      &mut partial_computed_value,
+                                      &mut |name, partial_computed_value| {
+                                          if let Some(other_specified_value) =
+                                                 specified_values_map.get(name) {
+                                              substitute_one(name,
+                                                             other_specified_value,
+                                                             specified_values_map,
+                                                             inherited,
+                                                             Some(partial_computed_value),
+                                                             computed_values_map,
+                                                             invalid)
+                                          } else {
+                                              Err(())
+                                          }
+                                      });
         if let Ok(last_token_type) = result {
             partial_computed_value.push_from(position, &input, last_token_type);
             partial_computed_value
@@ -369,14 +398,16 @@ fn substitute_block<F>(input: &mut Parser,
                        partial_computed_value: &mut ComputedValue,
                        substitute_one: &mut F)
                        -> Result<TokenSerializationType, ()>
-                       where F: FnMut(&Name, &mut ComputedValue) -> Result<TokenSerializationType, ()> {
+    where F: FnMut(&Name, &mut ComputedValue) -> Result<TokenSerializationType, ()>
+{
     let mut last_token_type = TokenSerializationType::nothing();
     let mut set_position_at_next_iteration = false;
     loop {
         let before_this_token = input.position();
         let next = input.next_including_whitespace_and_comments();
         if set_position_at_next_iteration {
-            *position = (before_this_token, match next {
+            *position = (before_this_token,
+                         match next {
                 Ok(ref token) => token.serialization_type(),
                 Err(()) => TokenSerializationType::nothing(),
             });
@@ -389,8 +420,9 @@ fn substitute_block<F>(input: &mut Parser,
         };
         match token {
             Token::Function(ref name) if name.eq_ignore_ascii_case("var") => {
-                partial_computed_value.push(
-                    input.slice(position.0..before_this_token), position.1, last_token_type);
+                partial_computed_value.push(input.slice(position.0..before_this_token),
+                                            position.1,
+                                            last_token_type);
                 try!(input.parse_nested_block(|input| {
                     // parse_var_function() ensures neither .unwrap() will fail.
                     let name = input.expect_ident().unwrap();
@@ -406,13 +438,14 @@ fn substitute_block<F>(input: &mut Parser,
                         try!(input.expect_comma());
                         let position = input.position();
                         let first_token_type = input.next_including_whitespace_and_comments()
-                            // parse_var_function() ensures that .unwrap() will not fail.
-                            .unwrap()
-                            .serialization_type();
+                                                    .unwrap()
+                                                    .serialization_type();
                         input.reset(position);
                         let mut position = (position, first_token_type);
-                        last_token_type = try!(substitute_block(
-                            input, &mut position, partial_computed_value, substitute_one));
+                        last_token_type = try!(substitute_block(input,
+                                                                &mut position,
+                                                                partial_computed_value,
+                                                                substitute_one));
                         partial_computed_value.push_from(position, input, last_token_type);
                     }
                     Ok(())
@@ -431,7 +464,7 @@ fn substitute_block<F>(input: &mut Parser,
                 last_token_type = Token::CloseParenthesis.serialization_type();
             }
 
-            _ => last_token_type = token.serialization_type()
+            _ => last_token_type = token.serialization_type(),
         }
     }
     // FIXME: deal with things being implicitly closed at the end of the input. E.g.
@@ -445,22 +478,28 @@ fn substitute_block<F>(input: &mut Parser,
 
 /// Replace `var()` functions for a non-custom property.
 /// Return `Err(())` for invalid at computed time.
-pub fn substitute(input: &str, first_token_type: TokenSerializationType,
+pub fn substitute(input: &str,
+                  first_token_type: TokenSerializationType,
                   computed_values_map: &Option<Arc<HashMap<Name, ComputedValue>>>)
                   -> Result<String, ()> {
     let mut substituted = ComputedValue::empty();
     let mut input = Parser::new(input);
     let mut position = (input.position(), first_token_type);
-    let last_token_type = try!(substitute_block(
-        &mut input, &mut position, &mut substituted, &mut |name, substituted| {
-            if let Some(value) = computed_values_map.as_ref().and_then(|map| map.get(name)) {
-                substituted.push_variable(value);
-                Ok(value.last_token_type)
-            } else {
-                Err(())
-            }
-        }
-    ));
+    let last_token_type = try!(substitute_block(&mut input,
+                                                &mut position,
+                                                &mut substituted,
+                                                &mut |name, substituted| {
+                                                    if let Some(value) =
+                                                           computed_values_map.as_ref()
+                                                                              .and_then(|map| {
+                                                                                  map.get(name)
+                                                                              }) {
+                                                        substituted.push_variable(value);
+                                                        Ok(value.last_token_type)
+                                                    } else {
+                                                        Err(())
+                                                    }
+                                                }));
     substituted.push_from(position, &input, last_token_type);
     Ok(substituted.css)
 }

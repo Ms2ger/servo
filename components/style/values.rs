@@ -75,7 +75,9 @@ pub mod specified {
     }
 
     impl ToCss for CSSColor {
-        fn to_css<W>(&self, dest: &mut W) -> fmt::Result where W: fmt::Write {
+        fn to_css<W>(&self, dest: &mut W) -> fmt::Result
+            where W: fmt::Write
+        {
             match self.authored {
                 Some(ref s) => dest.write_str(s),
                 None => self.parsed.to_css(dest),
@@ -90,7 +92,9 @@ pub mod specified {
     }
 
     impl ToCss for CSSRGBA {
-        fn to_css<W>(&self, dest: &mut W) -> fmt::Result where W: fmt::Write {
+        fn to_css<W>(&self, dest: &mut W) -> fmt::Result
+            where W: fmt::Write
+        {
             match self.authored {
                 Some(ref s) => dest.write_str(s),
                 None => self.parsed.to_css(dest),
@@ -103,34 +107,32 @@ pub mod specified {
         Em(CSSFloat),
         Ex(CSSFloat),
         Ch(CSSFloat),
-        Rem(CSSFloat)
+        Rem(CSSFloat),
     }
 
     impl ToCss for FontRelativeLength {
-        fn to_css<W>(&self, dest: &mut W) -> fmt::Result where W: fmt::Write {
+        fn to_css<W>(&self, dest: &mut W) -> fmt::Result
+            where W: fmt::Write
+        {
             match *self {
                 FontRelativeLength::Em(length) => write!(dest, "{}em", length),
                 FontRelativeLength::Ex(length) => write!(dest, "{}ex", length),
                 FontRelativeLength::Ch(length) => write!(dest, "{}ch", length),
-                FontRelativeLength::Rem(length) => write!(dest, "{}rem", length)
+                FontRelativeLength::Rem(length) => write!(dest, "{}rem", length),
             }
         }
     }
 
     impl FontRelativeLength {
-        pub fn to_computed_value(&self,
-                                 reference_font_size: Au,
-                                 root_font_size: Au)
-                                 -> Au
-        {
+        pub fn to_computed_value(&self, reference_font_size: Au, root_font_size: Au) -> Au {
             match *self {
                 FontRelativeLength::Em(length) => reference_font_size.scale_by(length),
                 FontRelativeLength::Ex(length) | FontRelativeLength::Ch(length) => {
                     // https://github.com/servo/servo/issues/7462
                     let em_factor = 0.5;
                     reference_font_size.scale_by(length * em_factor)
-                },
-                FontRelativeLength::Rem(length) => root_font_size.scale_by(length)
+                }
+                FontRelativeLength::Rem(length) => root_font_size.scale_by(length),
             }
         }
     }
@@ -140,16 +142,18 @@ pub mod specified {
         Vw(CSSFloat),
         Vh(CSSFloat),
         Vmin(CSSFloat),
-        Vmax(CSSFloat)
+        Vmax(CSSFloat),
     }
 
     impl ToCss for ViewportPercentageLength {
-        fn to_css<W>(&self, dest: &mut W) -> fmt::Result where W: fmt::Write {
+        fn to_css<W>(&self, dest: &mut W) -> fmt::Result
+            where W: fmt::Write
+        {
             match *self {
                 ViewportPercentageLength::Vw(length) => write!(dest, "{}vw", length),
                 ViewportPercentageLength::Vh(length) => write!(dest, "{}vh", length),
                 ViewportPercentageLength::Vmin(length) => write!(dest, "{}vmin", length),
-                ViewportPercentageLength::Vmax(length) => write!(dest, "{}vmax", length)
+                ViewportPercentageLength::Vmax(length) => write!(dest, "{}vmax", length),
             }
         }
     }
@@ -163,10 +167,8 @@ pub mod specified {
             }
 
             let value = match *self {
-                ViewportPercentageLength::Vw(length) =>
-                    length * to_unit!(viewport_size.width),
-                ViewportPercentageLength::Vh(length) =>
-                    length * to_unit!(viewport_size.height),
+                ViewportPercentageLength::Vw(length) => length * to_unit!(viewport_size.width),
+                ViewportPercentageLength::Vh(length) => length * to_unit!(viewport_size.height),
                 ViewportPercentageLength::Vmin(length) =>
                     length * to_unit!(cmp::min(viewport_size.width, viewport_size.height)),
                 ViewportPercentageLength::Vmax(length) =>
@@ -205,13 +207,15 @@ pub mod specified {
     }
 
     impl ToCss for Length {
-        fn to_css<W>(&self, dest: &mut W) -> fmt::Result where W: fmt::Write {
+        fn to_css<W>(&self, dest: &mut W) -> fmt::Result
+            where W: fmt::Write
+        {
             match *self {
                 Length::Absolute(length) => write!(dest, "{}px", length.to_f32_px()),
                 Length::FontRelative(length) => length.to_css(dest),
                 Length::ViewportPercentage(length) => length.to_css(dest),
-                Length::ServoCharacterWidth(_)
-                => panic!("internal CSS values should never be serialized"),
+                Length::ServoCharacterWidth(_) =>
+                    panic!("internal CSS values should never be serialized"),
             }
         }
     }
@@ -270,9 +274,8 @@ pub mod specified {
             match try!(input.next()) {
                 Token::Dimension(ref value, ref unit) if context.is_ok(value.value) =>
                     Length::parse_dimension(value.value, unit),
-                Token::Number(ref value) if value.value == 0. =>
-                    Ok(Length::Absolute(Au(0))),
-                _ => Err(())
+                Token::Number(ref value) if value.value == 0. => Ok(Length::Absolute(Au(0))),
+                _ => Err(()),
             }
         }
         pub fn parse(input: &mut Parser) -> Result<Length, ()> {
@@ -315,7 +318,7 @@ pub mod specified {
 
     #[derive(Clone, Debug)]
     struct CalcProductNode {
-        values: Vec<CalcValueNode>
+        values: Vec<CalcValueNode>,
     }
 
     #[derive(Clone, Debug)]
@@ -335,9 +338,7 @@ pub mod specified {
 
         #[inline]
         fn mul(self, scalar: CSSFloat) -> SimplifiedSumNode {
-            SimplifiedSumNode {
-                values: self.values.iter().map(|p| p * scalar).collect()
-            }
+            SimplifiedSumNode { values: self.values.iter().map(|p| p * scalar).collect() }
         }
     }
 
@@ -394,7 +395,7 @@ pub mod specified {
                         products.push(right);
                     }
                     Ok(_) => return Err(()),
-                    _ => break
+                    _ => break,
                 }
             }
 
@@ -436,13 +437,12 @@ pub mod specified {
                 Ok(Token::Number(ref value)) => Ok(CalcValueNode::Number(value.value)),
                 Ok(Token::Dimension(ref value, ref unit)) =>
                     Length::parse_dimension(value.value, unit).map(CalcValueNode::Length),
-                Ok(Token::Percentage(ref value)) =>
-                    Ok(CalcValueNode::Percentage(value.unit_value)),
+                Ok(Token::Percentage(ref value)) => Ok(CalcValueNode::Percentage(value.unit_value)),
                 Ok(Token::ParenthesisBlock) => {
                     let result = try!(input.parse_nested_block(Calc::parse_sum));
                     Ok(CalcValueNode::Sum(box result))
-                },
-                _ => Err(())
+                }
+                _ => Err(()),
             }
         }
 
@@ -450,7 +450,7 @@ pub mod specified {
             match *node {
                 CalcValueNode::Number(number) => Some(number),
                 CalcValueNode::Sum(box ref sum) => Calc::simplify_sum_to_number(sum),
-                _ => None
+                _ => None,
             }
         }
 
@@ -459,7 +459,7 @@ pub mod specified {
             for ref product in &node.products {
                 match Calc::simplify_product_to_number(product) {
                     Some(number) => sum += number,
-                    _ => return None
+                    _ => return None,
                 }
             }
             Some(sum)
@@ -470,7 +470,7 @@ pub mod specified {
             for ref value in &node.values {
                 match Calc::simplify_value_to_number(value) {
                     Some(number) => product *= number,
-                    _ => return None
+                    _ => return None,
                 }
             }
             Some(product)
@@ -488,7 +488,7 @@ pub mod specified {
             if simplified.len() == 1 {
                 Ok(simplified[0].clone())
             } else {
-                Ok(SimplifiedValueNode::Sum(box SimplifiedSumNode { values: simplified } ))
+                Ok(SimplifiedValueNode::Sum(box SimplifiedSumNode { values: simplified }))
             }
         }
 
@@ -504,16 +504,17 @@ pub mod specified {
                                 try!(Calc::simplify_products_in_sum(sum)),
                             CalcValueNode::Length(l) => SimplifiedValueNode::Length(l),
                             CalcValueNode::Percentage(p) => SimplifiedValueNode::Percentage(p),
-                            _ => unreachable!("Numbers should have been handled by simplify_value_to_nubmer")
+                            _ => unreachable!("Numbers should have been handled by \
+                                               simplify_value_to_nubmer"),
                         })
-                    },
+                    }
                     _ => return Err(()),
                 }
             }
 
             match node_with_unit {
                 None => Ok(SimplifiedValueNode::Number(multiplier)),
-                Some(ref value) => Ok(value * multiplier)
+                Some(ref value) => Ok(value * multiplier),
             }
         }
 
@@ -546,30 +547,22 @@ pub mod specified {
                         percentage = Some(percentage.unwrap_or(0.) + p),
                     SimplifiedValueNode::Length(Length::Absolute(Au(au))) =>
                         absolute = Some(absolute.unwrap_or(0) + au),
-                    SimplifiedValueNode::Length(Length::ViewportPercentage(v)) =>
-                        match v {
-                            ViewportPercentageLength::Vw(val) =>
-                                vw = Some(vw.unwrap_or(0.) + val),
-                            ViewportPercentageLength::Vh(val) =>
-                                vh = Some(vh.unwrap_or(0.) + val),
-                            ViewportPercentageLength::Vmin(val) =>
-                                vmin = Some(vmin.unwrap_or(0.) + val),
-                            ViewportPercentageLength::Vmax(val) =>
-                                vmax = Some(vmax.unwrap_or(0.) + val),
-                        },
-                    SimplifiedValueNode::Length(Length::FontRelative(f)) =>
-                        match f {
-                            FontRelativeLength::Em(val) =>
-                                em = Some(em.unwrap_or(0.) + val),
-                            FontRelativeLength::Ex(val) =>
-                                ex = Some(ex.unwrap_or(0.) + val),
-                            FontRelativeLength::Ch(val) =>
-                                ch = Some(ch.unwrap_or(0.) + val),
-                            FontRelativeLength::Rem(val) =>
-                                rem = Some(rem.unwrap_or(0.) + val),
-                        },
+                    SimplifiedValueNode::Length(Length::ViewportPercentage(v)) => match v {
+                        ViewportPercentageLength::Vw(val) => vw = Some(vw.unwrap_or(0.) + val),
+                        ViewportPercentageLength::Vh(val) => vh = Some(vh.unwrap_or(0.) + val),
+                        ViewportPercentageLength::Vmin(val) =>
+                            vmin = Some(vmin.unwrap_or(0.) + val),
+                        ViewportPercentageLength::Vmax(val) =>
+                            vmax = Some(vmax.unwrap_or(0.) + val),
+                    },
+                    SimplifiedValueNode::Length(Length::FontRelative(f)) => match f {
+                        FontRelativeLength::Em(val) => em = Some(em.unwrap_or(0.) + val),
+                        FontRelativeLength::Ex(val) => ex = Some(ex.unwrap_or(0.) + val),
+                        FontRelativeLength::Ch(val) => ch = Some(ch.unwrap_or(0.) + val),
+                        FontRelativeLength::Rem(val) => rem = Some(rem.unwrap_or(0.) + val),
+                    },
                     SimplifiedValueNode::Number(val) => number = Some(number.unwrap_or(0.) + val),
-                    _ => unreachable!()
+                    _ => unreachable!(),
                 }
             }
 
@@ -590,7 +583,9 @@ pub mod specified {
 
     impl ToCss for Calc {
         #[allow(unused_assignments)]
-        fn to_css<W>(&self, dest: &mut W) -> fmt::Result where W: fmt::Write {
+        fn to_css<W>(&self, dest: &mut W) -> fmt::Result
+            where W: fmt::Write
+        {
 
             macro_rules! count {
                 ( $( $val:ident ),* ) => {
@@ -628,23 +623,25 @@ pub mod specified {
             assert!(count > 0);
 
             if count > 1 {
-               try!(write!(dest, "calc("));
+                try!(write!(dest, "calc("));
             }
 
             serialize!(ch, em, ex, absolute, rem, vh, vmax, vmin, vw, percentage);
 
             if count > 1 {
-               try!(write!(dest, ")"));
+                try!(write!(dest, ")"));
             }
             Ok(())
-         }
+        }
     }
 
     #[derive(Clone, PartialEq, Copy, Debug, HeapSizeOf)]
     pub struct Percentage(pub CSSFloat); // [0 .. 100%] maps to [0.0 .. 1.0]
 
     impl ToCss for Percentage {
-        fn to_css<W>(&self, dest: &mut W) -> fmt::Result where W: fmt::Write {
+        fn to_css<W>(&self, dest: &mut W) -> fmt::Result
+            where W: fmt::Write
+        {
             write!(dest, "{}%", self.0 * 100.)
         }
     }
@@ -657,7 +654,9 @@ pub mod specified {
     }
 
     impl ToCss for LengthOrPercentage {
-        fn to_css<W>(&self, dest: &mut W) -> fmt::Result where W: fmt::Write {
+        fn to_css<W>(&self, dest: &mut W) -> fmt::Result
+            where W: fmt::Write
+        {
             match *self {
                 LengthOrPercentage::Length(length) => length.to_css(dest),
                 LengthOrPercentage::Percentage(percentage) => percentage.to_css(dest),
@@ -670,9 +669,9 @@ pub mod specified {
             LengthOrPercentage::Length(Length::Absolute(Au(0)))
         }
 
-        fn parse_internal(input: &mut Parser, context: &AllowedNumericType)
-                          -> Result<LengthOrPercentage, ()>
-        {
+        fn parse_internal(input: &mut Parser,
+                          context: &AllowedNumericType)
+                          -> Result<LengthOrPercentage, ()> {
             match try!(input.next()) {
                 Token::Dimension(ref value, ref unit) if context.is_ok(value.value) =>
                     Length::parse_dimension(value.value, unit).map(LengthOrPercentage::Length),
@@ -683,8 +682,8 @@ pub mod specified {
                 Token::Function(ref name) if name.eq_ignore_ascii_case("calc") => {
                     let calc = try!(input.parse_nested_block(Calc::parse));
                     Ok(LengthOrPercentage::Calc(calc))
-                },
-                _ => Err(())
+                }
+                _ => Err(()),
             }
         }
         #[inline]
@@ -706,7 +705,9 @@ pub mod specified {
     }
 
     impl ToCss for LengthOrPercentageOrAuto {
-        fn to_css<W>(&self, dest: &mut W) -> fmt::Result where W: fmt::Write {
+        fn to_css<W>(&self, dest: &mut W) -> fmt::Result
+            where W: fmt::Write
+        {
             match *self {
                 LengthOrPercentageOrAuto::Length(length) => length.to_css(dest),
                 LengthOrPercentageOrAuto::Percentage(percentage) => percentage.to_css(dest),
@@ -717,9 +718,9 @@ pub mod specified {
     }
 
     impl LengthOrPercentageOrAuto {
-        fn parse_internal(input: &mut Parser, context: &AllowedNumericType)
-                          -> Result<LengthOrPercentageOrAuto, ()>
-        {
+        fn parse_internal(input: &mut Parser,
+                          context: &AllowedNumericType)
+                          -> Result<LengthOrPercentageOrAuto, ()> {
             match try!(input.next()) {
                 Token::Dimension(ref value, ref unit) if context.is_ok(value.value) =>
                     Length::parse_dimension(value.value, unit).map(LengthOrPercentageOrAuto::Length),
@@ -732,8 +733,8 @@ pub mod specified {
                 Token::Function(ref name) if name.eq_ignore_ascii_case("calc") => {
                     let calc = try!(input.parse_nested_block(Calc::parse));
                     Ok(LengthOrPercentageOrAuto::Calc(calc))
-                },
-                _ => Err(())
+                }
+                _ => Err(()),
             }
         }
         #[inline]
@@ -754,7 +755,9 @@ pub mod specified {
     }
 
     impl ToCss for LengthOrPercentageOrNone {
-        fn to_css<W>(&self, dest: &mut W) -> fmt::Result where W: fmt::Write {
+        fn to_css<W>(&self, dest: &mut W) -> fmt::Result
+            where W: fmt::Write
+        {
             match *self {
                 LengthOrPercentageOrNone::Length(length) => length.to_css(dest),
                 LengthOrPercentageOrNone::Percentage(percentage) => percentage.to_css(dest),
@@ -763,9 +766,9 @@ pub mod specified {
         }
     }
     impl LengthOrPercentageOrNone {
-        fn parse_internal(input: &mut Parser, context: &AllowedNumericType)
-                          -> Result<LengthOrPercentageOrNone, ()>
-        {
+        fn parse_internal(input: &mut Parser,
+                          context: &AllowedNumericType)
+                          -> Result<LengthOrPercentageOrNone, ()> {
             match try!(input.next()) {
                 Token::Dimension(ref value, ref unit) if context.is_ok(value.value) =>
                     Length::parse_dimension(value.value, unit).map(LengthOrPercentageOrNone::Length),
@@ -775,7 +778,7 @@ pub mod specified {
                     Ok(LengthOrPercentageOrNone::Length(Length::Absolute(Au(0)))),
                 Token::Ident(ref value) if value.eq_ignore_ascii_case("none") =>
                     Ok(LengthOrPercentageOrNone::None),
-                _ => Err(())
+                _ => Err(()),
             }
         }
         #[inline]
@@ -795,7 +798,9 @@ pub mod specified {
     }
 
     impl ToCss for LengthOrNone {
-        fn to_css<W>(&self, dest: &mut W) -> fmt::Result where W: fmt::Write {
+        fn to_css<W>(&self, dest: &mut W) -> fmt::Result
+            where W: fmt::Write
+        {
             match *self {
                 LengthOrNone::Length(length) => length.to_css(dest),
                 LengthOrNone::None => dest.write_str("none"),
@@ -803,9 +808,9 @@ pub mod specified {
         }
     }
     impl LengthOrNone {
-        fn parse_internal(input: &mut Parser, context: &AllowedNumericType)
-                          -> Result<LengthOrNone, ()>
-        {
+        fn parse_internal(input: &mut Parser,
+                          context: &AllowedNumericType)
+                          -> Result<LengthOrNone, ()> {
             match try!(input.next()) {
                 Token::Dimension(ref value, ref unit) if context.is_ok(value.value) =>
                     Length::parse_dimension(value.value, unit).map(LengthOrNone::Length),
@@ -813,7 +818,7 @@ pub mod specified {
                     Ok(LengthOrNone::Length(Length::Absolute(Au(0)))),
                 Token::Ident(ref value) if value.eq_ignore_ascii_case("none") =>
                     Ok(LengthOrNone::None),
-                _ => Err(())
+                _ => Err(()),
             }
         }
         #[inline]
@@ -832,7 +837,7 @@ pub mod specified {
     impl BorderRadiusSize {
         pub fn zero() -> BorderRadiusSize {
             let zero = LengthOrPercentage::Length(Length::Absolute(Au(0)));
-                BorderRadiusSize(Size2D::new(zero, zero))
+            BorderRadiusSize(Size2D::new(zero, zero))
         }
 
         pub fn new(width: LengthOrPercentage, height: LengthOrPercentage) -> BorderRadiusSize {
@@ -852,7 +857,9 @@ pub mod specified {
     }
 
     impl ToCss for BorderRadiusSize {
-        fn to_css<W>(&self, dest: &mut W) -> fmt::Result where W: fmt::Write {
+        fn to_css<W>(&self, dest: &mut W) -> fmt::Result
+            where W: fmt::Write
+        {
             let BorderRadiusSize(size) = *self;
             try!(size.width.to_css(dest));
             try!(dest.write_str(" "));
@@ -875,8 +882,7 @@ pub mod specified {
         pub fn parse(input: &mut Parser) -> Result<PositionComponent, ()> {
             match try!(input.next()) {
                 Token::Dimension(ref value, ref unit) => {
-                    Length::parse_dimension(value.value, unit)
-                    .map(PositionComponent::Length)
+                    Length::parse_dimension(value.value, unit).map(PositionComponent::Length)
                 }
                 Token::Percentage(ref value) => {
                     Ok(PositionComponent::Percentage(Percentage(value.unit_value)))
@@ -894,7 +900,7 @@ pub mod specified {
                         _ => Err(())
                     }
                 }
-                _ => Err(())
+                _ => Err(()),
             }
         }
         #[inline]
@@ -915,7 +921,9 @@ pub mod specified {
     pub struct Angle(pub CSSFloat);
 
     impl ToCss for Angle {
-        fn to_css<W>(&self, dest: &mut W) -> fmt::Result where W: fmt::Write {
+        fn to_css<W>(&self, dest: &mut W) -> fmt::Result
+            where W: fmt::Write
+        {
             let Angle(value) = *self;
             write!(dest, "{}rad", value)
         }
@@ -946,7 +954,7 @@ pub mod specified {
                     }
                 }
                 Token::Number(ref value) if value.value == 0. => Ok(Angle(0.)),
-                _ => Err(())
+                _ => Err(()),
             }
         }
     }
@@ -959,7 +967,9 @@ pub mod specified {
     }
 
     impl ToCss for Image {
-        fn to_css<W>(&self, dest: &mut W) -> fmt::Result where W: fmt::Write {
+        fn to_css<W>(&self, dest: &mut W) -> fmt::Result
+            where W: fmt::Write
+        {
             match *self {
                 Image::Url(ref url) => {
                     try!(dest.write_str("url(\""));
@@ -967,7 +977,7 @@ pub mod specified {
                     try!(dest.write_str("\")"));
                     Ok(())
                 }
-                Image::LinearGradient(ref gradient) => gradient.to_css(dest)
+                Image::LinearGradient(ref gradient) => gradient.to_css(dest),
             }
         }
     }
@@ -987,7 +997,7 @@ pub mod specified {
                         _ => Err(())
                     }
                 }
-                _ => Err(())
+                _ => Err(()),
             }
         }
     }
@@ -1003,7 +1013,9 @@ pub mod specified {
     }
 
     impl ToCss for LinearGradient {
-        fn to_css<W>(&self, dest: &mut W) -> fmt::Result where W: fmt::Write {
+        fn to_css<W>(&self, dest: &mut W) -> fmt::Result
+            where W: fmt::Write
+        {
             try!(dest.write_str("linear-gradient("));
             try!(self.angle_or_corner.to_css(dest));
             for stop in &self.stops {
@@ -1023,7 +1035,9 @@ pub mod specified {
     }
 
     impl ToCss for AngleOrCorner {
-        fn to_css<W>(&self, dest: &mut W) -> fmt::Result where W: fmt::Write {
+        fn to_css<W>(&self, dest: &mut W) -> fmt::Result
+            where W: fmt::Write
+        {
             match *self {
                 AngleOrCorner::Angle(angle) => angle.to_css(dest),
                 AngleOrCorner::Corner(horizontal, vertical) => {
@@ -1049,7 +1063,9 @@ pub mod specified {
     }
 
     impl ToCss for ColorStop {
-        fn to_css<W>(&self, dest: &mut W) -> fmt::Result where W: fmt::Write {
+        fn to_css<W>(&self, dest: &mut W) -> fmt::Result
+            where W: fmt::Write
+        {
             try!(self.color.to_css(dest));
             if let Some(position) = self.position {
                 try!(dest.write_str(" "));
@@ -1073,27 +1089,29 @@ pub mod specified {
         /// Parses a linear gradient from the given arguments.
         pub fn parse_function(input: &mut Parser) -> Result<LinearGradient, ()> {
             let angle_or_corner = if input.try(|input| input.expect_ident_matching("to")).is_ok() {
-                let (horizontal, vertical) =
-                if let Ok(value) = input.try(HorizontalDirection::parse) {
-                    (Some(value), input.try(VerticalDirection::parse).ok())
+                let (horizontal, vertical) = if let Ok(value) =
+                                                    input.try(HorizontalDirection::parse) {
+                    (Some(value),
+                     input.try(VerticalDirection::parse).ok())
                 } else {
                     let value = try!(VerticalDirection::parse(input));
-                    (input.try(HorizontalDirection::parse).ok(), Some(value))
+                    (input.try(HorizontalDirection::parse).ok(),
+                     Some(value))
                 };
                 try!(input.expect_comma());
                 match (horizontal, vertical) {
                     (None, Some(VerticalDirection::Top)) => {
                         AngleOrCorner::Angle(Angle(0.0))
-                    },
+                    }
                     (Some(HorizontalDirection::Right), None) => {
                         AngleOrCorner::Angle(Angle(PI * 0.5))
-                    },
+                    }
                     (None, Some(VerticalDirection::Bottom)) => {
                         AngleOrCorner::Angle(Angle(PI))
-                    },
+                    }
                     (Some(HorizontalDirection::Left), None) => {
                         AngleOrCorner::Angle(Angle(PI * 1.5))
-                    },
+                    }
                     (Some(horizontal), Some(vertical)) => {
                         AngleOrCorner::Corner(horizontal, vertical)
                     }
@@ -1119,7 +1137,7 @@ pub mod specified {
 
     pub fn parse_border_radius(input: &mut Parser) -> Result<BorderRadiusSize, ()> {
         input.try(BorderRadiusSize::parse).or_else(|()| {
-                match_ignore_ascii_case! { try!(input.expect_ident()),
+            match_ignore_ascii_case! { try!(input.expect_ident()),
                                            "thin" =>
                                            Ok(BorderRadiusSize::circle(
                                                LengthOrPercentage::Length(Length::from_px(1.)))),
@@ -1131,7 +1149,7 @@ pub mod specified {
                                                LengthOrPercentage::Length(Length::from_px(5.))))
                                            _ => Err(())
                 }
-            })
+        })
     }
 
     pub fn parse_border_width(input: &mut Parser) -> Result<Length, ()> {
@@ -1202,7 +1220,9 @@ pub mod specified {
     }
 
     impl ToCss for Time {
-        fn to_css<W>(&self, dest: &mut W) -> fmt::Result where W: fmt::Write {
+        fn to_css<W>(&self, dest: &mut W) -> fmt::Result
+            where W: fmt::Write
+        {
             write!(dest, "{}ms", self.0)
         }
     }
@@ -1284,7 +1304,7 @@ pub mod computed {
                 specified::Length::ViewportPercentage(length) =>
                     length.to_computed_value(context.viewport_size),
                 specified::Length::ServoCharacterWidth(length) =>
-                    length.to_computed_value(context.font_size)
+                    length.to_computed_value(context.font_size),
             }
         }
     }
@@ -1353,12 +1373,14 @@ pub mod computed {
     }
 
     impl ::cssparser::ToCss for Calc {
-        fn to_css<W>(&self, dest: &mut W) -> fmt::Result where W: fmt::Write {
+        fn to_css<W>(&self, dest: &mut W) -> fmt::Result
+            where W: fmt::Write
+        {
             match (self.length, self.percentage) {
                 (None, Some(p)) => write!(dest, "{}%", p * 100.),
                 (Some(l), None) => write!(dest, "{}px", Au::to_px(l)),
                 (Some(l), Some(p)) => write!(dest, "calc({}px + {}%)", Au::to_px(l), p * 100.),
-                _ => unreachable!()
+                _ => unreachable!(),
             }
         }
     }
@@ -1376,17 +1398,20 @@ pub mod computed {
             for val in &[self.vw, self.vh, self.vmin, self.vmax] {
                 if let Some(val) = *val {
                     length = Some(length.unwrap_or(Au(0)) +
-                        val.to_computed_value(context.viewport_size));
+                                  val.to_computed_value(context.viewport_size));
                 }
             }
             for val in &[self.ch, self.em, self.ex, self.rem] {
                 if let Some(val) = *val {
                     length = Some(length.unwrap_or(Au(0)) +
-                        val.to_computed_value(context.font_size, context.root_font_size));
+                                  val.to_computed_value(context.font_size, context.root_font_size));
                 }
             }
 
-            Calc { length: length, percentage: self.percentage.map(|p| p.0) }
+            Calc {
+                length: length,
+                percentage: self.percentage.map(|p| p.0),
+            }
         }
     }
 
@@ -1396,7 +1421,8 @@ pub mod computed {
 
     impl BorderRadiusSize {
         pub fn zero() -> BorderRadiusSize {
-            BorderRadiusSize(Size2D::new(LengthOrPercentage::Length(Au(0)), LengthOrPercentage::Length(Au(0))))
+            BorderRadiusSize(Size2D::new(LengthOrPercentage::Length(Au(0)),
+                                         LengthOrPercentage::Length(Au(0))))
         }
     }
 
@@ -1413,7 +1439,9 @@ pub mod computed {
     }
 
     impl ::cssparser::ToCss for BorderRadiusSize {
-        fn to_css<W>(&self, dest: &mut W) -> fmt::Result where W: fmt::Write {
+        fn to_css<W>(&self, dest: &mut W) -> fmt::Result
+            where W: fmt::Write
+        {
             let BorderRadiusSize(s) = *self;
             try!(s.width.to_css(dest));
             try!(dest.write_str("/"));
@@ -1463,11 +1491,13 @@ pub mod computed {
     }
 
     impl ::cssparser::ToCss for LengthOrPercentage {
-        fn to_css<W>(&self, dest: &mut W) -> fmt::Result where W: fmt::Write {
+        fn to_css<W>(&self, dest: &mut W) -> fmt::Result
+            where W: fmt::Write
+        {
             match *self {
                 LengthOrPercentage::Length(length) => length.to_css(dest),
-                LengthOrPercentage::Percentage(percentage)
-                => write!(dest, "{}%", percentage * 100.),
+                LengthOrPercentage::Percentage(percentage) =>
+                    write!(dest, "{}%", percentage * 100.),
                 LengthOrPercentage::Calc(calc) => calc.to_css(dest),
             }
         }
@@ -1484,7 +1514,8 @@ pub mod computed {
         fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
             match *self {
                 LengthOrPercentageOrAuto::Length(length) => write!(f, "{:?}", length),
-                LengthOrPercentageOrAuto::Percentage(percentage) => write!(f, "{}%", percentage * 100.),
+                LengthOrPercentageOrAuto::Percentage(percentage) =>
+                    write!(f, "{}%", percentage * 100.),
                 LengthOrPercentageOrAuto::Auto => write!(f, "auto"),
                 LengthOrPercentageOrAuto::Calc(calc) => write!(f, "{:?}", calc),
             }
@@ -1514,11 +1545,13 @@ pub mod computed {
     }
 
     impl ::cssparser::ToCss for LengthOrPercentageOrAuto {
-        fn to_css<W>(&self, dest: &mut W) -> fmt::Result where W: fmt::Write {
+        fn to_css<W>(&self, dest: &mut W) -> fmt::Result
+            where W: fmt::Write
+        {
             match *self {
                 LengthOrPercentageOrAuto::Length(length) => length.to_css(dest),
-                LengthOrPercentageOrAuto::Percentage(percentage)
-                => write!(dest, "{}%", percentage * 100.),
+                LengthOrPercentageOrAuto::Percentage(percentage) =>
+                    write!(dest, "{}%", percentage * 100.),
                 LengthOrPercentageOrAuto::Auto => dest.write_str("auto"),
                 LengthOrPercentageOrAuto::Calc(calc) => calc.to_css(dest),
             }
@@ -1535,7 +1568,8 @@ pub mod computed {
         fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
             match *self {
                 LengthOrPercentageOrNone::Length(length) => write!(f, "{:?}", length),
-                LengthOrPercentageOrNone::Percentage(percentage) => write!(f, "{}%", percentage * 100.),
+                LengthOrPercentageOrNone::Percentage(percentage) =>
+                    write!(f, "{}%", percentage * 100.),
                 LengthOrPercentageOrNone::None => write!(f, "none"),
             }
         }
@@ -1561,7 +1595,9 @@ pub mod computed {
     }
 
     impl ::cssparser::ToCss for LengthOrPercentageOrNone {
-        fn to_css<W>(&self, dest: &mut W) -> fmt::Result where W: fmt::Write {
+        fn to_css<W>(&self, dest: &mut W) -> fmt::Result
+            where W: fmt::Write
+        {
             match *self {
                 LengthOrPercentageOrNone::Length(length) => length.to_css(dest),
                 LengthOrPercentageOrNone::Percentage(percentage) =>
@@ -1602,7 +1638,9 @@ pub mod computed {
     }
 
     impl ::cssparser::ToCss for LengthOrNone {
-        fn to_css<W>(&self, dest: &mut W) -> fmt::Result where W: fmt::Write {
+        fn to_css<W>(&self, dest: &mut W) -> fmt::Result
+            where W: fmt::Write
+        {
             match *self {
                 LengthOrNone::Length(length) => length.to_css(dest),
                 LengthOrNone::None => dest.write_str("none"),
@@ -1652,7 +1690,9 @@ pub mod computed {
     }
 
     impl ::cssparser::ToCss for LinearGradient {
-        fn to_css<W>(&self, dest: &mut W) -> fmt::Result where W: fmt::Write {
+        fn to_css<W>(&self, dest: &mut W) -> fmt::Result
+            where W: fmt::Write
+        {
             try!(dest.write_str("linear-gradient("));
             try!(self.angle_or_corner.to_css(dest));
             for stop in &self.stops {
@@ -1686,7 +1726,9 @@ pub mod computed {
     }
 
     impl ::cssparser::ToCss for ColorStop {
-        fn to_css<W>(&self, dest: &mut W) -> fmt::Result where W: fmt::Write {
+        fn to_css<W>(&self, dest: &mut W) -> fmt::Result
+            where W: fmt::Write
+        {
             try!(self.color.to_css(dest));
             if let Some(position) = self.position {
                 try!(dest.write_str(" "));
@@ -1717,15 +1759,17 @@ pub mod computed {
             } = *self;
             LinearGradient {
                 angle_or_corner: angle_or_corner,
-                stops: stops.iter().map(|stop| {
-                    ColorStop {
-                        color: stop.color.parsed,
-                        position: match stop.position {
-                            None => None,
-                            Some(value) => Some(value.to_computed_value(context)),
-                        },
-                    }
-                }).collect()
+                stops: stops.iter()
+                            .map(|stop| {
+                                ColorStop {
+                                    color: stop.color.parsed,
+                                    position: match stop.position {
+                                        None => None,
+                                        Some(value) => Some(value.to_computed_value(context)),
+                                    },
+                                }
+                            })
+                            .collect(),
             }
         }
     }

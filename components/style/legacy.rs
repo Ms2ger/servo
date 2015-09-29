@@ -31,17 +31,22 @@ pub trait PresentationalHintSynthesis {
     /// `common_style_affecting_attributes` or `rare_style_affecting_attributes` as appropriate. If
     /// you don't, you risk strange random nondeterministic failures due to false positives in
     /// style sharing.
-    fn synthesize_presentational_hints_for_legacy_attributes<E, V>(
-        &self, element: &E, matching_rules_list: &mut V, shareable: &mut bool)
-            where E: Element + TElementAttributes,
-                  V: VecLike<DeclarationBlock<Vec<PropertyDeclaration>>>;
+    fn synthesize_presentational_hints_for_legacy_attributes<E, V>(&self,
+                                                                   element: &E,
+                                                                   matching_rules_list: &mut V,
+                                                                   shareable: &mut bool)
+        where E: Element + TElementAttributes,
+              V: VecLike<DeclarationBlock<Vec<PropertyDeclaration>>>;
 }
 
 impl PresentationalHintSynthesis for Stylist {
-    fn synthesize_presentational_hints_for_legacy_attributes<E, V>(
-        &self, element: &E, matching_rules_list: &mut V, shareable: &mut bool)
-             where E: Element + TElementAttributes,
-                   V: VecLike<DeclarationBlock<Vec<PropertyDeclaration>>> {
+    fn synthesize_presentational_hints_for_legacy_attributes<E, V>(&self,
+                                                                   element: &E,
+                                                                   matching_rules_list: &mut V,
+                                                                   shareable: &mut bool)
+        where E: Element + TElementAttributes,
+              V: VecLike<DeclarationBlock<Vec<PropertyDeclaration>>>
+    {
         let length = matching_rules_list.len();
         element.synthesize_presentational_hints_for_legacy_attributes(matching_rules_list);
         if matching_rules_list.len() != length {

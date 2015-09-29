@@ -29,29 +29,29 @@ pub enum ViewportDescriptor {
     MaxZoom(Zoom),
 
     UserZoom(UserZoom),
-    Orientation(Orientation)
+    Orientation(Orientation),
 }
 
 struct ViewportRuleParser<'a, 'b: 'a> {
-    context: &'a ParserContext<'b>
+    context: &'a ParserContext<'b>,
 }
 
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub struct ViewportDescriptorDeclaration {
     pub origin: Origin,
     pub descriptor: ViewportDescriptor,
-    pub important: bool
+    pub important: bool,
 }
 
 impl ViewportDescriptorDeclaration {
     pub fn new(origin: Origin,
                descriptor: ViewportDescriptor,
-               important: bool) -> ViewportDescriptorDeclaration
-    {
+               important: bool)
+               -> ViewportDescriptorDeclaration {
         ViewportDescriptorDeclaration {
             origin: origin,
             descriptor: descriptor,
-            important: important
+            important: important,
         }
     }
 }
@@ -60,7 +60,7 @@ fn parse_shorthand(input: &mut Parser) -> Result<[LengthOrPercentageOrAuto; 2], 
     let min = try!(LengthOrPercentageOrAuto::parse_non_negative(input));
     match input.try(|input| LengthOrPercentageOrAuto::parse_non_negative(input)) {
         Err(()) => Ok([min.clone(), min]),
-        Ok(max) => Ok([min, max])
+        Ok(max) => Ok([min, max]),
     }
 }
 
@@ -72,7 +72,10 @@ impl<'a, 'b> AtRuleParser for ViewportRuleParser<'a, 'b> {
 impl<'a, 'b> DeclarationParser for ViewportRuleParser<'a, 'b> {
     type Declaration = Vec<ViewportDescriptorDeclaration>;
 
-    fn parse_value(&self, name: &str, input: &mut Parser) -> Result<Vec<ViewportDescriptorDeclaration>, ()> {
+    fn parse_value(&self,
+                   name: &str,
+                   input: &mut Parser)
+                   -> Result<Vec<ViewportDescriptorDeclaration>, ()> {
         macro_rules! declaration {
             ($declaration:ident($parse:path)) => {
                 declaration!($declaration(value: try!($parse(input)),
@@ -104,27 +107,20 @@ impl<'a, 'b> DeclarationParser for ViewportRuleParser<'a, 'b> {
                 ok!(MinWidth(LengthOrPercentageOrAuto::parse_non_negative)),
             n if n.eq_ignore_ascii_case("max-width") =>
                 ok!(MaxWidth(LengthOrPercentageOrAuto::parse_non_negative)),
-            n if n.eq_ignore_ascii_case("width") =>
-                ok!(shorthand -> [MinWidth, MaxWidth]),
+            n if n.eq_ignore_ascii_case("width") => ok!(shorthand -> [MinWidth, MaxWidth]),
 
             n if n.eq_ignore_ascii_case("min-height") =>
                 ok!(MinHeight(LengthOrPercentageOrAuto::parse_non_negative)),
             n if n.eq_ignore_ascii_case("max-height") =>
                 ok!(MaxHeight(LengthOrPercentageOrAuto::parse_non_negative)),
-            n if n.eq_ignore_ascii_case("height") =>
-                ok!(shorthand -> [MinHeight, MaxHeight]),
+            n if n.eq_ignore_ascii_case("height") => ok!(shorthand -> [MinHeight, MaxHeight]),
 
-            n if n.eq_ignore_ascii_case("zoom") =>
-                ok!(Zoom(Zoom::parse)),
-            n if n.eq_ignore_ascii_case("min-zoom") =>
-                ok!(MinZoom(Zoom::parse)),
-            n if n.eq_ignore_ascii_case("max-zoom") =>
-                ok!(MaxZoom(Zoom::parse)),
+            n if n.eq_ignore_ascii_case("zoom") => ok!(Zoom(Zoom::parse)),
+            n if n.eq_ignore_ascii_case("min-zoom") => ok!(MinZoom(Zoom::parse)),
+            n if n.eq_ignore_ascii_case("max-zoom") => ok!(MaxZoom(Zoom::parse)),
 
-            n if n.eq_ignore_ascii_case("user-zoom") =>
-                ok!(UserZoom(UserZoom::parse)),
-            n if n.eq_ignore_ascii_case("orientation") =>
-                ok!(Orientation(Orientation::parse)),
+            n if n.eq_ignore_ascii_case("user-zoom") => ok!(UserZoom(UserZoom::parse)),
+            n if n.eq_ignore_ascii_case("orientation") => ok!(Orientation(Orientation::parse)),
 
             _ => Err(()),
         }
@@ -133,28 +129,26 @@ impl<'a, 'b> DeclarationParser for ViewportRuleParser<'a, 'b> {
 
 #[derive(Debug, PartialEq)]
 pub struct ViewportRule {
-    pub declarations: Vec<ViewportDescriptorDeclaration>
+    pub declarations: Vec<ViewportDescriptorDeclaration>,
 }
 
 impl ViewportRule {
-    pub fn parse(input: &mut Parser, context: &ParserContext)
-                     -> Result<ViewportRule, ()>
-    {
+    pub fn parse(input: &mut Parser, context: &ParserContext) -> Result<ViewportRule, ()> {
         let parser = ViewportRuleParser { context: context };
 
         let mut errors = vec![];
         let valid_declarations = DeclarationListParser::new(input, parser)
-            .filter_map(|result| {
-                match result {
-                    Ok(declarations) => Some(declarations),
-                    Err(range) => {
-                        errors.push(range);
-                        None
-                    }
-                }
-            })
-            .flat_map(|declarations| declarations.into_iter())
-            .collect::<Vec<_>>();
+                                     .filter_map(|result| {
+                                         match result {
+                                             Ok(declarations) => Some(declarations),
+                                             Err(range) => {
+                                                 errors.push(range);
+                                                 None
+                                             }
+                                         }
+                                     })
+                                     .flat_map(|declarations| declarations.into_iter())
+                                     .collect::<Vec<_>>();
 
         for range in errors {
             let pos = range.start;
@@ -176,9 +170,7 @@ impl<'a, I> ViewportRuleCascade for I
 {
     #[inline]
     fn cascade(self) -> ViewportRule {
-        ViewportRule {
-            declarations: self.flat_map(|r| r.declarations.iter()).cascade()
-        }
+        ViewportRule { declarations: self.flat_map(|r| r.declarations.iter()).cascade() }
     }
 }
 
@@ -209,7 +201,7 @@ impl ViewportDescriptorDeclaration {
 }
 
 fn cascade<'a, I>(iter: I) -> Vec<ViewportDescriptorDeclaration>
-    where I: Iterator<Item=&'a ViewportDescriptorDeclaration>
+    where I: Iterator<Item = &'a ViewportDescriptorDeclaration>
 {
     let mut declarations: HashMap<u64, (usize, &'a ViewportDescriptorDeclaration)> = HashMap::new();
 
@@ -217,9 +209,7 @@ fn cascade<'a, I>(iter: I) -> Vec<ViewportDescriptorDeclaration>
     // have been added to the map
     let mut index = 0;
     for declaration in iter {
-        let descriptor = unsafe {
-            intrinsics::discriminant_value(&declaration.descriptor)
-        };
+        let descriptor = unsafe { intrinsics::discriminant_value(&declaration.descriptor) };
 
         match declarations.entry(descriptor) {
             Entry::Occupied(mut entry) => {
@@ -252,15 +242,14 @@ impl<'a, I> ViewportDescriptorDeclarationCascade for I
 
 pub trait MaybeNew {
     fn maybe_new(initial_viewport: TypedSize2D<ViewportPx, f32>,
-                     rule: &ViewportRule)
-                     -> Option<ViewportConstraints>;
+                 rule: &ViewportRule)
+                 -> Option<ViewportConstraints>;
 }
 
 impl MaybeNew for ViewportConstraints {
     fn maybe_new(initial_viewport: TypedSize2D<ViewportPx, f32>,
-                     rule: &ViewportRule)
-                     -> Option<ViewportConstraints>
-    {
+                 rule: &ViewportRule)
+                 -> Option<ViewportConstraints> {
         use num::{Float, ToPrimitive};
         use std::cmp;
 
@@ -295,7 +284,7 @@ impl MaybeNew for ViewportConstraints {
                 ViewportDescriptor::MaxZoom(value) => max_zoom = value.to_f32(),
 
                 ViewportDescriptor::UserZoom(value) => user_zoom = value,
-                ViewportDescriptor::Orientation(value) => orientation = value
+                ViewportDescriptor::Orientation(value) => orientation = value,
             }
         }
 
@@ -411,25 +400,29 @@ impl MaybeNew for ViewportConstraints {
 
         // DEVICE-ADAPT § 6.2.5 Resolve width value
         let width = if width.is_none() && height.is_none() {
-             Some(initial_viewport.width)
+            Some(initial_viewport.width)
         } else {
             width
         };
 
-        let width = width.unwrap_or_else(|| match initial_viewport.height {
-            Au(0) => initial_viewport.width,
-            initial_height => {
-                let ratio = initial_viewport.width.to_f32_px() / initial_height.to_f32_px();
-                Au::from_f32_px(height.clone().unwrap().to_f32_px() * ratio)
+        let width = width.unwrap_or_else(|| {
+            match initial_viewport.height {
+                Au(0) => initial_viewport.width,
+                initial_height => {
+                    let ratio = initial_viewport.width.to_f32_px() / initial_height.to_f32_px();
+                    Au::from_f32_px(height.clone().unwrap().to_f32_px() * ratio)
+                }
             }
         });
 
         // DEVICE-ADAPT § 6.2.6 Resolve height value
-        let height = height.unwrap_or_else(|| match initial_viewport.width {
-            Au(0) => initial_viewport.height,
-            initial_width => {
-                let ratio = initial_viewport.height.to_f32_px() / initial_width.to_f32_px();
-                Au::from_f32_px(width.to_f32_px() * ratio)
+        let height = height.unwrap_or_else(|| {
+            match initial_viewport.width {
+                Au(0) => initial_viewport.height,
+                initial_width => {
+                    let ratio = initial_viewport.height.to_f32_px() / initial_width.to_f32_px();
+                    Au::from_f32_px(width.to_f32_px() * ratio)
+                }
             }
         });
 
@@ -442,7 +435,7 @@ impl MaybeNew for ViewportConstraints {
             max_zoom: max_zoom.map(ScaleFactor::new),
 
             user_zoom: user_zoom,
-            orientation: orientation
+            orientation: orientation,
         })
     }
 }
