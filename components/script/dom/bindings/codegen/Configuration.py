@@ -225,11 +225,11 @@ class Descriptor(DescriptorProvider):
                 if iface:
                     iface.setUserData('hasConcreteDescendant', True)
 
-            if self.proxy:
-                iface = self.interface
-                while iface.parent:
-                    iface = iface.parent
-                    iface.setUserData('hasProxyDescendant', True)
+        if self.proxy:
+            iface = self.interface
+            while iface.parent:
+                iface = iface.parent
+                iface.setUserData('hasProxyDescendant', True)
 
         self.name = interface.identifier.name
 

@@ -1726,7 +1726,7 @@ class CGNamespace(CGWrapper):
 
 def DOMClassTypeId(desc):
     protochain = desc.prototypeChain
-    if len(protochain) == 1:
+    if len(protochain) == 1 and not desc.interface.getUserData("hasConcreteDescendant", False):
         return "::dom::bindings::codegen::InheritTypes::TopTypeId::Alone"
     if desc.interface.getExtendedAttribute("Abstract"):
         return "::dom::bindings::codegen::InheritTypes::TopTypeId::Abstract"
@@ -5825,6 +5825,14 @@ class GlobalGenRoots():
         allprotos = []
         topTypes = []
         hierarchy = defaultdict(list)
+        
+        raise Exception("\n".join(
+            "%s => %s" % (descriptor.interface.identifier.name,
+                          descriptor.interface.getUserData("hasConcreteDescendant", False))
+            for descriptor in descriptors
+            if descriptor.interface.getUserData("hasProxyDescendant", False)
+        ))
+        
         for descriptor in descriptors:
             name = descriptor.name
             chain = descriptor.prototypeChain
