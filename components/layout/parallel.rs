@@ -483,7 +483,7 @@ pub fn traverse_flow_tree_preorder(
 }
 
 pub fn build_display_list_for_subtree(
-        root: &mut FlowRef,
+        root: &mut Flow,
         profiler_metadata: ProfilerMetadata,
         time_profiler_chan: time::ProfilerChan,
         shared_layout_context: &SharedLayoutContext,
@@ -493,7 +493,7 @@ pub fn build_display_list_for_subtree(
                 time_profiler_chan, || {
             queue.push(WorkUnit {
                 fun: compute_absolute_positions,
-                data: (box vec![mut_owned_flow_to_unsafe_flow(root)], 0),
+                data: (box vec![mut_borrowed_flow_to_unsafe_flow(root)], 0),
             })
         });
     }, shared_layout_context);

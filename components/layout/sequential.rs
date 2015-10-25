@@ -96,7 +96,7 @@ pub fn traverse_flow_tree_preorder(root: &mut FlowRef,
     root.late_store_overflow(&layout_context);
 }
 
-pub fn build_display_list_for_subtree(root: &mut FlowRef,
+pub fn build_display_list_for_subtree(root: &mut Flow,
                                       shared_layout_context: &SharedLayoutContext) {
     fn doit(flow: &mut Flow,
             compute_absolute_positions: ComputeAbsolutePositions,
@@ -118,7 +118,7 @@ pub fn build_display_list_for_subtree(root: &mut FlowRef,
     let compute_absolute_positions = ComputeAbsolutePositions { layout_context: &layout_context };
     let build_display_list         = BuildDisplayList         { layout_context: &layout_context };
 
-    doit(flow_ref::deref_mut(root), compute_absolute_positions, build_display_list);
+    doit(root, compute_absolute_positions, build_display_list);
 }
 
 pub fn iterate_through_flow_tree_fragment_border_boxes(root: &mut FlowRef,

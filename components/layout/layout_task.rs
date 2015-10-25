@@ -1043,16 +1043,17 @@ impl LayoutTask {
                                                   layout_root: &mut FlowRef,
                                                   shared_layout_context: &mut SharedLayoutContext,
                                                   rw_data: &mut LayoutTaskData) {
-        let writing_mode = flow::base(&**layout_root).writing_mode;
+        let layout_root = flow_ref::deref_mut(layout_root);
+        let writing_mode = flow::base(&*layout_root).writing_mode;
         profile(time::ProfilerCategory::LayoutDispListBuild,
                 self.profiler_metadata(),
                 self.time_profiler_chan.clone(),
                 || {
-            flow::mut_base(flow_ref::deref_mut(layout_root)).stacking_relative_position =
+            flow::mut_base(layout_root).stacking_relative_position =
                 LogicalPoint::zero(writing_mode).to_physical(writing_mode,
                                                              rw_data.screen_size);
 
-            flow::mut_base(flow_ref::deref_mut(layout_root)).clip =
+            flow::mut_base(layout_root).clip =
                 ClippingRegion::from_rect(&data.page_clip_rect);
 
             match (&mut rw_data.parallel_traversal, opts::get().parallel_display_list_building) {
@@ -1072,10 +1073,9 @@ impl LayoutTask {
             if data.goal == ReflowGoal::ForDisplay {
                 debug!("Done building display list.");
 
-                let root_background_color = get_root_flow_background_color(
-                    flow_ref::deref_mut(layout_root));
+                let root_background_color = get_root_flow_background_color(layout_root);
                 let root_size = {
-                    let root_flow = flow::base(&**layout_root);
+                    let root_flow = flow::base(&*layout_root);
                     if rw_data.stylist.constrain_viewport().is_some() {
                         root_flow.position.size.to_physical(root_flow.writing_mode)
                     } else {
@@ -1083,7 +1083,7 @@ impl LayoutTask {
                     }
                 };
                 let mut display_list = box DisplayList::new();
-                flow::mut_base(flow_ref::deref_mut(layout_root))
+                flow::mut_base(layout_root)
                     .display_list_building_result
                     .add_to(&mut *display_list);
 
