@@ -163,14 +163,6 @@ pub struct LayoutTaskData {
     pub visible_rects: Arc<HashMap<LayerId, Rect<Au>, DefaultState<FnvHasher>>>,
 }
 
-impl LayoutTaskData {
-    pub fn layout_root(&self) -> Option<FlowRef> {
-        self.root_flow.as_ref().map(|root_flow| {
-            root_flow.clone()
-        })
-    }
-}
-
 /// Information needed by the layout task.
 pub struct LayoutTask {
     /// The ID of the pipeline that we belong to.
@@ -1229,7 +1221,7 @@ impl LayoutTask {
                                                      &mut rw_data,
                                                      &mut shared_layout_context);
 
-        if let Some(mut root_flow) = rw_data.layout_root() {
+        if let Some(mut root_flow) = rw_data.root_flow.clone() {
             match data.query_type {
                 ReflowQueryType::ContentBoxQuery(node) =>
                     process_content_box_request(node, &mut root_flow, &mut rw_data),
@@ -1331,7 +1323,7 @@ impl LayoutTask {
                                                                   &self.url,
                                                                   reflow_info.goal);
 
-        if let Some(mut root_flow) = rw_data.layout_root() {
+        if let Some(mut root_flow) = rw_data.root_flow.clone() {
             // Perform an abbreviated style recalc that operates without access to the DOM.
             let animations = &*rw_data.running_animations;
             profile(time::ProfilerCategory::LayoutStyleRecalc,
@@ -1378,7 +1370,7 @@ impl LayoutTask {
                                                    data: &Reflow,
                                                    rw_data: &mut LayoutTaskData,
                                                    layout_context: &mut SharedLayoutContext) {
-        if let Some(mut root_flow) = rw_data.layout_root() {
+        if let Some(mut root_flow) = rw_data.root_flow.clone() {
             // Kick off animations if any were triggered, expire completed ones.
             animation::update_animation_state(&mut *rw_data, self.id);
 
@@ -1432,7 +1424,7 @@ impl LayoutTask {
                                            rw_data: &mut LayoutTaskData,
                                            layout_context: &mut SharedLayoutContext) {
         // Build the display list if necessary, and send it to the painter.
-        if let Some(mut root_flow) = rw_data.layout_root() {
+        if let Some(mut root_flow) = rw_data.root_flow.clone() {
             self.compute_abs_pos_and_build_display_list(data,
                                                         &mut root_flow,
                                                         &mut *layout_context,
