@@ -1040,10 +1040,9 @@ impl LayoutTask {
 
     fn compute_abs_pos_and_build_display_list<'a>(&'a self,
                                                   data: &Reflow,
-                                                  layout_root: &mut FlowRef,
+                                                  layout_root: &mut Flow,
                                                   shared_layout_context: &mut SharedLayoutContext,
                                                   rw_data: &mut LayoutTaskData) {
-        let layout_root = flow_ref::deref_mut(layout_root);
         let writing_mode = flow::base(&*layout_root).writing_mode;
         profile(time::ProfilerCategory::LayoutDispListBuild,
                 self.profiler_metadata(),
@@ -1434,7 +1433,7 @@ impl LayoutTask {
         // Build the display list if necessary, and send it to the painter.
         if let Some(mut root_flow) = rw_data.layout_root() {
             self.compute_abs_pos_and_build_display_list(data,
-                                                        &mut root_flow,
+                                                        flow_ref::deref_mut(&mut root_flow),
                                                         &mut *layout_context,
                                                         rw_data);
             self.first_reflow.set(false);
