@@ -58,7 +58,7 @@ pub fn resolve_generated_content(root: &mut FlowRef, shared_layout_context: &Sha
     doit(flow_ref::deref_mut(root), 0, &mut traversal)
 }
 
-pub fn traverse_flow_tree_preorder(root: &mut FlowRef,
+pub fn traverse_flow_tree_preorder(root: &mut Flow,
                                    shared_layout_context: &SharedLayoutContext) {
     fn doit(flow: &mut Flow,
             assign_inline_sizes: AssignISizes,
@@ -77,8 +77,6 @@ pub fn traverse_flow_tree_preorder(root: &mut FlowRef,
     }
 
     let layout_context = LayoutContext::new(shared_layout_context);
-
-    let root = flow_ref::deref_mut(root);
 
     if opts::get().bubble_inline_sizes_separately {
         let bubble_inline_sizes = BubbleISizes { layout_context: &layout_context };

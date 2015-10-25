@@ -10,7 +10,7 @@
 
 use context::{LayoutContext, SharedLayoutContext};
 use flow::{self, Flow, MutableFlowUtils, PostorderFlowTraversal, PreorderFlowTraversal};
-use flow_ref::{self, FlowRef};
+use flow_ref::FlowRef;
 use profile_traits::time::{self, ProfilerMetadata, profile};
 use std::mem;
 use std::sync::atomic::{AtomicIsize, Ordering};
@@ -457,7 +457,7 @@ pub fn traverse_dom_preorder(root: LayoutNode,
 }
 
 pub fn traverse_flow_tree_preorder(
-        root: &mut FlowRef,
+        root: &mut Flow,
         profiler_metadata: ProfilerMetadata,
         time_profiler_chan: time::ProfilerChan,
         shared_layout_context: &SharedLayoutContext,
@@ -465,7 +465,7 @@ pub fn traverse_flow_tree_preorder(
     if opts::get().bubble_inline_sizes_separately {
         let layout_context = LayoutContext::new(shared_layout_context);
         let bubble_inline_sizes = BubbleISizes { layout_context: &layout_context };
-        flow_ref::deref_mut(root).traverse_postorder(&bubble_inline_sizes);
+        root.traverse_postorder(&bubble_inline_sizes);
     }
 
     run_queue_with_custom_work_data_type(queue, |queue| {
@@ -473,13 +473,13 @@ pub fn traverse_flow_tree_preorder(
                 time_profiler_chan, || {
             queue.push(WorkUnit {
                 fun: assign_inline_sizes,
-                data: (box vec![mut_owned_flow_to_unsafe_flow(root)], 0),
+                data: (box vec![mut_borrowed_flow_to_unsafe_flow(root)], 0),
             })
         });
     }, shared_layout_context);
 
     let layout_context = LayoutContext::new(shared_layout_context);
-    flow_ref::deref_mut(root).late_store_overflow(&layout_context);
+    root.late_store_overflow(&layout_context);
 }
 
 pub fn build_display_list_for_subtree(

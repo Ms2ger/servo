@@ -852,7 +852,7 @@ impl LayoutTask {
     /// benchmarked against those two. It is marked `#[inline(never)]` to aid profiling.
     #[inline(never)]
     fn solve_constraints<'a>(&self,
-                         layout_root: &mut FlowRef,
+                         layout_root: &mut Flow,
                          shared_layout_context: &SharedLayoutContext) {
         let _scope = layout_debug_scope!("solve_constraints");
         sequential::traverse_flow_tree_preorder(layout_root, shared_layout_context);
@@ -865,7 +865,7 @@ impl LayoutTask {
     #[inline(never)]
     fn solve_constraints_parallel(&self,
                                   traversal: &mut WorkQueue<SharedLayoutContext, WorkQueueData>,
-                                  layout_root: &mut FlowRef,
+                                  layout_root: &mut Flow,
                                   shared_layout_context: &SharedLayoutContext) {
         let _scope = layout_debug_scope!("solve_constraints_parallel");
 
@@ -1411,12 +1411,13 @@ impl LayoutTask {
                 match rw_data.parallel_traversal {
                     None => {
                         // Sequential mode.
-                        self.solve_constraints(&mut root_flow, &layout_context)
+                        self.solve_constraints(flow_ref::deref_mut(&mut root_flow),
+                                               &layout_context)
                     }
                     Some(ref mut parallel) => {
                         // Parallel mode.
                         self.solve_constraints_parallel(parallel,
-                                                        &mut root_flow,
+                                                        flow_ref::deref_mut(&mut root_flow),
                                                         &*layout_context);
                     }
                 }
