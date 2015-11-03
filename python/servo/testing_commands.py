@@ -188,6 +188,7 @@ class MachCommands(CommandBase):
         for crate in packages:
             args += ["-p", "%s_tests" % crate]
         args += test_patterns
+        args += ["--", "--nocapture"]
         result = subprocess.call(args, env=self.build_env(), cwd=self.servo_crate())
         if result != 0:
             return result

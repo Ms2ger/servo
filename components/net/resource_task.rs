@@ -182,6 +182,7 @@ impl ResourceChannelManager {
                     consumer.send(cookie_jar.cookies_for_url(&url, source)).unwrap();
                 }
                 ControlMsg::Cancel(res_id) => {
+                    println!("Heyo! {:?}", self.resource_manager.cancel_load_map.get(&res_id).is_some());
                     if let Some(cancel_sender) = self.resource_manager.cancel_load_map.get(&res_id) {
                         let _ = cancel_sender.send(CancelLoad);
                     }
@@ -213,7 +214,7 @@ impl CancellationListener {
     }
 
     pub fn is_cancelled(&self) -> bool {
-        match self.receiver {
+        let res = match self.receiver {
             Some(ref receiver) => match receiver.try_recv() {
                 Ok(_) => {
                     self.cancel_status.set(true);
@@ -222,7 +223,9 @@ impl CancellationListener {
                 Err(_) => self.cancel_status.get(),
             },
             None => false,      // channel doesn't exist!
-        }
+        };
+        debug!("is_cancelled: {}", res);
+        res
     }
 }
 
@@ -302,12 +305,12 @@ impl ResourceManager {
             "data" => from_factory(data_loader::factory),
             "about" => from_factory(about_loader::factory),
             _ => {
-                debug!("resource_task: no loader for scheme {}", load_data.url.scheme);
+                println!("resource_task: no loader for scheme {}", load_data.url.scheme);
                 send_error(load_data.url, "no loader for scheme".to_owned(), consumer);
                 return
             }
         };
-        debug!("resource_task: loading url: {}", load_data.url.serialize());
+        println!("resource_task: loading url: {}", load_data.url.serialize());
 
         loader.call_box((load_data,
                          consumer,

@@ -115,21 +115,26 @@ fn load_for_consumer(load_data: LoadData,
     };
     match load::<WrappedHttpRequest>(load_data, hsts_list, cookie_jar, devtools_chan, &factory, user_agent) {
         Err(LoadError::UnsupportedScheme(url)) => {
+            debug!("result UnsupportedScheme");
             let s = format!("{} request, but we don't support that scheme", &*url.scheme);
             send_error(url, s, start_chan)
         }
         Err(LoadError::Connection(url, e)) => {
+            debug!("result Connection");
             send_error(url, e, start_chan)
         }
         Err(LoadError::MaxRedirects(url)) => {
+            debug!("result MaxRedirects");
             send_error(url, "too many redirects".to_owned(), start_chan)
         }
         Err(LoadError::Cors(url, msg)) |
         Err(LoadError::InvalidRedirect(url, msg)) |
         Err(LoadError::Decoding(url, msg)) => {
+            debug!("result CORS|InvalidRedirect|Decoding");
             send_error(url, msg, start_chan)
         }
         Err(LoadError::Ssl(url, msg)) => {
+            debug!("result Ssl");
             info!("ssl validation error {}, '{}'", url.serialize(), msg);
 
             let mut image = resources_dir_path();
@@ -138,8 +143,12 @@ fn load_for_consumer(load_data: LoadData,
 
             file_loader::factory(load_data, start_chan, classifier, cancel_listener)
         }
-        Err(LoadError::ConnectionAborted(_)) => unreachable!(),
+        Err(LoadError::ConnectionAborted(_)) => {
+            debug!("result aborted");
+            unreachable!()
+        },
         Ok(mut load_response) => {
+            debug!("result OK");
             let metadata = load_response.metadata.clone();
             send_data(&mut load_response, start_chan, metadata, classifier, cancel_listener)
         }
@@ -260,11 +269,13 @@ impl HttpRequest for WrappedHttpRequest {
     }
 
     fn send(self, body: &Option<Vec<u8>>) -> Result<WrappedHttpResponse, LoadError> {
+        debug!("WrappedHttpRequest");
         let url = self.request.url.clone();
         let mut request_writer = match self.request.start() {
             Ok(streaming) => streaming,
             Err(e) => return Err(LoadError::Connection(url, e.description().to_owned()))
         };
+        debug!("WrappedHttpRequest 1");
 
         if let Some(ref data) = *body {
             match request_writer.write_all(&data) {
@@ -274,6 +285,7 @@ impl HttpRequest for WrappedHttpRequest {
                 _ => {}
             }
         }
+        debug!("WrappedHttpRequest 2");
 
         let response = match request_writer.send() {
             Ok(w) => w,
@@ -282,6 +294,7 @@ impl HttpRequest for WrappedHttpRequest {
             },
             Err(e) => return Err(LoadError::Connection(url, e.description().to_owned()))
         };
+        debug!("WrappedHttpRequest 3");
 
         Ok(WrappedHttpResponse { response: response })
     }
@@ -565,6 +578,7 @@ pub fn load<A>(load_data: LoadData,
         // a ConnectionAborted error. this loop tries again with a new
         // connection.
         loop {
+            debug!("Inner loop");
             let mut req = try!(request_factory.create(url.clone(), method.clone()));
             *req.headers_mut() = request_headers.clone();
 
@@ -608,7 +622,10 @@ pub fn load<A>(load_data: LoadData,
                         None
                     );
 
-                    req.send(&None)
+                    debug!("About to req.send(&None)");
+                    let x = req.send(&None);
+                    debug!("Did req.send(&None)");
+                    x
                 }
             };
 
@@ -618,7 +635,10 @@ pub fn load<A>(load_data: LoadData,
                     debug!("connection aborted ({:?}), possibly stale, trying new connection", reason);
                     continue;
                 }
-                Err(e) => return Err(e),
+                Err(e) => {
+                    debug!("Returning");
+                    return Err(e)
+                },
             };
 
             // if no ConnectionAborted, break the loop

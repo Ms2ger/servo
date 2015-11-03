@@ -175,6 +175,9 @@ fn test_replace_hosts() {
 #[test]
 fn test_cancelled_listener() {
     use std::net::TcpListener;
+    use env_logger;
+
+    env_logger::init().unwrap();
 
     let mut host_table_box = Box::new(HashMap::new());
     host_table_box.insert("foo.bar.com".to_owned(), "127.0.0.1".to_owned());
@@ -186,13 +189,19 @@ fn test_cancelled_listener() {
     let (sender, receiver) = ipc::channel().unwrap();
     let (id_sender, id_receiver) = ipc::channel().unwrap();
 
+    println!("Made it here 1");
+
     let url = Url::parse(&format!("http://foo.bar.com:{}", port)).unwrap();
     resource_task.send(ControlMsg::Load(LoadData::new(host_replacement(hosts_table, &url), None),
                                         LoadConsumer::Channel(sender),
                                         Some(id_sender))).unwrap();
+    println!("Made it here 2");
     let res_id = id_receiver.recv().unwrap();
+    println!("Made it here 3");
     resource_task.send(ControlMsg::Cancel(res_id)).unwrap();
+    println!("Made it here 4");
     let response = receiver.recv().unwrap();
+    println!("Made it here 5");
     match response.progress_port.recv().unwrap() {
         ProgressMsg::Done(result) => assert_eq!(result.unwrap_err(), "Loading has been cancelled!".to_owned()),
         _ => unreachable!(),
