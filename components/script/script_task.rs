@@ -566,7 +566,7 @@ unsafe extern "C" fn debug_gc_callback(_rt: *mut JSRuntime, status: JSGCStatus, 
 
 unsafe extern "C" fn shadow_check_callback(_cx: *mut JSContext,
     _object: HandleObject, _id: HandleId) -> DOMProxyShadowsResult {
-    // XXX implement me
+    // FIXME(#8333) implement me
     DOMProxyShadowsResult::ShadowCheckFailed
 }
 
