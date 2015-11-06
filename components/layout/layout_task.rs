@@ -100,9 +100,6 @@ pub struct LayoutTaskData {
     /// The root stacking context.
     pub stacking_context: Option<Arc<StackingContext>>,
 
-    /// Performs CSS selector matching and style resolution.
-    pub stylist: Box<Stylist>,
-
     /// A queued response for the union of the content boxes of a node.
     pub content_box_response: Rect<Au>,
 
@@ -214,6 +211,9 @@ pub struct LayoutTask {
     /// constraints.
     viewport_size: Size2D<Au>,
 
+    /// Performs CSS selector matching and style resolution.
+    stylist: Box<Stylist>,
+
     /// A mutex to allow for fast, read-only RPC of layout's internal data
     /// structures, while still letting the LayoutTask modify them.
     ///
@@ -321,6 +321,7 @@ impl<'a, 'b: 'a> RwData<'a, 'b> {
     /// If no reflow has ever been triggered, this will keep the lock, locked
     /// (and saved in `possibly_locked_rw_data`). If it has been, the lock will
     /// be unlocked.
+    #[allow(dead_code)]
     fn block(&mut self, rw_data: RWGuard<'b>) {
         match rw_data {
             RWGuard::Used(x) => drop(x),
@@ -433,11 +434,11 @@ impl LayoutTask {
             running_animations: Arc::new(HashMap::new()),
             epoch: Epoch(0),
             viewport_size: Size2D::new(Au(0), Au(0)),
+            stylist: stylist,
             rw_data: Arc::new(Mutex::new(
                 LayoutTaskData {
                     constellation_chan: constellation_chan,
                     stacking_context: None,
-                    stylist: stylist,
                     content_box_response: Rect::zero(),
                     content_boxes_response: Vec::new(),
                     client_rect_response: Rect::zero(),
@@ -462,7 +463,7 @@ impl LayoutTask {
 
     // Create a layout context for use in building display lists, hit testing, &c.
     fn build_shared_layout_context(&self,
-                                   rw_data: &LayoutTaskData,
+                                   _: &LayoutTaskData,
                                    screen_size_changed: bool,
                                    url: &Url,
                                    goal: ReflowGoal)
@@ -474,7 +475,7 @@ impl LayoutTask {
             screen_size_changed: screen_size_changed,
             font_cache_task: Mutex::new(self.font_cache_task.clone()),
             canvas_layers_sender: Mutex::new(self.canvas_layers_sender.clone()),
-            stylist: StylistWrapper(&*rw_data.stylist),
+            stylist: StylistWrapper(&*self.stylist),
             url: (*url).clone(),
             visible_rects: self.visible_rects.clone(),
             generation: self.generation,
@@ -732,29 +733,24 @@ impl LayoutTask {
         response_port.recv().unwrap()
     }
 
-    fn handle_add_stylesheet<'a, 'b>(&self,
+    fn handle_add_stylesheet<'a, 'b>(&mut self,
                                      stylesheet: Arc<Stylesheet>,
-                                     possibly_locked_rw_data: &mut RwData<'a, 'b>) {
+                                     _: &mut RwData<'a, 'b>) {
         // Find all font-face rules and notify the font cache of them.
         // GWTODO: Need to handle unloading web fonts.
 
-        let rw_data = possibly_locked_rw_data.lock();
-        if stylesheet.is_effective_for_device(&rw_data.stylist.device) {
+        if stylesheet.is_effective_for_device(&self.stylist.device) {
             add_font_face_rules(&*stylesheet,
-                                &rw_data.stylist.device,
+                                &self.stylist.device,
                                 &self.font_cache_task,
                                 &self.font_cache_sender,
                                 &self.outstanding_web_fonts);
         }
-
-        possibly_locked_rw_data.block(rw_data);
     }
 
     /// Sets quirks mode for the document, causing the quirks mode stylesheet to be used.
-    fn handle_set_quirks_mode<'a, 'b>(&self, possibly_locked_rw_data: &mut RwData<'a, 'b>) {
-        let mut rw_data = possibly_locked_rw_data.lock();
-        rw_data.stylist.set_quirks_mode(true);
-        possibly_locked_rw_data.block(rw_data);
+    fn handle_set_quirks_mode<'a, 'b>(&mut self, _: &mut RwData<'a, 'b>) {
+        self.stylist.set_quirks_mode(true);
     }
 
     fn try_get_layout_root(&self, node: LayoutNode) -> Option<FlowRef> {
@@ -1018,7 +1014,7 @@ impl LayoutTask {
                     flow_ref::deref_mut(layout_root));
                 let root_size = {
                     let root_flow = flow::base(&**layout_root);
-                    if rw_data.stylist.viewport_constraints().is_some() {
+                    if self.stylist.viewport_constraints().is_some() {
                         root_flow.position.size.to_physical(root_flow.writing_mode)
                     } else {
                         root_flow.overflow.size
@@ -1104,9 +1100,9 @@ impl LayoutTask {
 
         // Calculate the actual viewport as per DEVICE-ADAPT § 6
         let device = Device::new(MediaType::Screen, initial_viewport);
-        rw_data.stylist.set_device(device, &stylesheets);
+        self.stylist.set_device(device, &stylesheets);
 
-        let constraints = rw_data.stylist.viewport_constraints().clone();
+        let constraints = self.stylist.viewport_constraints().clone();
         self.viewport_size = match constraints {
             Some(ref constraints) => {
                 debug!("Viewport constraints: {:?}", constraints);
@@ -1130,7 +1126,7 @@ impl LayoutTask {
         }
 
         // If the entire flow tree is invalid, then it will be reflowed anyhow.
-        let needs_dirtying = rw_data.stylist.update(&stylesheets, stylesheets_changed);
+        let needs_dirtying = self.stylist.update(&stylesheets, stylesheets_changed);
         let needs_reflow = viewport_size_changed && !needs_dirtying;
         unsafe {
             if needs_dirtying {
@@ -1146,9 +1142,9 @@ impl LayoutTask {
         let modified_elements = document.drain_modified_elements();
         if !needs_dirtying {
             for &(el, old_state) in modified_elements.iter() {
-                let hint = rw_data.stylist.restyle_hint_for_state_change(&el,
-                                                                         el.get_state(),
-                                                                         old_state);
+                let hint = self.stylist.restyle_hint_for_state_change(&el,
+                                                                      el.get_state(),
+                                                                      old_state);
                 el.note_restyle_hint(hint);
             }
         }
