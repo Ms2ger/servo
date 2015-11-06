@@ -118,9 +118,6 @@ pub struct LayoutTaskData {
     /// Performs CSS selector matching and style resolution.
     pub stylist: Box<Stylist>,
 
-    /// The workers that we use for parallel operation.
-    pub parallel_traversal: Option<WorkQueue<SharedLayoutContext, WorkQueueData>>,
-
     /// Starts at zero, and increased by one every time a layout completes.
     /// This can be used to easily check for invalid stale data.
     pub generation: u32,
@@ -229,6 +226,9 @@ pub struct LayoutTask {
     /// to the paint chan
     pub canvas_layers_receiver: Receiver<(LayerId, IpcSender<CanvasMsg>)>,
     pub canvas_layers_sender: Sender<(LayerId, IpcSender<CanvasMsg>)>,
+
+    /// The workers that we use for parallel operation.
+    parallel_traversal: Option<WorkQueue<SharedLayoutContext, WorkQueueData>>,
 
     /// A mutex to allow for fast, read-only RPC of layout's internal data
     /// structures, while still letting the LayoutTask modify them.
@@ -439,6 +439,7 @@ impl LayoutTask {
             font_cache_sender: font_cache_sender,
             canvas_layers_receiver: canvas_layers_receiver,
             canvas_layers_sender: canvas_layers_sender,
+            parallel_traversal: parallel_traversal,
             rw_data: Arc::new(Mutex::new(
                 LayoutTaskData {
                     root_flow: None,
@@ -447,7 +448,6 @@ impl LayoutTask {
                     viewport_size: Size2D::new(Au(0), Au(0)),
                     stacking_context: None,
                     stylist: stylist,
-                    parallel_traversal: parallel_traversal,
                     generation: 0,
                     content_box_response: Rect::zero(),
                     content_boxes_response: Vec::new(),
@@ -686,7 +686,7 @@ impl LayoutTask {
         });
 
         // ... as do each of the LayoutWorkers, if present.
-        if let Some(ref traversal) = rw_data.parallel_traversal {
+        if let Some(ref traversal) = self.parallel_traversal {
             let sizes = traversal.heap_size_of_tls(heap_size_of_local_context);
             for (i, size) in sizes.iter().enumerate() {
                 reports.push(Report {
@@ -723,7 +723,7 @@ impl LayoutTask {
 
     /// Enters a quiescent state in which no new messages will be processed until an `ExitNow` is
     /// received. A pong is immediately sent on the given response channel.
-    fn prepare_to_exit<'a, 'b>(&self,
+    fn prepare_to_exit<'a, 'b>(&mut self,
                                response_chan: Sender<()>,
                                possibly_locked_rw_data: &mut RwData<'a, 'b>) {
         response_chan.send(()).unwrap();
@@ -751,17 +751,13 @@ impl LayoutTask {
 
     /// Shuts down the layout task now. If there are any DOM nodes left, layout will now (safely)
     /// crash.
-    fn exit_now<'a, 'b>(&self,
-                        possibly_locked_rw_data: &mut RwData<'a, 'b>,
+    fn exit_now<'a, 'b>(&mut self,
+                        _: &mut RwData<'a, 'b>,
                         exit_type: PipelineExitType) {
         let (response_chan, response_port) = ipc::channel().unwrap();
 
-        {
-            let mut rw_data = possibly_locked_rw_data.lock();
-            if let Some(ref mut traversal) = (&mut *rw_data).parallel_traversal {
-                traversal.shutdown()
-            }
-            possibly_locked_rw_data.block(rw_data);
+        if let Some(ref mut traversal) = self.parallel_traversal {
+            traversal.shutdown()
         }
 
         self.paint_chan.send(LayoutToPaintMsg::Exit(Some(response_chan), exit_type)).unwrap();
@@ -1056,15 +1052,16 @@ impl LayoutTask {
         }
     }
 
-    fn compute_abs_pos_and_build_display_list<'a>(&'a self,
+    fn compute_abs_pos_and_build_display_list<'a>(&'a mut self,
                                                   data: &Reflow,
                                                   layout_root: &mut FlowRef,
                                                   shared_layout_context: &mut SharedLayoutContext,
                                                   rw_data: &mut LayoutTaskData) {
         let writing_mode = flow::base(&**layout_root).writing_mode;
+        let (metadata, sender) = (self.profiler_metadata(), self.time_profiler_chan.clone());
         profile(time::ProfilerCategory::LayoutDispListBuild,
-                self.profiler_metadata(),
-                self.time_profiler_chan.clone(),
+                metadata.clone(),
+                sender.clone(),
                 || {
             flow::mut_base(flow_ref::deref_mut(layout_root)).stacking_relative_position =
                 LogicalPoint::zero(writing_mode).to_physical(writing_mode,
@@ -1073,11 +1070,11 @@ impl LayoutTask {
             flow::mut_base(flow_ref::deref_mut(layout_root)).clip =
                 ClippingRegion::from_rect(&data.page_clip_rect);
 
-            match (&mut rw_data.parallel_traversal, opts::get().parallel_display_list_building) {
+            match (&mut self.parallel_traversal, opts::get().parallel_display_list_building) {
                 (&mut Some(ref mut traversal), true) => {
                     parallel::build_display_list_for_subtree(layout_root,
-                                                             self.profiler_metadata(),
-                                                             self.time_profiler_chan.clone(),
+                                                             metadata,
+                                                             sender,
                                                              shared_layout_context,
                                                              traversal);
                 }
@@ -1242,8 +1239,7 @@ impl LayoutTask {
                     self.time_profiler_chan.clone(),
                     || {
                 // Perform CSS selector matching and flow construction.
-                let rw_data = &mut *rw_data;
-                match rw_data.parallel_traversal {
+                match self.parallel_traversal {
                     None => {
                         sequential::traverse_dom_preorder(node, &shared_layout_context);
                     }
@@ -1438,7 +1434,8 @@ impl LayoutTask {
                     self.profiler_metadata(),
                     self.time_profiler_chan.clone(),
                     || {
-                match rw_data.parallel_traversal {
+                let profiler_metadata = self.profiler_metadata();
+                match self.parallel_traversal {
                     None => {
                         // Sequential mode.
                         LayoutTask::solve_constraints(&mut root_flow, &layout_context)
@@ -1447,7 +1444,7 @@ impl LayoutTask {
                         // Parallel mode.
                         LayoutTask::solve_constraints_parallel(parallel,
                                                                &mut root_flow,
-                                                               self.profiler_metadata(),
+                                                               profiler_metadata,
                                                                self.time_profiler_chan.clone(),
                                                                &*layout_context);
                     }
