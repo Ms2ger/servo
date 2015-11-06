@@ -584,9 +584,9 @@ impl LayoutTask {
                                      -> bool {
         match request {
             Msg::AddStylesheet(style_info) => {
-                self.handle_add_stylesheet(style_info, possibly_locked_rw_data)
+                self.handle_add_stylesheet(style_info)
             }
-            Msg::SetQuirksMode => self.handle_set_quirks_mode(possibly_locked_rw_data),
+            Msg::SetQuirksMode => self.handle_set_quirks_mode(),
             Msg::GetRPC(response_chan) => {
                 response_chan.send(box LayoutRPCImpl(self.rw_data.clone()) as
                                    Box<LayoutRPC + Send>).unwrap();
@@ -733,9 +733,7 @@ impl LayoutTask {
         response_port.recv().unwrap()
     }
 
-    fn handle_add_stylesheet<'a, 'b>(&mut self,
-                                     stylesheet: Arc<Stylesheet>,
-                                     _: &mut RwData<'a, 'b>) {
+    fn handle_add_stylesheet(&mut self, stylesheet: Arc<Stylesheet>) {
         // Find all font-face rules and notify the font cache of them.
         // GWTODO: Need to handle unloading web fonts.
 
@@ -749,7 +747,7 @@ impl LayoutTask {
     }
 
     /// Sets quirks mode for the document, causing the quirks mode stylesheet to be used.
-    fn handle_set_quirks_mode<'a, 'b>(&mut self, _: &mut RwData<'a, 'b>) {
+    fn handle_set_quirks_mode(&mut self) {
         self.stylist.set_quirks_mode(true);
     }
 
