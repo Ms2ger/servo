@@ -468,7 +468,6 @@ impl LayoutTask {
 
     // Create a layout context for use in building display lists, hit testing, &c.
     fn build_shared_layout_context(&self,
-                                   _: &LayoutTaskData,
                                    screen_size_changed: bool,
                                    url: &Url,
                                    goal: ReflowGoal)
@@ -569,8 +568,7 @@ impl LayoutTask {
             page_clip_rect: MAX_RECT,
         };
 
-        let mut layout_context = self.build_shared_layout_context(&*rw_data,
-                                                                  false,
+        let mut layout_context = self.build_shared_layout_context(false,
                                                                   &self.url,
                                                                   reflow_info.goal);
 
@@ -1198,8 +1196,7 @@ impl LayoutTask {
         }
 
         // Create a layout context for use throughout the following passes.
-        let mut shared_layout_context = self.build_shared_layout_context(&*rw_data,
-                                                                         viewport_size_changed,
+        let mut shared_layout_context = self.build_shared_layout_context(viewport_size_changed,
                                                                          &self.url,
                                                                          data.reflow_info.goal);
 
@@ -1305,8 +1302,7 @@ impl LayoutTask {
             page_clip_rect: MAX_RECT,
         };
 
-        let mut layout_context = self.build_shared_layout_context(&*rw_data,
-                                                                  false,
+        let mut layout_context = self.build_shared_layout_context(false,
                                                                   &self.url,
                                                                   reflow_info.goal);
 
@@ -1325,8 +1321,7 @@ impl LayoutTask {
             page_clip_rect: MAX_RECT,
         };
 
-        let mut layout_context = self.build_shared_layout_context(&*rw_data,
-                                                                  false,
+        let mut layout_context = self.build_shared_layout_context(false,
                                                                   &self.url,
                                                                   reflow_info.goal);
 
@@ -1356,8 +1351,7 @@ impl LayoutTask {
             page_clip_rect: MAX_RECT,
         };
 
-        let mut layout_context = self.build_shared_layout_context(&*rw_data,
-                                                                  false,
+        let mut layout_context = self.build_shared_layout_context(false,
                                                                   &self.url,
                                                                   reflow_info.goal);
 
