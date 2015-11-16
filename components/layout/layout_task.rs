@@ -811,7 +811,7 @@ impl LayoutTask {
     }
 
     fn process_node_geometry_request(&self,
-                                     requested_node: TrustedNodeAddress,
+                                     requested_node: &TrustedNodeAddress,
                                      layout_root: &mut FlowRef)
                                      -> Rect<i32> {
         let requested_node: OpaqueNode = OpaqueNodeMethods::from_script_node(requested_node);
@@ -823,7 +823,7 @@ impl LayoutTask {
     /// Return the resolved value of property for a given (pseudo)element.
     /// https://drafts.csswg.org/cssom/#resolved-value
     fn process_resolved_style_request(&self,
-                                      requested_node: TrustedNodeAddress,
+                                      requested_node: &TrustedNodeAddress,
                                       pseudo: &Option<PseudoElement>,
                                       property: &Atom,
                                       layout_root: &mut FlowRef)
@@ -866,7 +866,7 @@ impl LayoutTask {
 
         fn used_value_for_position_property(layout_node: ThreadSafeLayoutNode,
                                             layout_root: &mut FlowRef,
-                                            requested_node: TrustedNodeAddress,
+                                            requested_node: &TrustedNodeAddress,
                                             property: &Atom) -> Option<String> {
             let layout_data = layout_node.borrow_layout_data();
             let position = layout_data.as_ref().map(|layout_data| {
@@ -949,7 +949,7 @@ impl LayoutTask {
     }
 
     fn process_offset_parent_query(&self,
-                                   requested_node: TrustedNodeAddress,
+                                   requested_node: &TrustedNodeAddress,
                                    layout_root: &mut FlowRef)
                                    -> OffsetParentResponse {
         let requested_node: OpaqueNode = OpaqueNodeMethods::from_script_node(requested_node);
@@ -1198,20 +1198,20 @@ impl LayoutTask {
 
         if let Some(mut root_flow) = self.root_flow.clone() {
             match data.query_type {
-                ReflowQueryType::ContentBoxQuery(node) =>
+                ReflowQueryType::ContentBoxQuery(ref node) =>
                     rw_data.content_box_response = process_content_box_request(node, &mut root_flow),
-                ReflowQueryType::ContentBoxesQuery(node) =>
+                ReflowQueryType::ContentBoxesQuery(ref node) =>
                     rw_data.content_boxes_response = process_content_boxes_request(node, &mut root_flow),
-                ReflowQueryType::NodeGeometryQuery(node) =>
+                ReflowQueryType::NodeGeometryQuery(ref node) =>
                     rw_data.client_rect_response = self.process_node_geometry_request(node, &mut root_flow),
-                ReflowQueryType::ResolvedStyleQuery(node, ref pseudo, ref property) => {
+                ReflowQueryType::ResolvedStyleQuery(ref node, ref pseudo, ref property) => {
                     rw_data.resolved_style_response =
                         self.process_resolved_style_request(node,
                                                             pseudo,
                                                             property,
                                                             &mut root_flow)
                 }
-                ReflowQueryType::OffsetParentQuery(node) =>
+                ReflowQueryType::OffsetParentQuery(ref node) =>
                     rw_data.offset_parent_response = self.process_offset_parent_query(node, &mut root_flow),
                 ReflowQueryType::NoQuery => {}
             }

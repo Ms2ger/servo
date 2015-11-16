@@ -1318,11 +1318,11 @@ fn debug_reflow_events(goal: &ReflowGoal, query_type: &ReflowQueryType, reason: 
 
     debug_msg.push_str(match *query_type {
         ReflowQueryType::NoQuery => "\tNoQuery",
-        ReflowQueryType::ContentBoxQuery(_n) => "\tContentBoxQuery",
-        ReflowQueryType::ContentBoxesQuery(_n) => "\tContentBoxesQuery",
-        ReflowQueryType::NodeGeometryQuery(_n) => "\tNodeGeometryQuery",
+        ReflowQueryType::ContentBoxQuery(_) => "\tContentBoxQuery",
+        ReflowQueryType::ContentBoxesQuery(_) => "\tContentBoxesQuery",
+        ReflowQueryType::NodeGeometryQuery(_) => "\tNodeGeometryQuery",
         ReflowQueryType::ResolvedStyleQuery(_, _, _) => "\tResolvedStyleQuery",
-        ReflowQueryType::OffsetParentQuery(_n) => "\tOffsetParentQuery",
+        ReflowQueryType::OffsetParentQuery(_) => "\tOffsetParentQuery",
     });
 
     debug_msg.push_str(match *reason {

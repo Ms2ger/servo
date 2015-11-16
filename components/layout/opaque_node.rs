@@ -13,7 +13,7 @@ use script_traits::UntrustedNodeAddress;
 
 pub trait OpaqueNodeMethods {
     /// Converts a DOM node (script view) to an `OpaqueNode`.
-    fn from_script_node(node: TrustedNodeAddress) -> Self;
+    fn from_script_node(node: &TrustedNodeAddress) -> Self;
 
     /// Converts a DOM node to an `OpaqueNode'.
     fn from_jsmanaged(node: &LayoutJS<Node>) -> Self;
@@ -24,7 +24,7 @@ pub trait OpaqueNodeMethods {
 }
 
 impl OpaqueNodeMethods for OpaqueNode {
-    fn from_script_node(node: TrustedNodeAddress) -> OpaqueNode {
+    fn from_script_node(node: &TrustedNodeAddress) -> OpaqueNode {
         unsafe {
             OpaqueNodeMethods::from_jsmanaged(&LayoutJS::from_trusted_node_address(node))
         }

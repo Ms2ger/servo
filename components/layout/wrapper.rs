@@ -98,7 +98,7 @@ impl<'ln> LayoutNode<'ln> {
     }
 
     pub unsafe fn new(address: &TrustedNodeAddress) -> LayoutNode {
-        LayoutNode::from_layout_js(LayoutJS::from_trusted_node_address(*address))
+        LayoutNode::from_layout_js(LayoutJS::from_trusted_node_address(address))
     }
 
     /// Creates a new layout node with the same lifetime as this layout node.

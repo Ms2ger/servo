@@ -2328,7 +2328,7 @@ impl NodeMethods for Node {
 /// and are also used in the HTML parser interface.
 
 #[allow(raw_pointer_derive)]
-#[derive(Clone, PartialEq, Eq, Copy)]
+#[derive(PartialEq, Eq)]
 pub struct TrustedNodeAddress(pub *const c_void);
 
 #[allow(unsafe_code)]

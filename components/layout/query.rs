@@ -281,7 +281,7 @@ impl FragmentBorderBoxIterator for MarginRetrievingFragmentBorderBoxIterator {
     }
 }
 
-pub fn process_content_box_request(requested_node: TrustedNodeAddress,
+pub fn process_content_box_request(requested_node: &TrustedNodeAddress,
                                    layout_root: &mut FlowRef)
                                    -> Rect<Au> {
     // FIXME(pcwalton): This has not been updated to handle the stacking context relative
@@ -295,7 +295,7 @@ pub fn process_content_box_request(requested_node: TrustedNodeAddress,
     }
 }
 
-pub fn process_content_boxes_request(requested_node: TrustedNodeAddress,
+pub fn process_content_boxes_request(requested_node: &TrustedNodeAddress,
                                      layout_root: &mut FlowRef)
                                      -> Vec<Rect<Au>> {
     // FIXME(pcwalton): This has not been updated to handle the stacking context relative
