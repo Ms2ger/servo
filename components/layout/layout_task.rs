@@ -1063,7 +1063,7 @@ impl LayoutTask {
     fn handle_reflow<'a, 'b>(&mut self,
                              data: ScriptReflow,
                              possibly_locked_rw_data: &mut RwData<'a, 'b>) {
-        let document = unsafe { LayoutNode::new(&data.document) };
+        let document = unsafe { LayoutNode::new(data.document()) };
         let document = document.as_document().unwrap();
 
         debug!("layout: received layout request for: {}", self.url.serialize());

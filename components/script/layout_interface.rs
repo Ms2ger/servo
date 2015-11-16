@@ -179,6 +179,12 @@ pub struct ScriptReflow {
     pub query_type: ReflowQueryType,
 }
 
+impl ScriptReflow {
+    pub fn document(&self) -> &TrustedNodeAddress {
+        &self.document
+    }
+}
+
 impl Drop for ScriptReflow {
     fn drop(&mut self) {
         self.script_join_chan.send(()).unwrap();
