@@ -198,9 +198,8 @@ impl LayoutJS<Node> {
     pub unsafe fn from_trusted_node_address(inner: &TrustedNodeAddress)
                                             -> LayoutJS<Node> {
         debug_assert!(task_state::get().is_layout());
-        let TrustedNodeAddress(addr) = *inner;
         LayoutJS {
-            ptr: NonZero::new(addr as *const Node)
+            ptr: NonZero::new(inner.ptr())
         }
     }
 }

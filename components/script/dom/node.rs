@@ -2329,10 +2329,17 @@ impl NodeMethods for Node {
 
 #[allow(raw_pointer_derive)]
 #[derive(PartialEq, Eq)]
-pub struct TrustedNodeAddress(pub *const c_void);
+pub struct TrustedNodeAddress(*const c_void);
 
 #[allow(unsafe_code)]
 unsafe impl Send for TrustedNodeAddress {}
+
+impl TrustedNodeAddress {
+    #[allow(unsafe_code)]
+    pub unsafe fn ptr(&self) -> *const Node {
+        self.0 as *const Node
+    }
+}
 
 pub fn document_from_node<T: DerivedFrom<Node> + Reflectable>(derived: &T) -> Root<Document> {
     derived.upcast().owner_doc()
