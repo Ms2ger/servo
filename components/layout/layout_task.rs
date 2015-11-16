@@ -587,7 +587,7 @@ impl LayoutTask {
                 profile(time::ProfilerCategory::LayoutPerform,
                         self.profiler_metadata(),
                         self.time_profiler_chan.clone(),
-                        || self.handle_reflow(&data, possibly_locked_rw_data));
+                        || self.handle_reflow(data, possibly_locked_rw_data));
             },
             Msg::TickAnimations => self.tick_all_animations(possibly_locked_rw_data),
             Msg::ReflowWithNewlyLoadedWebFont => {
@@ -1061,7 +1061,7 @@ impl LayoutTask {
 
     /// The high-level routine that performs layout tasks.
     fn handle_reflow<'a, 'b>(&mut self,
-                             data: &ScriptReflow,
+                             data: ScriptReflow,
                              possibly_locked_rw_data: &mut RwData<'a, 'b>) {
         let document = unsafe { LayoutNode::new(&data.document) };
         let document = document.as_document().unwrap();
