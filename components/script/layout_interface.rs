@@ -179,11 +179,15 @@ pub struct ScriptReflow {
     pub query_type: ReflowQueryType,
 }
 
+/*
 impl ScriptReflow {
-    pub fn document(&self) -> &TrustedNodeAddress {
-        &self.document
+    pub fn node<'a>(&'a self, node: &'a TrustedNodeAddress) -> LayoutJS<'a, Node> {
+        unsafe {
+            LayoutJS::from_trusted_node_address(node)
+        }
     }
 }
+*/
 
 impl Drop for ScriptReflow {
     fn drop(&mut self) {
