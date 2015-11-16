@@ -51,7 +51,7 @@ use script::dom::htmltextareaelement::{HTMLTextAreaElement, LayoutHTMLTextAreaEl
 use script::dom::node::{HAS_CHANGED, HAS_DIRTY_DESCENDANTS, IS_DIRTY};
 use script::dom::node::{LayoutNodeHelpers, Node, SharedLayoutData};
 use script::dom::text::Text;
-use script::layout_interface::TrustedNodeAddress;
+use script::layout_interface::{TrustedNodeAddress, ScriptReflow};
 use selectors::matching::DeclarationBlock;
 use selectors::parser::{AttrSelector, NamespaceConstraint};
 use selectors::states::*;
@@ -97,8 +97,12 @@ impl<'ln> LayoutNode<'ln> {
         }
     }
 
-    pub unsafe fn new(address: &TrustedNodeAddress) -> LayoutNode {
-        LayoutNode::from_layout_js(LayoutJS::from_trusted_node_address(address))
+    pub fn new<'a>(_: &'a ScriptReflow, address: &'a TrustedNodeAddress) -> LayoutNode<'a> {
+        // Safe because the script thread remains blocked as long as the `ScriptReflow`
+        // remains alive.
+        unsafe {
+            LayoutNode::from_layout_js(LayoutJS::from_trusted_node_address(address))
+        }
     }
 
     /// Creates a new layout node with the same lifetime as this layout node.

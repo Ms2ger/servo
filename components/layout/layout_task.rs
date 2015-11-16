@@ -52,7 +52,7 @@ use script::dom::node::LayoutData;
 use script::layout_interface::Animation;
 use script::layout_interface::{LayoutRPC, OffsetParentResponse};
 use script::layout_interface::{Msg, NewLayoutTaskInfo, Reflow, ReflowGoal, ReflowQueryType};
-use script::layout_interface::{ScriptLayoutChan, ScriptReflow, TrustedNodeAddress};
+use script::layout_interface::{ScriptLayoutChan, ScriptReflow};
 use script_traits::{ConstellationControlMsg, LayoutControlMsg, OpaqueScriptLayoutChannel};
 use selectors::parser::PseudoElement;
 use sequential;
@@ -811,10 +811,10 @@ impl LayoutTask {
     }
 
     fn process_node_geometry_request(&self,
-                                     requested_node: &TrustedNodeAddress,
+                                     requested_node: LayoutNode,
                                      layout_root: &mut FlowRef)
                                      -> Rect<i32> {
-        let requested_node: OpaqueNode = OpaqueNodeMethods::from_script_node(requested_node);
+        let requested_node = requested_node.opaque();
         let mut iterator = FragmentLocatingFragmentIterator::new(requested_node);
         sequential::iterate_through_flow_tree_fragment_border_boxes(layout_root, &mut iterator);
         iterator.client_rect
@@ -823,14 +823,12 @@ impl LayoutTask {
     /// Return the resolved value of property for a given (pseudo)element.
     /// https://drafts.csswg.org/cssom/#resolved-value
     fn process_resolved_style_request(&self,
-                                      requested_node: &TrustedNodeAddress,
+                                      requested_node: LayoutNode,
                                       pseudo: &Option<PseudoElement>,
                                       property: &Atom,
                                       layout_root: &mut FlowRef)
                                       -> Option<String> {
-        let node = unsafe { LayoutNode::new(&requested_node) };
-
-        let layout_node = ThreadSafeLayoutNode::new(&node);
+        let layout_node = ThreadSafeLayoutNode::new(&requested_node);
         let layout_node = match pseudo {
             &Some(PseudoElement::Before) => layout_node.get_before_pseudo(),
             &Some(PseudoElement::After) => layout_node.get_after_pseudo(),
@@ -866,7 +864,7 @@ impl LayoutTask {
 
         fn used_value_for_position_property(layout_node: ThreadSafeLayoutNode,
                                             layout_root: &mut FlowRef,
-                                            requested_node: &TrustedNodeAddress,
+                                            requested_node: LayoutNode,
                                             property: &Atom) -> Option<String> {
             let layout_data = layout_node.borrow_layout_data();
             let position = layout_data.as_ref().map(|layout_data| {
@@ -887,8 +885,7 @@ impl LayoutTask {
                 atom!("height") => PositionProperty::Height,
                 _ => unreachable!()
             };
-            let requested_node: OpaqueNode =
-                OpaqueNodeMethods::from_script_node(requested_node);
+            let requested_node = requested_node.opaque();
             let mut iterator =
                 PositionRetrievingFragmentBorderBoxIterator::new(requested_node,
                                                                  property,
@@ -918,8 +915,7 @@ impl LayoutTask {
                     atom!("padding-right") => (MarginPadding::Padding, Side::Right),
                     _ => unreachable!()
                 };
-                let requested_node: OpaqueNode =
-                    OpaqueNodeMethods::from_script_node(requested_node);
+                let requested_node = requested_node.opaque();
                 let mut iterator =
                     MarginRetrievingFragmentBorderBoxIterator::new(requested_node,
                                                                    side,
@@ -949,10 +945,10 @@ impl LayoutTask {
     }
 
     fn process_offset_parent_query(&self,
-                                   requested_node: &TrustedNodeAddress,
+                                   requested_node: LayoutNode,
                                    layout_root: &mut FlowRef)
                                    -> OffsetParentResponse {
-        let requested_node: OpaqueNode = OpaqueNodeMethods::from_script_node(requested_node);
+        let requested_node = requested_node.opaque();
         let mut iterator = ParentOffsetBorderBoxIterator::new(requested_node);
         sequential::iterate_through_flow_tree_fragment_border_boxes(layout_root, &mut iterator);
         let parent_info_index = iterator.parent_nodes.iter().rposition(|info| info.is_some());
@@ -1063,7 +1059,7 @@ impl LayoutTask {
     fn handle_reflow<'a, 'b>(&mut self,
                              data: ScriptReflow,
                              possibly_locked_rw_data: &mut RwData<'a, 'b>) {
-        let document = unsafe { LayoutNode::new(data.document()) };
+        let document = LayoutNode::new(&data, &data.document);
         let document = document.as_document().unwrap();
 
         debug!("layout: received layout request for: {}", self.url.serialize());
@@ -1199,20 +1195,20 @@ impl LayoutTask {
         if let Some(mut root_flow) = self.root_flow.clone() {
             match data.query_type {
                 ReflowQueryType::ContentBoxQuery(ref node) =>
-                    rw_data.content_box_response = process_content_box_request(node, &mut root_flow),
+                    rw_data.content_box_response = process_content_box_request(LayoutNode::new(&data, node), &mut root_flow),
                 ReflowQueryType::ContentBoxesQuery(ref node) =>
-                    rw_data.content_boxes_response = process_content_boxes_request(node, &mut root_flow),
+                    rw_data.content_boxes_response = process_content_boxes_request(LayoutNode::new(&data, node), &mut root_flow),
                 ReflowQueryType::NodeGeometryQuery(ref node) =>
-                    rw_data.client_rect_response = self.process_node_geometry_request(node, &mut root_flow),
+                    rw_data.client_rect_response = self.process_node_geometry_request(LayoutNode::new(&data, node), &mut root_flow),
                 ReflowQueryType::ResolvedStyleQuery(ref node, ref pseudo, ref property) => {
                     rw_data.resolved_style_response =
-                        self.process_resolved_style_request(node,
+                        self.process_resolved_style_request(LayoutNode::new(&data, node),
                                                             pseudo,
                                                             property,
                                                             &mut root_flow)
                 }
                 ReflowQueryType::OffsetParentQuery(ref node) =>
-                    rw_data.offset_parent_response = self.process_offset_parent_query(node, &mut root_flow),
+                    rw_data.offset_parent_response = self.process_offset_parent_query(LayoutNode::new(&data, node), &mut root_flow),
                 ReflowQueryType::NoQuery => {}
             }
         }
