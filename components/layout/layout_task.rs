@@ -100,9 +100,6 @@ pub struct LayoutTaskData {
     /// The root stacking context.
     pub stacking_context: Option<Arc<StackingContext>>,
 
-    /// Performs CSS selector matching and style resolution.
-    pub stylist: Box<Stylist>,
-
     /// A queued response for the union of the content boxes of a node.
     pub content_box_response: Rect<Au>,
 
@@ -241,22 +238,22 @@ impl LayoutTaskFactory for LayoutTask {
                                          move || {
             { // Ensures layout task is destroyed before we send shutdown message
                 let sender = chan.sender();
-                let layout = LayoutTask::new(id,
-                                             url,
-                                             is_iframe,
-                                             chan.receiver(),
-                                             pipeline_port,
-                                             constellation_chan,
-                                             script_chan,
-                                             paint_chan,
-                                             image_cache_task,
-                                             font_cache_task,
-                                             time_profiler_chan,
-                                             mem_profiler_chan.clone());
+                let (layout, stylist) = LayoutTask::new(id,
+                                                        url,
+                                                        is_iframe,
+                                                        chan.receiver(),
+                                                        pipeline_port,
+                                                        constellation_chan,
+                                                        script_chan,
+                                                        paint_chan,
+                                                        image_cache_task,
+                                                        font_cache_task,
+                                                        time_profiler_chan,
+                                                        mem_profiler_chan.clone());
 
                 let reporter_name = format!("layout-reporter-{}", id);
                 mem_profiler_chan.run_with_memory_reporting(|| {
-                    layout.start();
+                    layout.start(stylist);
                 }, reporter_name, sender, Msg::CollectReports);
             }
             shutdown_chan.send(()).unwrap();
@@ -316,6 +313,7 @@ impl<'a, 'b: 'a> RwData<'a, 'b> {
     /// If no reflow has ever been triggered, this will keep the lock, locked
     /// (and saved in `possibly_locked_rw_data`). If it has been, the lock will
     /// be unlocked.
+    #[allow(dead_code)]
     fn block(&mut self, rw_data: RWGuard<'b>) {
         match rw_data {
             RWGuard::Used(x) => drop(x),
@@ -361,7 +359,7 @@ impl LayoutTask {
            font_cache_task: FontCacheTask,
            time_profiler_chan: time::ProfilerChan,
            mem_profiler_chan: mem::ProfilerChan)
-           -> LayoutTask {
+           -> (LayoutTask, Stylist) {
         let device = Device::new(
             MediaType::Screen,
             opts::get().initial_window_size.as_f32() * ScaleFactor::new(1.0));
@@ -386,7 +384,7 @@ impl LayoutTask {
 
         let (font_cache_sender, font_cache_receiver) = channel();
 
-        let stylist = box Stylist::new(device);
+        let stylist = Stylist::new(device);
         let outstanding_web_fonts_counter = Arc::new(AtomicUsize::new(0));
         for stylesheet in &*USER_OR_USER_AGENT_STYLESHEETS {
             add_font_face_rules(stylesheet,
@@ -396,7 +394,7 @@ impl LayoutTask {
                                 &outstanding_web_fonts_counter);
         }
 
-        LayoutTask {
+        (LayoutTask {
             id: id,
             url: url,
             is_iframe: is_iframe,
@@ -430,35 +428,34 @@ impl LayoutTask {
                 LayoutTaskData {
                     constellation_chan: constellation_chan,
                     stacking_context: None,
-                    stylist: stylist,
                     content_box_response: Rect::zero(),
                     content_boxes_response: Vec::new(),
                     client_rect_response: Rect::zero(),
                     resolved_style_response: None,
                     offset_parent_response: OffsetParentResponse::empty(),
               })),
-        }
+        }, stylist)
     }
 
     /// Starts listening on the port.
-    fn start(mut self) {
+    fn start(mut self, mut stylist: Stylist) {
         let rw_data = self.rw_data.clone();
         let mut possibly_locked_rw_data = Some(rw_data.lock().unwrap());
         let mut rw_data = RwData {
             rw_data: &rw_data,
             possibly_locked_rw_data: &mut possibly_locked_rw_data,
         };
-        while self.handle_request(&mut rw_data) {
+        while self.handle_request(&mut rw_data, &mut stylist) {
             // Loop indefinitely.
         }
     }
 
     // Create a layout context for use in building display lists, hit testing, &c.
     fn build_shared_layout_context(&self,
-                                   rw_data: &LayoutTaskData,
                                    screen_size_changed: bool,
                                    url: &Url,
-                                   goal: ReflowGoal)
+                                   goal: ReflowGoal,
+                                   stylist: &Stylist)
                                    -> SharedLayoutContext {
         SharedLayoutContext {
             image_cache_task: self.image_cache_task.clone(),
@@ -467,7 +464,7 @@ impl LayoutTask {
             screen_size_changed: screen_size_changed,
             font_cache_task: Mutex::new(self.font_cache_task.clone()),
             canvas_layers_sender: Mutex::new(self.canvas_layers_sender.clone()),
-            stylist: StylistWrapper(&*rw_data.stylist),
+            stylist: StylistWrapper(stylist),
             url: (*url).clone(),
             visible_rects: self.visible_rects.clone(),
             generation: self.generation,
@@ -478,7 +475,10 @@ impl LayoutTask {
     }
 
     /// Receives and dispatches messages from the script and constellation tasks
-    fn handle_request<'a, 'b>(&mut self, possibly_locked_rw_data: &mut RwData<'a, 'b>) -> bool {
+    fn handle_request<'a, 'b>(&mut self,
+                              possibly_locked_rw_data: &mut RwData<'a, 'b>,
+                              stylist: &mut Stylist)
+                              -> bool {
         enum Request {
             FromPipeline(LayoutControlMsg),
             FromScript(Msg),
@@ -512,26 +512,30 @@ impl LayoutTask {
         match request {
             Request::FromPipeline(LayoutControlMsg::SetVisibleRects(new_visible_rects)) => {
                 self.handle_request_helper(Msg::SetVisibleRects(new_visible_rects),
-                                           possibly_locked_rw_data)
+                                           possibly_locked_rw_data,
+                                           stylist)
             },
             Request::FromPipeline(LayoutControlMsg::TickAnimations) => {
-                self.handle_request_helper(Msg::TickAnimations, possibly_locked_rw_data)
+                self.handle_request_helper(Msg::TickAnimations, possibly_locked_rw_data, stylist)
             },
             Request::FromPipeline(LayoutControlMsg::GetCurrentEpoch(sender)) => {
-                self.handle_request_helper(Msg::GetCurrentEpoch(sender), possibly_locked_rw_data)
+                self.handle_request_helper(Msg::GetCurrentEpoch(sender),
+                                           possibly_locked_rw_data,
+                                           stylist)
             },
             Request::FromPipeline(LayoutControlMsg::GetWebFontLoadState(sender)) => {
                 self.handle_request_helper(Msg::GetWebFontLoadState(sender),
-                                           possibly_locked_rw_data)
+                                           possibly_locked_rw_data,
+                                           stylist)
             },
             Request::FromPipeline(LayoutControlMsg::ExitNow) => {
-                self.handle_request_helper(Msg::ExitNow, possibly_locked_rw_data)
+                self.handle_request_helper(Msg::ExitNow, possibly_locked_rw_data, stylist)
             },
             Request::FromScript(msg) => {
-                self.handle_request_helper(msg, possibly_locked_rw_data)
+                self.handle_request_helper(msg, possibly_locked_rw_data, stylist)
             },
             Request::FromImageCache => {
-                self.repaint(possibly_locked_rw_data)
+                self.repaint(possibly_locked_rw_data, stylist)
             },
             Request::FromFontCache => {
                 let _rw_data = possibly_locked_rw_data.lock();
@@ -548,7 +552,10 @@ impl LayoutTask {
     /// repaint.
     /// TODO: In the future we could detect if the image size hasn't changed
     /// since last time and avoid performing a complete layout pass.
-    fn repaint<'a, 'b>(&mut self, possibly_locked_rw_data: &mut RwData<'a, 'b>) -> bool {
+    fn repaint<'a, 'b>(&mut self,
+                       possibly_locked_rw_data: &mut RwData<'a, 'b>,
+                       stylist: &mut Stylist)
+                       -> bool {
         let mut rw_data = possibly_locked_rw_data.lock();
 
         let reflow_info = Reflow {
@@ -556,14 +563,15 @@ impl LayoutTask {
             page_clip_rect: MAX_RECT,
         };
 
-        let mut layout_context = self.build_shared_layout_context(&*rw_data,
-                                                                  false,
+        let mut layout_context = self.build_shared_layout_context(false,
                                                                   &self.url,
-                                                                  reflow_info.goal);
+                                                                  reflow_info.goal,
+                                                                  stylist);
 
         self.perform_post_style_recalc_layout_passes(&reflow_info,
                                                      &mut *rw_data,
-                                                     &mut layout_context);
+                                                     &mut layout_context,
+                                                     stylist);
 
 
         true
@@ -572,13 +580,14 @@ impl LayoutTask {
     /// Receives and dispatches messages from other tasks.
     fn handle_request_helper<'a, 'b>(&mut self,
                                      request: Msg,
-                                     possibly_locked_rw_data: &mut RwData<'a, 'b>)
+                                     possibly_locked_rw_data: &mut RwData<'a, 'b>,
+                                     stylist: &mut Stylist)
                                      -> bool {
         match request {
             Msg::AddStylesheet(style_info) => {
-                self.handle_add_stylesheet(style_info, possibly_locked_rw_data)
+                self.handle_add_stylesheet(style_info, stylist)
             }
-            Msg::SetQuirksMode => self.handle_set_quirks_mode(possibly_locked_rw_data),
+            Msg::SetQuirksMode => self.handle_set_quirks_mode(stylist),
             Msg::GetRPC(response_chan) => {
                 response_chan.send(box LayoutRPCImpl(self.rw_data.clone()) as
                                    Box<LayoutRPC + Send>).unwrap();
@@ -587,14 +596,14 @@ impl LayoutTask {
                 profile(time::ProfilerCategory::LayoutPerform,
                         self.profiler_metadata(),
                         self.time_profiler_chan.clone(),
-                        || self.handle_reflow(&data, possibly_locked_rw_data));
+                        || self.handle_reflow(&data, possibly_locked_rw_data, stylist));
             },
-            Msg::TickAnimations => self.tick_all_animations(possibly_locked_rw_data),
+            Msg::TickAnimations => self.tick_all_animations(possibly_locked_rw_data, stylist),
             Msg::ReflowWithNewlyLoadedWebFont => {
-                self.reflow_with_newly_loaded_web_font(possibly_locked_rw_data)
+                self.reflow_with_newly_loaded_web_font(possibly_locked_rw_data, stylist)
             }
             Msg::SetVisibleRects(new_visible_rects) => {
-                self.set_visible_rects(new_visible_rects, possibly_locked_rw_data);
+                self.set_visible_rects(new_visible_rects, possibly_locked_rw_data, stylist);
             }
             Msg::ReapLayoutData(dead_layout_data) => {
                 unsafe {
@@ -725,29 +734,22 @@ impl LayoutTask {
         response_port.recv().unwrap()
     }
 
-    fn handle_add_stylesheet<'a, 'b>(&self,
-                                     stylesheet: Arc<Stylesheet>,
-                                     possibly_locked_rw_data: &mut RwData<'a, 'b>) {
+    fn handle_add_stylesheet(&self, stylesheet: Arc<Stylesheet>, stylist: &Stylist) {
         // Find all font-face rules and notify the font cache of them.
         // GWTODO: Need to handle unloading web fonts.
 
-        let rw_data = possibly_locked_rw_data.lock();
-        if stylesheet.is_effective_for_device(&rw_data.stylist.device) {
+        if stylesheet.is_effective_for_device(&stylist.device) {
             add_font_face_rules(&*stylesheet,
-                                &rw_data.stylist.device,
+                                &stylist.device,
                                 &self.font_cache_task,
                                 &self.font_cache_sender,
                                 &self.outstanding_web_fonts);
         }
-
-        possibly_locked_rw_data.block(rw_data);
     }
 
     /// Sets quirks mode for the document, causing the quirks mode stylesheet to be used.
-    fn handle_set_quirks_mode<'a, 'b>(&self, possibly_locked_rw_data: &mut RwData<'a, 'b>) {
-        let mut rw_data = possibly_locked_rw_data.lock();
-        rw_data.stylist.set_quirks_mode(true);
-        possibly_locked_rw_data.block(rw_data);
+    fn handle_set_quirks_mode(&self, stylist: &mut Stylist) {
+        stylist.set_quirks_mode(true);
     }
 
     fn try_get_layout_root(&self, node: LayoutNode) -> Option<FlowRef> {
@@ -976,7 +978,8 @@ impl LayoutTask {
                                               data: &Reflow,
                                               layout_root: &mut FlowRef,
                                               shared_layout_context: &mut SharedLayoutContext,
-                                              rw_data: &mut LayoutTaskData) {
+                                              rw_data: &mut LayoutTaskData,
+                                              stylist: &mut Stylist) {
         let writing_mode = flow::base(&**layout_root).writing_mode;
         let (metadata, sender) = (self.profiler_metadata(), self.time_profiler_chan.clone());
         profile(time::ProfilerCategory::LayoutDispListBuild,
@@ -1011,7 +1014,7 @@ impl LayoutTask {
                     flow_ref::deref_mut(layout_root));
                 let root_size = {
                     let root_flow = flow::base(&**layout_root);
-                    if rw_data.stylist.viewport_constraints().is_some() {
+                    if stylist.viewport_constraints().is_some() {
                         root_flow.position.size.to_physical(root_flow.writing_mode)
                     } else {
                         root_flow.overflow.size
@@ -1062,7 +1065,8 @@ impl LayoutTask {
     /// The high-level routine that performs layout tasks.
     fn handle_reflow<'a, 'b>(&mut self,
                              data: &ScriptReflow,
-                             possibly_locked_rw_data: &mut RwData<'a, 'b>) {
+                             possibly_locked_rw_data: &mut RwData<'a, 'b>,
+                             stylist: &mut Stylist) {
         let document = unsafe { LayoutNode::new(&data.document) };
         let document = document.as_document().unwrap();
 
@@ -1111,9 +1115,9 @@ impl LayoutTask {
 
         // Calculate the actual viewport as per DEVICE-ADAPT § 6
         let device = Device::new(MediaType::Screen, initial_viewport);
-        rw_data.stylist.set_device(device, &stylesheets);
+        stylist.set_device(device, &stylesheets);
 
-        let constraints = rw_data.stylist.viewport_constraints().clone();
+        let constraints = stylist.viewport_constraints().clone();
         self.viewport_size = match constraints {
             Some(ref constraints) => {
                 debug!("Viewport constraints: {:?}", constraints);
@@ -1137,7 +1141,7 @@ impl LayoutTask {
         }
 
         // If the entire flow tree is invalid, then it will be reflowed anyhow.
-        let needs_dirtying = rw_data.stylist.update(&stylesheets, stylesheets_changed);
+        let needs_dirtying = stylist.update(&stylesheets, stylesheets_changed);
         let needs_reflow = viewport_size_changed && !needs_dirtying;
         unsafe {
             if needs_dirtying {
@@ -1153,16 +1157,16 @@ impl LayoutTask {
         let modified_elements = document.drain_modified_elements();
         if !needs_dirtying {
             for (el, snapshot) in modified_elements {
-                let hint = rw_data.stylist.compute_restyle_hint(&el, &snapshot, el.get_state());
+                let hint = stylist.compute_restyle_hint(&el, &snapshot, el.get_state());
                 el.note_restyle_hint(hint);
             }
         }
 
         // Create a layout context for use throughout the following passes.
-        let mut shared_layout_context = self.build_shared_layout_context(&*rw_data,
-                                                                         viewport_size_changed,
+        let mut shared_layout_context = self.build_shared_layout_context(viewport_size_changed,
                                                                          &self.url,
-                                                                         data.reflow_info.goal);
+                                                                         data.reflow_info.goal,
+                                                                         stylist);
 
         if node.is_dirty() || node.has_dirty_descendants() {
             // Recalculate CSS styles and rebuild flows and fragments.
@@ -1194,7 +1198,8 @@ impl LayoutTask {
         // Perform post-style recalculation layout passes.
         self.perform_post_style_recalc_layout_passes(&data.reflow_info,
                                                      &mut rw_data,
-                                                     &mut shared_layout_context);
+                                                     &mut shared_layout_context,
+                                                     stylist);
 
         if let Some(mut root_flow) = self.root_flow.clone() {
             match data.query_type {
@@ -1220,7 +1225,8 @@ impl LayoutTask {
 
     fn set_visible_rects<'a, 'b>(&mut self,
                                  new_visible_rects: Vec<(LayerId, Rect<Au>)>,
-                                 possibly_locked_rw_data: &mut RwData<'a, 'b>)
+                                 possibly_locked_rw_data: &mut RwData<'a, 'b>,
+                                 stylist: &mut Stylist)
                                  -> bool {
         let mut rw_data = possibly_locked_rw_data.lock();
 
@@ -1266,34 +1272,34 @@ impl LayoutTask {
             page_clip_rect: MAX_RECT,
         };
 
-        let mut layout_context = self.build_shared_layout_context(&*rw_data,
-                                                                  false,
+        let mut layout_context = self.build_shared_layout_context(false,
                                                                   &self.url,
-                                                                  reflow_info.goal);
+                                                                  reflow_info.goal,
+                                                                  stylist);
 
-        self.perform_post_main_layout_passes(&reflow_info, &mut *rw_data, &mut layout_context);
+        self.perform_post_main_layout_passes(&reflow_info, &mut *rw_data, &mut layout_context, stylist);
         true
     }
 
-    fn tick_all_animations<'a, 'b>(&mut self, possibly_locked_rw_data: &mut RwData<'a, 'b>) {
+    fn tick_all_animations<'a, 'b>(&mut self, possibly_locked_rw_data: &mut RwData<'a, 'b>, stylist: &mut Stylist) {
         let mut rw_data = possibly_locked_rw_data.lock();
-        self.tick_animations(&mut rw_data);
+        self.tick_animations(&mut rw_data, stylist);
 
         self.script_chan
           .send(ConstellationControlMsg::TickAllAnimations(self.id))
           .unwrap();
     }
 
-    pub fn tick_animations(&mut self, rw_data: &mut LayoutTaskData) {
+    pub fn tick_animations(&mut self, rw_data: &mut LayoutTaskData, stylist: &mut Stylist) {
         let reflow_info = Reflow {
             goal: ReflowGoal::ForDisplay,
             page_clip_rect: MAX_RECT,
         };
 
-        let mut layout_context = self.build_shared_layout_context(&*rw_data,
-                                                                  false,
+        let mut layout_context = self.build_shared_layout_context(false,
                                                                   &self.url,
-                                                                  reflow_info.goal);
+                                                                  reflow_info.goal,
+                                                                  stylist);
 
         if let Some(mut root_flow) = self.root_flow.clone() {
             // Perform an abbreviated style recalc that operates without access to the DOM.
@@ -1309,10 +1315,13 @@ impl LayoutTask {
 
         self.perform_post_style_recalc_layout_passes(&reflow_info,
                                                      &mut *rw_data,
-                                                     &mut layout_context);
+                                                     &mut layout_context,
+                                                     stylist);
     }
 
-    fn reflow_with_newly_loaded_web_font<'a, 'b>(&mut self, possibly_locked_rw_data: &mut RwData<'a, 'b>) {
+    fn reflow_with_newly_loaded_web_font<'a, 'b>(&mut self,
+                                                 possibly_locked_rw_data: &mut RwData<'a, 'b>,
+                                                 stylist: &mut Stylist) {
         let mut rw_data = possibly_locked_rw_data.lock();
         font_context::invalidate_font_caches();
 
@@ -1321,10 +1330,10 @@ impl LayoutTask {
             page_clip_rect: MAX_RECT,
         };
 
-        let mut layout_context = self.build_shared_layout_context(&*rw_data,
-                                                                  false,
+        let mut layout_context = self.build_shared_layout_context(false,
                                                                   &self.url,
-                                                                  reflow_info.goal);
+                                                                  reflow_info.goal,
+                                                                  stylist);
 
         // No need to do a style recalc here.
         if self.root_flow.is_none() {
@@ -1332,13 +1341,15 @@ impl LayoutTask {
         }
         self.perform_post_style_recalc_layout_passes(&reflow_info,
                                                      &mut *rw_data,
-                                                     &mut layout_context);
+                                                     &mut layout_context,
+                                                     stylist);
     }
 
     fn perform_post_style_recalc_layout_passes(&mut self,
                                                data: &Reflow,
                                                rw_data: &mut LayoutTaskData,
-                                               layout_context: &mut SharedLayoutContext) {
+                                               layout_context: &mut SharedLayoutContext,
+                                               stylist: &mut Stylist) {
         if let Some(mut root_flow) = self.root_flow.clone() {
             // Kick off animations if any were triggered, expire completed ones.
             animation::update_animation_state(&self.constellation_chan,
@@ -1390,20 +1401,22 @@ impl LayoutTask {
                 }
             });
 
-            self.perform_post_main_layout_passes(data, rw_data, layout_context);
+            self.perform_post_main_layout_passes(data, rw_data, layout_context, stylist);
         }
     }
 
     fn perform_post_main_layout_passes(&mut self,
                                        data: &Reflow,
                                        rw_data: &mut LayoutTaskData,
-                                       layout_context: &mut SharedLayoutContext) {
+                                       layout_context: &mut SharedLayoutContext,
+                                       stylist: &mut Stylist) {
         // Build the display list if necessary, and send it to the painter.
         if let Some(mut root_flow) = self.root_flow.clone() {
             self.compute_abs_pos_and_build_display_list(data,
                                                         &mut root_flow,
                                                         &mut *layout_context,
-                                                        rw_data);
+                                                        rw_data,
+                                                        stylist);
             self.first_reflow = false;
 
             if opts::get().trace_layout {
