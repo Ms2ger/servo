@@ -12,7 +12,7 @@ use app_units::Au;
 use azure::azure::AzColor;
 use canvas_traits::CanvasMsg;
 use construct::ConstructionResult;
-use context::{SharedLayoutContext, StylistWrapper, heap_size_of_local_context};
+use context::{SharedLayoutContext, heap_size_of_local_context};
 use cssparser::ToCss;
 use data::LayoutDataWrapper;
 use display_list_builder::ToGfxColor;
@@ -451,12 +451,12 @@ impl LayoutTask {
     }
 
     // Create a layout context for use in building display lists, hit testing, &c.
-    fn build_shared_layout_context(&self,
+    fn build_shared_layout_context<'a>(&self,
                                    screen_size_changed: bool,
                                    url: &Url,
                                    goal: ReflowGoal,
-                                   stylist: &Stylist)
-                                   -> SharedLayoutContext {
+                                   stylist: &'a Stylist)
+                                   -> SharedLayoutContext<'a> {
         SharedLayoutContext {
             image_cache_task: self.image_cache_task.clone(),
             image_cache_sender: Mutex::new(self.image_cache_sender.clone()),
@@ -464,7 +464,7 @@ impl LayoutTask {
             screen_size_changed: screen_size_changed,
             font_cache_task: Mutex::new(self.font_cache_task.clone()),
             canvas_layers_sender: Mutex::new(self.canvas_layers_sender.clone()),
-            stylist: StylistWrapper(stylist),
+            stylist: stylist,
             url: (*url).clone(),
             visible_rects: self.visible_rects.clone(),
             generation: self.generation,

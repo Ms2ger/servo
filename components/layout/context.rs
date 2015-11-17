@@ -74,14 +74,8 @@ fn create_or_get_local_context(shared_layout_context: &SharedLayoutContext)
     })
 }
 
-pub struct StylistWrapper(pub *const Stylist);
-
-// FIXME(#6569) This implementation is unsound.
-#[allow(unsafe_code)]
-unsafe impl Sync for StylistWrapper {}
-
 /// Layout information shared among all workers. This must be thread-safe.
-pub struct SharedLayoutContext {
+pub struct SharedLayoutContext<'a> {
     /// The shared image cache task.
     pub image_cache_task: ImageCacheTask,
 
@@ -98,9 +92,7 @@ pub struct SharedLayoutContext {
     pub font_cache_task: Mutex<FontCacheTask>,
 
     /// The CSS selector stylist.
-    ///
-    /// FIXME(#2604): Make this no longer an unsafe pointer once we have fast `RWArc`s.
-    pub stylist: StylistWrapper,
+    pub stylist: &'a Stylist,
 
     /// The URL.
     pub url: Url,
@@ -127,7 +119,7 @@ pub struct SharedLayoutContext {
 }
 
 pub struct LayoutContext<'a> {
-    pub shared: &'a SharedLayoutContext,
+    pub shared: &'a SharedLayoutContext<'a>,
     cached_local_layout_context: Rc<LocalLayoutContext>,
 }
 
