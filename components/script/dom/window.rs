@@ -426,7 +426,7 @@ impl WindowMethods for Window {
 
     // https://html.spec.whatwg.org/multipage/#dom-document-2
     fn Document(&self) -> Root<Document> {
-        self.browsing_context().as_ref().unwrap().active_document()
+        self.browsing_context().as_ref().unwrap().active_document().as_local()
     }
 
     // https://html.spec.whatwg.org/multipage/#dom-location
@@ -1288,7 +1288,7 @@ impl Window {
         browsing_context.frame_element().map(|frame_element| {
             let window = window_from_node(frame_element);
             let context = window.browsing_context();
-            context.unwrap().active_window()
+            context.unwrap().active_window().as_local()
         })
     }
 }
