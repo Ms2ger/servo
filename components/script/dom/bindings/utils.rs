@@ -608,16 +608,12 @@ pub fn create_dom_global(cx: *mut JSContext,
 
 /// Drop the resources held by reserved slots of a global object
 pub unsafe fn finalize_global(obj: *mut JSObject) {
-    let protolist = get_proto_or_iface_array(obj);
-    let list = (*protolist).as_mut_ptr();
-    for idx in 0..(PrototypeList::ID::Count as isize) {
-        let entry = list.offset(idx);
-        let value = *entry;
-        if <*mut JSObject>::needs_post_barrier(value) {
+    let mut protolist = Box::from_raw(get_proto_or_iface_array(obj));
+    for entry in &mut protolist[..] {
+        if <*mut JSObject>::needs_post_barrier(*entry) {
             <*mut JSObject>::relocate(entry);
         }
     }
-    let _: Box<ProtoOrIfaceArray> = Box::from_raw(protolist);
 }
 
 /// Trace the resources held by reserved slots of a global object
