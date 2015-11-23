@@ -1845,7 +1845,7 @@ class CGPrototypeJSClass(CGThing):
 
     def define(self):
         return """\
-static PrototypeClass: JSClass = JSClass {
+static PROTOTYPE_CLASS: JSClass = JSClass {
     name: %s as *const u8 as *const libc::c_char,
     flags: (1 & JSCLASS_RESERVED_SLOTS_MASK) << JSCLASS_RESERVED_SLOTS_SHIFT, //JSCLASS_HAS_RESERVED_SLOTS(1)
     addProperty: None,
@@ -2358,7 +2358,7 @@ class CGCreateInterfaceObjectsMethod(CGAbstractMethod):
         if self.descriptor.interface.isCallback():
             protoClass = "None"
         else:
-            protoClass = "Some(&PrototypeClass)"
+            protoClass = "Some(&PROTOTYPE_CLASS)"
 
         if self.descriptor.concrete:
             if self.descriptor.proxy:
