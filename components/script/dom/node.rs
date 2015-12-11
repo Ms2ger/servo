@@ -930,16 +930,16 @@ pub fn from_untrusted_node_address(_runtime: *mut JSRuntime, candidate: Untruste
 }
 
 #[allow(unsafe_code)]
-pub trait LayoutNodeHelpers {
+pub trait LayoutNodeHelpers<'a> {
     unsafe fn type_id_for_layout(&self) -> NodeTypeId;
 
-    unsafe fn parent_node_ref(&self) -> Option<LayoutJS<Node>>;
-    unsafe fn first_child_ref(&self) -> Option<LayoutJS<Node>>;
-    unsafe fn last_child_ref(&self) -> Option<LayoutJS<Node>>;
-    unsafe fn prev_sibling_ref(&self) -> Option<LayoutJS<Node>>;
-    unsafe fn next_sibling_ref(&self) -> Option<LayoutJS<Node>>;
+    unsafe fn parent_node_ref(&self) -> Option<LayoutJS<'a, Node>>;
+    unsafe fn first_child_ref(&self) -> Option<LayoutJS<'a, Node>>;
+    unsafe fn last_child_ref(&self) -> Option<LayoutJS<'a, Node>>;
+    unsafe fn prev_sibling_ref(&self) -> Option<LayoutJS<'a, Node>>;
+    unsafe fn next_sibling_ref(&self) -> Option<LayoutJS<'a, Node>>;
 
-    unsafe fn owner_doc_for_layout(&self) -> LayoutJS<Document>;
+    unsafe fn owner_doc_for_layout(&self) -> LayoutJS<'a, Document>;
 
     unsafe fn is_element_for_layout(&self) -> bool;
     unsafe fn get_flag(&self, flag: NodeFlags) -> bool;
@@ -952,7 +952,7 @@ pub trait LayoutNodeHelpers {
     unsafe fn layout_data_unchecked(&self) -> *const Option<LayoutData>;
 }
 
-impl LayoutNodeHelpers for LayoutJS<Node> {
+impl<'a> LayoutNodeHelpers<'a> for LayoutJS<'a, Node> {
     #[inline]
     #[allow(unsafe_code)]
     unsafe fn type_id_for_layout(&self) -> NodeTypeId {
@@ -967,37 +967,37 @@ impl LayoutNodeHelpers for LayoutJS<Node> {
 
     #[inline]
     #[allow(unsafe_code)]
-    unsafe fn parent_node_ref(&self) -> Option<LayoutJS<Node>> {
+    unsafe fn parent_node_ref(&self) -> Option<LayoutJS<'a, Node>> {
         (*self.unsafe_get()).parent_node.get_inner_as_layout()
     }
 
     #[inline]
     #[allow(unsafe_code)]
-    unsafe fn first_child_ref(&self) -> Option<LayoutJS<Node>> {
+    unsafe fn first_child_ref(&self) -> Option<LayoutJS<'a, Node>> {
         (*self.unsafe_get()).first_child.get_inner_as_layout()
     }
 
     #[inline]
     #[allow(unsafe_code)]
-    unsafe fn last_child_ref(&self) -> Option<LayoutJS<Node>> {
+    unsafe fn last_child_ref(&self) -> Option<LayoutJS<'a, Node>> {
         (*self.unsafe_get()).last_child.get_inner_as_layout()
     }
 
     #[inline]
     #[allow(unsafe_code)]
-    unsafe fn prev_sibling_ref(&self) -> Option<LayoutJS<Node>> {
+    unsafe fn prev_sibling_ref(&self) -> Option<LayoutJS<'a, Node>> {
         (*self.unsafe_get()).prev_sibling.get_inner_as_layout()
     }
 
     #[inline]
     #[allow(unsafe_code)]
-    unsafe fn next_sibling_ref(&self) -> Option<LayoutJS<Node>> {
+    unsafe fn next_sibling_ref(&self) -> Option<LayoutJS<'a, Node>> {
         (*self.unsafe_get()).next_sibling.get_inner_as_layout()
     }
 
     #[inline]
     #[allow(unsafe_code)]
-    unsafe fn owner_doc_for_layout(&self) -> LayoutJS<Document> {
+    unsafe fn owner_doc_for_layout(&self) -> LayoutJS<'a, Document> {
         (*self.unsafe_get()).owner_doc.get_inner_as_layout().unwrap()
     }
 

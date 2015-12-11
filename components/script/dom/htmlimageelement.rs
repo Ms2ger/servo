@@ -168,7 +168,7 @@ pub trait LayoutHTMLImageElementHelpers {
     unsafe fn image_url(&self) -> Option<Url>;
 }
 
-impl LayoutHTMLImageElementHelpers for LayoutJS<HTMLImageElement> {
+impl<'a> LayoutHTMLImageElementHelpers for LayoutJS<'a, HTMLImageElement> {
     #[allow(unsafe_code)]
     unsafe fn image(&self) -> Option<Arc<Image>> {
         (*self.unsafe_get()).image.borrow_for_layout().clone()

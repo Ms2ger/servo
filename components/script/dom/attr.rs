@@ -232,7 +232,7 @@ pub trait AttrHelpersForLayout {
 }
 
 #[allow(unsafe_code)]
-impl AttrHelpersForLayout for LayoutJS<Attr> {
+impl<'a> AttrHelpersForLayout for LayoutJS<'a, Attr> {
     #[inline]
     unsafe fn value_forever(&self) -> &'static AttrValue {
         // This transmute is used to cheat the lifetime restriction.

@@ -55,7 +55,7 @@ pub trait HTMLHRLayoutHelpers {
     fn get_width(&self) -> LengthOrPercentageOrAuto;
 }
 
-impl HTMLHRLayoutHelpers for LayoutJS<HTMLHRElement> {
+impl<'a> HTMLHRLayoutHelpers for LayoutJS<'a, HTMLHRElement> {
     #[allow(unsafe_code)]
     fn get_color(&self) -> Option<RGBA> {
         unsafe {

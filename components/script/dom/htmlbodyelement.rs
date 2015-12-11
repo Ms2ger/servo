@@ -92,7 +92,7 @@ pub trait HTMLBodyElementLayoutHelpers {
     fn get_background(&self) -> Option<Url>;
 }
 
-impl HTMLBodyElementLayoutHelpers for LayoutJS<HTMLBodyElement> {
+impl<'a> HTMLBodyElementLayoutHelpers for LayoutJS<'a, HTMLBodyElement> {
     #[allow(unsafe_code)]
     fn get_background_color(&self) -> Option<RGBA> {
         unsafe {

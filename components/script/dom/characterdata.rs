@@ -167,7 +167,7 @@ pub trait LayoutCharacterDataHelpers {
 }
 
 #[allow(unsafe_code)]
-impl LayoutCharacterDataHelpers for LayoutJS<CharacterData> {
+impl<'a> LayoutCharacterDataHelpers for LayoutJS<'a, CharacterData> {
     #[inline]
     unsafe fn data_for_layout(&self) -> &str {
         &(*self.unsafe_get()).data.borrow_for_layout()

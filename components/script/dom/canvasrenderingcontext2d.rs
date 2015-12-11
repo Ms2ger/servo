@@ -484,7 +484,7 @@ pub trait LayoutCanvasRenderingContext2DHelpers {
     unsafe fn get_ipc_renderer(&self) -> IpcSender<CanvasMsg>;
 }
 
-impl LayoutCanvasRenderingContext2DHelpers for LayoutJS<CanvasRenderingContext2D> {
+impl<'a> LayoutCanvasRenderingContext2DHelpers for LayoutJS<'a, CanvasRenderingContext2D> {
     #[allow(unsafe_code)]
     unsafe fn get_renderer_id(&self) -> usize {
         (*self.unsafe_get()).renderer_id

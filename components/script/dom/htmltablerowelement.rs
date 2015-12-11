@@ -94,7 +94,7 @@ pub trait HTMLTableRowElementLayoutHelpers {
 }
 
 #[allow(unsafe_code)]
-impl HTMLTableRowElementLayoutHelpers for LayoutJS<HTMLTableRowElement> {
+impl<'a> HTMLTableRowElementLayoutHelpers for LayoutJS<'a, HTMLTableRowElement> {
     fn get_background_color(&self) -> Option<RGBA> {
         unsafe {
             (&*self.upcast::<Element>().unsafe_get())

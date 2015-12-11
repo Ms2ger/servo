@@ -63,12 +63,12 @@ impl<T> HeapSizeOf for JS<T> {
     }
 }
 
-impl<T> JS<T> {
+impl<T: Reflectable> JS<T> {
     /// Returns `LayoutJS<T>` containing the same pointer.
-    pub unsafe fn to_layout(&self) -> LayoutJS<T> {
+    pub fn to_layout(&self) -> LayoutJS<T> {
         debug_assert!(task_state::get().is_layout());
         LayoutJS {
-            ptr: self.ptr.clone(),
+            ptr: &**self,
         }
     }
 }
@@ -113,11 +113,11 @@ impl<T: Reflectable> JSTraceable for JS<T> {
 /// An unrooted reference to a DOM object for use in layout. `Layout*Helpers`
 /// traits must be implemented on this.
 #[allow_unrooted_interior]
-pub struct LayoutJS<T> {
-    ptr: NonZero<*const T>,
+pub struct LayoutJS<'a, T: 'a> {
+    ptr: &'a T,
 }
 
-impl<T: Castable> LayoutJS<T> {
+impl<'a, T: 'a + Castable> LayoutJS<'a, T> {
     /// Cast a DOM object root upwards to one of the interfaces it derives from.
     pub fn upcast<U>(&self) -> LayoutJS<U>
         where U: Castable,
@@ -142,15 +142,22 @@ impl<T: Castable> LayoutJS<T> {
     }
 }
 
-impl<T: Reflectable> LayoutJS<T> {
+impl<'a, T: 'a + Reflectable> LayoutJS<'a, T> {
     /// Get the reflector.
     pub unsafe fn get_jsobject(&self) -> *mut JSObject {
         debug_assert!(task_state::get().is_layout());
-        (**self.ptr).reflector().get_jsobject().get()
+        self.ptr.reflector().get_jsobject().get()
     }
 }
 
-impl<T> Copy for LayoutJS<T> {}
+impl<'a, T: 'static + Reflectable> LayoutJS<'a, T> {
+    /// Extend the lifetime of this pointer.
+    pub unsafe fn extend<'b>(self) -> LayoutJS<'b, T> {
+        mem::transmute(self)
+    }
+}
+
+impl<'a, T: 'a> Copy for LayoutJS<'a, T> {}
 
 impl<T> PartialEq for JS<T> {
     fn eq(&self, other: &JS<T>) -> bool {
@@ -160,13 +167,13 @@ impl<T> PartialEq for JS<T> {
 
 impl<T> Eq for JS<T> {}
 
-impl<T> PartialEq for LayoutJS<T> {
-    fn eq(&self, other: &LayoutJS<T>) -> bool {
-        self.ptr == other.ptr
+impl<'a, T: 'a> PartialEq for LayoutJS<'a, T> {
+    fn eq(&self, other: &LayoutJS<'a, T>) -> bool {
+        self.ptr as *const T == other.ptr as *const T
     }
 }
 
-impl<T> Eq for LayoutJS<T> {}
+impl<'a, T: 'a> Eq for LayoutJS<'a, T> {}
 
 impl<T> Hash for JS<T> {
     fn hash<H: Hasher>(&self, state: &mut H) {
@@ -174,13 +181,13 @@ impl<T> Hash for JS<T> {
     }
 }
 
-impl<T> Hash for LayoutJS<T> {
+impl<'a, T: 'a> Hash for LayoutJS<'a, T> {
     fn hash<H: Hasher>(&self, state: &mut H) {
-        self.ptr.hash(state)
+        (self.ptr as *const T).hash(state)
     }
 }
 
-impl <T> Clone for JS<T> {
+impl<T> Clone for JS<T> {
     #[inline]
     #[allow(unrooted_must_root)]
     fn clone(&self) -> JS<T> {
@@ -191,24 +198,22 @@ impl <T> Clone for JS<T> {
     }
 }
 
-impl <T> Clone for LayoutJS<T> {
+impl<'a, T: 'a> Clone for LayoutJS<'a, T> {
     #[inline]
-    fn clone(&self) -> LayoutJS<T> {
+    fn clone(&self) -> LayoutJS<'a, T> {
         debug_assert!(task_state::get().is_layout());
-        LayoutJS {
-            ptr: self.ptr.clone(),
-        }
+        *self
     }
 }
 
-impl LayoutJS<Node> {
+impl<'a> LayoutJS<'a, Node> {
     /// Create a new JS-owned value wrapped from an address known to be a
     /// `Node` pointer.
-    pub unsafe fn from_trusted_node_address(inner: TrustedNodeAddress) -> LayoutJS<Node> {
+    pub unsafe fn from_trusted_node_address(inner: TrustedNodeAddress) -> LayoutJS<'a, Node> {
         debug_assert!(task_state::get().is_layout());
         let TrustedNodeAddress(addr) = inner;
         LayoutJS {
-            ptr: NonZero::new(addr as *const Node),
+            ptr: &*(addr as *const Node),
         }
     }
 }
@@ -366,7 +371,7 @@ impl<T: Reflectable> MutNullableHeap<JS<T>> {
     #[allow(unrooted_must_root)]
     pub unsafe fn get_inner_as_layout(&self) -> Option<LayoutJS<T>> {
         debug_assert!(task_state::get().is_layout());
-        ptr::read(self.ptr.get()).map(|js| js.to_layout())
+        ptr::read(self.ptr.get()).map(|js| mem::transmute(js.to_layout()))
     }
 
     /// Get a rooted value out of this object
@@ -421,13 +426,13 @@ impl<T: HeapGCValue> HeapSizeOf for MutNullableHeap<T> {
     }
 }
 
-impl<T: Reflectable> LayoutJS<T> {
+impl<'a, T: 'a + Reflectable> LayoutJS<'a, T> {
     /// Returns an unsafe pointer to the interior of this JS object. This is
     /// the only method that be safely accessed from layout. (The fact that
     /// this is unsafe is what necessitates the layout wrappers.)
     pub unsafe fn unsafe_get(&self) -> *const T {
         debug_assert!(task_state::get().is_layout());
-        *self.ptr
+        self.ptr
     }
 }
 

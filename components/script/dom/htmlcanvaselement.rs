@@ -103,7 +103,7 @@ pub trait LayoutHTMLCanvasElementHelpers {
     fn data(&self) -> HTMLCanvasData;
 }
 
-impl LayoutHTMLCanvasElementHelpers for LayoutJS<HTMLCanvasElement> {
+impl<'a> LayoutHTMLCanvasElementHelpers for LayoutJS<'a, HTMLCanvasElement> {
     #[allow(unsafe_code)]
     fn data(&self) -> HTMLCanvasData {
         unsafe {

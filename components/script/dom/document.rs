@@ -1404,7 +1404,7 @@ pub trait LayoutDocumentHelpers {
 }
 
 #[allow(unsafe_code)]
-impl LayoutDocumentHelpers for LayoutJS<Document> {
+impl<'a> LayoutDocumentHelpers for LayoutJS<'a, Document> {
     #[inline]
     unsafe fn is_html_document_for_layout(&self) -> bool {
         (*self.unsafe_get()).is_html_document
@@ -1414,7 +1414,7 @@ impl LayoutDocumentHelpers for LayoutJS<Document> {
     #[allow(unrooted_must_root)]
     unsafe fn drain_modified_elements(&self) -> Vec<(LayoutJS<Element>, ElementSnapshot)> {
         let mut elements = (*self.unsafe_get()).modified_elements.borrow_mut_for_layout();
-        let result = elements.drain().map(|(k, v)| (k.to_layout(), v)).collect();
+        let result = elements.drain().map(|(k, v)| (k.to_layout().extend(), v)).collect();
         result
     }
 }

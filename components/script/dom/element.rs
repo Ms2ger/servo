@@ -174,7 +174,7 @@ pub trait RawLayoutElementHelpers {
 #[inline]
 #[allow(unsafe_code)]
 pub unsafe fn get_attr_for_layout<'a>(elem: &'a Element, namespace: &Namespace, name: &Atom)
-                                      -> Option<LayoutJS<Attr>> {
+                                      -> Option<LayoutJS<'a, Attr>> {
     // cast to point to T in RefCell<T> directly
     let attrs = elem.attrs.borrow_for_layout();
     attrs.iter().find(|attr| {
@@ -238,7 +238,7 @@ pub trait LayoutElementHelpers {
     fn get_state_for_layout(&self) -> ElementState;
 }
 
-impl LayoutElementHelpers for LayoutJS<Element> {
+impl<'a> LayoutElementHelpers for LayoutJS<'a, Element> {
     #[allow(unsafe_code)]
     #[inline]
     unsafe fn has_class_for_layout(&self, name: &Atom) -> bool {
