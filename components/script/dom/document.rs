@@ -1398,21 +1398,21 @@ pub enum DocumentSource {
 }
 
 #[allow(unsafe_code)]
-pub trait LayoutDocumentHelpers {
-    unsafe fn is_html_document_for_layout(&self) -> bool;
-    unsafe fn drain_modified_elements(&self) -> Vec<(LayoutJS<Element>, ElementSnapshot)>;
+pub trait LayoutDocumentHelpers<'a> {
+    unsafe fn is_html_document_for_layout(self) -> bool;
+    unsafe fn drain_modified_elements(self) -> Vec<(LayoutJS<'a, Element>, ElementSnapshot)>;
 }
 
 #[allow(unsafe_code)]
-impl<'a> LayoutDocumentHelpers for LayoutJS<'a, Document> {
+impl<'a> LayoutDocumentHelpers<'a> for LayoutJS<'a, Document> {
     #[inline]
-    unsafe fn is_html_document_for_layout(&self) -> bool {
+    unsafe fn is_html_document_for_layout(self) -> bool {
         (*self.unsafe_get()).is_html_document
     }
 
     #[inline]
     #[allow(unrooted_must_root)]
-    unsafe fn drain_modified_elements(&self) -> Vec<(LayoutJS<Element>, ElementSnapshot)> {
+    unsafe fn drain_modified_elements(self) -> Vec<(LayoutJS<'a, Element>, ElementSnapshot)> {
         let mut elements = (*self.unsafe_get()).modified_elements.borrow_mut_for_layout();
         let result = elements.drain().map(|(k, v)| (k.to_layout().extend(), v)).collect();
         result

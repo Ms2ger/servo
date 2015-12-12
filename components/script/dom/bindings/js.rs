@@ -119,22 +119,22 @@ pub struct LayoutJS<'a, T: 'a> {
 
 impl<'a, T: 'a + Castable> LayoutJS<'a, T> {
     /// Cast a DOM object root upwards to one of the interfaces it derives from.
-    pub fn upcast<U>(&self) -> LayoutJS<U>
+    pub fn upcast<U>(self) -> LayoutJS<'a, U>
         where U: Castable,
               T: DerivedFrom<U>
     {
         debug_assert!(task_state::get().is_layout());
-        unsafe { mem::transmute_copy(self) }
+        unsafe { mem::transmute(self) }
     }
 
     /// Cast a DOM object downwards to one of the interfaces it might implement.
-    pub fn downcast<U>(&self) -> Option<LayoutJS<U>>
+    pub fn downcast<U>(self) -> Option<LayoutJS<'a, U>>
         where U: DerivedFrom<T>
     {
         debug_assert!(task_state::get().is_layout());
         unsafe {
             if (*self.unsafe_get()).is::<U>() {
-                Some(mem::transmute_copy(self))
+                Some(mem::transmute(self))
             } else {
                 None
             }

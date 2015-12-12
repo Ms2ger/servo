@@ -240,17 +240,10 @@ pub trait LayoutElement<'le> : Sized + Copy + Clone + ::selectors::Element + TEl
     }
 }
 
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, PartialEq)]
 pub struct ServoLayoutNode<'a> {
     /// The wrapped node.
     node: LayoutJS<'a, Node>,
-}
-
-impl<'a> PartialEq for ServoLayoutNode<'a> {
-    #[inline]
-    fn eq(&self, other: &ServoLayoutNode) -> bool {
-        self.node == other.node
-    }
 }
 
 impl<'ln> ServoLayoutNode<'ln> {
@@ -328,7 +321,7 @@ impl<'ln> LayoutNode<'ln> for ServoLayoutNode<'ln> {
     }
 
     fn opaque(&self) -> OpaqueNode {
-        OpaqueNodeMethods::from_jsmanaged(unsafe { self.get_jsmanaged() })
+        OpaqueNodeMethods::from_jsmanaged(unsafe { &self.get_jsmanaged() })
     }
 
     fn initialize_layout_data(self) {
@@ -469,8 +462,8 @@ impl<'ln> ServoLayoutNode<'ln> {
 
     /// Returns the interior of this node as a `LayoutJS`. This is highly unsafe for layout to
     /// call and as such is marked `unsafe`.
-    unsafe fn get_jsmanaged(&self) -> &LayoutJS<'ln, Node> {
-        &self.node
+    unsafe fn get_jsmanaged(self) -> LayoutJS<'ln, Node> {
+        self.node
     }
 }
 
@@ -968,8 +961,8 @@ pub trait ThreadSafeLayoutNode<'ln> : Clone + Copy + Sized {
 
 // These can violate the thread-safety and therefore are not public.
 trait DangerousThreadSafeLayoutNode<'ln> : ThreadSafeLayoutNode<'ln> {
-    unsafe fn dangerous_first_child(&'ln self) -> Option<Self>;
-    unsafe fn dangerous_next_sibling(&'ln self) -> Option<Self>;
+    unsafe fn dangerous_first_child(self) -> Option<Self>;
+    unsafe fn dangerous_next_sibling(self) -> Option<Self>;
 }
 
 pub trait ThreadSafeLayoutElement<'le>: Clone + Copy + Sized {
@@ -988,11 +981,11 @@ pub struct ServoThreadSafeLayoutNode<'ln> {
 }
 
 impl<'ln> DangerousThreadSafeLayoutNode<'ln> for ServoThreadSafeLayoutNode<'ln> {
-    unsafe fn dangerous_first_child(&'ln self) -> Option<Self> {
+    unsafe fn dangerous_first_child(self) -> Option<Self> {
             self.get_jsmanaged().first_child_ref()
                 .map(|node| self.new_with_this_lifetime(&node))
     }
-    unsafe fn dangerous_next_sibling(&'ln self) -> Option<Self> {
+    unsafe fn dangerous_next_sibling(self) -> Option<Self> {
             self.get_jsmanaged().next_sibling_ref()
                 .map(|node| self.new_with_this_lifetime(&node))
     }
@@ -1026,7 +1019,7 @@ impl<'ln> ServoThreadSafeLayoutNode<'ln> {
 
     /// Returns the interior of this node as a `LayoutJS`. This is highly unsafe for layout to
     /// call and as such is marked `unsafe`.
-    unsafe fn get_jsmanaged(&self) -> &LayoutJS<Node> {
+    unsafe fn get_jsmanaged(self) -> LayoutJS<'ln, Node> {
         self.node.get_jsmanaged()
     }
 
@@ -1044,7 +1037,7 @@ impl<'ln> ThreadSafeLayoutNode<'ln> for ServoThreadSafeLayoutNode<'ln> {
     type ChildrenIterator = ThreadSafeLayoutNodeChildrenIterator<'ln, Self>;
 
     fn opaque(&self) -> OpaqueNode {
-        OpaqueNodeMethods::from_jsmanaged(unsafe { self.get_jsmanaged() })
+        OpaqueNodeMethods::from_jsmanaged(unsafe { &self.get_jsmanaged() })
     }
 
     fn type_id(&self) -> Option<NodeTypeId> {

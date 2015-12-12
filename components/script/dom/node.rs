@@ -931,85 +931,85 @@ pub fn from_untrusted_node_address(_runtime: *mut JSRuntime, candidate: Untruste
 
 #[allow(unsafe_code)]
 pub trait LayoutNodeHelpers<'a> {
-    unsafe fn type_id_for_layout(&self) -> NodeTypeId;
+    unsafe fn type_id_for_layout(self) -> NodeTypeId;
 
-    unsafe fn parent_node_ref(&self) -> Option<LayoutJS<'a, Node>>;
-    unsafe fn first_child_ref(&self) -> Option<LayoutJS<'a, Node>>;
-    unsafe fn last_child_ref(&self) -> Option<LayoutJS<'a, Node>>;
-    unsafe fn prev_sibling_ref(&self) -> Option<LayoutJS<'a, Node>>;
-    unsafe fn next_sibling_ref(&self) -> Option<LayoutJS<'a, Node>>;
+    unsafe fn parent_node_ref(self) -> Option<LayoutJS<'a, Node>>;
+    unsafe fn first_child_ref(self) -> Option<LayoutJS<'a, Node>>;
+    unsafe fn last_child_ref(self) -> Option<LayoutJS<'a, Node>>;
+    unsafe fn prev_sibling_ref(self) -> Option<LayoutJS<'a, Node>>;
+    unsafe fn next_sibling_ref(self) -> Option<LayoutJS<'a, Node>>;
 
-    unsafe fn owner_doc_for_layout(&self) -> LayoutJS<'a, Document>;
+    unsafe fn owner_doc_for_layout(self) -> LayoutJS<'a, Document>;
 
-    unsafe fn is_element_for_layout(&self) -> bool;
-    unsafe fn get_flag(&self, flag: NodeFlags) -> bool;
-    unsafe fn set_flag(&self, flag: NodeFlags, value: bool);
+    unsafe fn is_element_for_layout(self) -> bool;
+    unsafe fn get_flag(self, flag: NodeFlags) -> bool;
+    unsafe fn set_flag(self, flag: NodeFlags, value: bool);
 
-    unsafe fn children_count(&self) -> u32;
+    unsafe fn children_count(self) -> u32;
 
-    unsafe fn layout_data(&self) -> Ref<Option<LayoutData>>;
-    unsafe fn layout_data_mut(&self) -> RefMut<Option<LayoutData>>;
-    unsafe fn layout_data_unchecked(&self) -> *const Option<LayoutData>;
+    unsafe fn layout_data(self) -> Ref<'a, Option<LayoutData>>;
+    unsafe fn layout_data_mut(self) -> RefMut<'a, Option<LayoutData>>;
+    unsafe fn layout_data_unchecked(self) -> *const Option<LayoutData>;
 }
 
 impl<'a> LayoutNodeHelpers<'a> for LayoutJS<'a, Node> {
     #[inline]
     #[allow(unsafe_code)]
-    unsafe fn type_id_for_layout(&self) -> NodeTypeId {
+    unsafe fn type_id_for_layout(self) -> NodeTypeId {
         (*self.unsafe_get()).type_id()
     }
 
     #[inline]
     #[allow(unsafe_code)]
-    unsafe fn is_element_for_layout(&self) -> bool {
+    unsafe fn is_element_for_layout(self) -> bool {
         (*self.unsafe_get()).is::<Element>()
     }
 
     #[inline]
     #[allow(unsafe_code)]
-    unsafe fn parent_node_ref(&self) -> Option<LayoutJS<'a, Node>> {
+    unsafe fn parent_node_ref(self) -> Option<LayoutJS<'a, Node>> {
         (*self.unsafe_get()).parent_node.get_inner_as_layout()
     }
 
     #[inline]
     #[allow(unsafe_code)]
-    unsafe fn first_child_ref(&self) -> Option<LayoutJS<'a, Node>> {
+    unsafe fn first_child_ref(self) -> Option<LayoutJS<'a, Node>> {
         (*self.unsafe_get()).first_child.get_inner_as_layout()
     }
 
     #[inline]
     #[allow(unsafe_code)]
-    unsafe fn last_child_ref(&self) -> Option<LayoutJS<'a, Node>> {
+    unsafe fn last_child_ref(self) -> Option<LayoutJS<'a, Node>> {
         (*self.unsafe_get()).last_child.get_inner_as_layout()
     }
 
     #[inline]
     #[allow(unsafe_code)]
-    unsafe fn prev_sibling_ref(&self) -> Option<LayoutJS<'a, Node>> {
+    unsafe fn prev_sibling_ref(self) -> Option<LayoutJS<'a, Node>> {
         (*self.unsafe_get()).prev_sibling.get_inner_as_layout()
     }
 
     #[inline]
     #[allow(unsafe_code)]
-    unsafe fn next_sibling_ref(&self) -> Option<LayoutJS<'a, Node>> {
+    unsafe fn next_sibling_ref(self) -> Option<LayoutJS<'a, Node>> {
         (*self.unsafe_get()).next_sibling.get_inner_as_layout()
     }
 
     #[inline]
     #[allow(unsafe_code)]
-    unsafe fn owner_doc_for_layout(&self) -> LayoutJS<'a, Document> {
+    unsafe fn owner_doc_for_layout(self) -> LayoutJS<'a, Document> {
         (*self.unsafe_get()).owner_doc.get_inner_as_layout().unwrap()
     }
 
     #[inline]
     #[allow(unsafe_code)]
-    unsafe fn get_flag(&self, flag: NodeFlags) -> bool {
+    unsafe fn get_flag(self, flag: NodeFlags) -> bool {
         (*self.unsafe_get()).flags.get().contains(flag)
     }
 
     #[inline]
     #[allow(unsafe_code)]
-    unsafe fn set_flag(&self, flag: NodeFlags, value: bool) {
+    unsafe fn set_flag(self, flag: NodeFlags, value: bool) {
         let this = self.unsafe_get();
         let mut flags = (*this).flags.get();
 
@@ -1024,25 +1024,25 @@ impl<'a> LayoutNodeHelpers<'a> for LayoutJS<'a, Node> {
 
     #[inline]
     #[allow(unsafe_code)]
-    unsafe fn children_count(&self) -> u32 {
+    unsafe fn children_count(self) -> u32 {
         (*self.unsafe_get()).children_count.get()
     }
 
     #[inline]
     #[allow(unsafe_code)]
-    unsafe fn layout_data(&self) -> Ref<Option<LayoutData>> {
+    unsafe fn layout_data(self) -> Ref<'a, Option<LayoutData>> {
         (*self.unsafe_get()).layout_data.borrow()
     }
 
     #[inline]
     #[allow(unsafe_code)]
-    unsafe fn layout_data_mut(&self) -> RefMut<Option<LayoutData>> {
+    unsafe fn layout_data_mut(self) -> RefMut<'a, Option<LayoutData>> {
         (*self.unsafe_get()).layout_data.borrow_mut()
     }
 
     #[inline]
     #[allow(unsafe_code)]
-    unsafe fn layout_data_unchecked(&self) -> *const Option<LayoutData> {
+    unsafe fn layout_data_unchecked(self) -> *const Option<LayoutData> {
         (*self.unsafe_get()).layout_data.borrow_unchecked()
     }
 }
