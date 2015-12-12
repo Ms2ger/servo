@@ -243,10 +243,7 @@ pub trait LayoutElement<'le> : Sized + Copy + Clone + ::selectors::Element + TEl
 #[derive(Copy, Clone)]
 pub struct ServoLayoutNode<'a> {
     /// The wrapped node.
-    node: LayoutJS<Node>,
-
-    /// Being chained to a PhantomData prevents `LayoutNode`s from escaping.
-    chain: PhantomData<&'a ()>,
+    node: LayoutJS<'a, Node>,
 }
 
 impl<'a> PartialEq for ServoLayoutNode<'a> {
@@ -257,10 +254,9 @@ impl<'a> PartialEq for ServoLayoutNode<'a> {
 }
 
 impl<'ln> ServoLayoutNode<'ln> {
-    fn from_layout_js(n: LayoutJS<Node>) -> ServoLayoutNode<'ln> {
+    fn from_layout_js(n: LayoutJS<Node>) -> ServoLayoutNode {
         ServoLayoutNode {
             node: n,
-            chain: PhantomData,
         }
     }
 
@@ -269,10 +265,9 @@ impl<'ln> ServoLayoutNode<'ln> {
     }
 
     /// Creates a new layout node with the same lifetime as this layout node.
-    pub unsafe fn new_with_this_lifetime(&self, node: &LayoutJS<Node>) -> ServoLayoutNode<'ln> {
+    pub unsafe fn new_with_this_lifetime(&self, node: &LayoutJS<'ln, Node>) -> ServoLayoutNode<'ln> {
         ServoLayoutNode {
             node: *node,
-            chain: self.chain,
         }
     }
 }
@@ -474,7 +469,7 @@ impl<'ln> ServoLayoutNode<'ln> {
 
     /// Returns the interior of this node as a `LayoutJS`. This is highly unsafe for layout to
     /// call and as such is marked `unsafe`.
-    unsafe fn get_jsmanaged(&self) -> &LayoutJS<Node> {
+    unsafe fn get_jsmanaged(&self) -> &LayoutJS<'ln, Node> {
         &self.node
     }
 }
@@ -541,8 +536,7 @@ impl<'a, ConcreteLayoutNode> Iterator for LayoutTreeIterator<'a, ConcreteLayoutN
 // A wrapper around documents that ensures ayout can only ever access safe properties.
 #[derive(Copy, Clone)]
 pub struct ServoLayoutDocument<'ld> {
-    document: LayoutJS<Document>,
-    chain: PhantomData<&'ld ()>,
+    document: LayoutJS<'ld, Document>,
 }
 
 impl<'ld> LayoutDocument<'ld> for ServoLayoutDocument<'ld> {
@@ -564,10 +558,9 @@ impl<'ld> LayoutDocument<'ld> for ServoLayoutDocument<'ld> {
 }
 
 impl<'ld> ServoLayoutDocument<'ld> {
-    fn from_layout_js(doc: LayoutJS<Document>) -> ServoLayoutDocument<'ld> {
+    fn from_layout_js(doc: LayoutJS<'ld, Document>) -> ServoLayoutDocument<'ld> {
         ServoLayoutDocument {
             document: doc,
-            chain: PhantomData,
         }
     }
 }
@@ -575,8 +568,7 @@ impl<'ld> ServoLayoutDocument<'ld> {
 /// A wrapper around elements that ensures layout can only ever access safe properties.
 #[derive(Copy, Clone)]
 pub struct ServoLayoutElement<'le> {
-    element: LayoutJS<Element>,
-    chain: PhantomData<&'le ()>,
+    element: LayoutJS<'le, Element>,
 }
 
 impl<'le> LayoutElement<'le> for ServoLayoutElement<'le> {
@@ -600,15 +592,14 @@ impl<'le> LayoutElement<'le> for ServoLayoutElement<'le> {
 
 
 impl<'le> ServoLayoutElement<'le> {
-    fn from_layout_js(el: LayoutJS<Element>) -> ServoLayoutElement<'le> {
+    fn from_layout_js(el: LayoutJS<Element>) -> ServoLayoutElement {
         ServoLayoutElement {
             element: el,
-            chain: PhantomData,
         }
     }
 }
 
-fn as_element<'le>(node: LayoutJS<Node>) -> Option<ServoLayoutElement<'le>> {
+fn as_element<'le>(node: LayoutJS<'le, Node>) -> Option<ServoLayoutElement<'le>> {
     node.downcast().map(|element| ServoLayoutElement::from_layout_js(element))
 }
 
@@ -977,8 +968,8 @@ pub trait ThreadSafeLayoutNode<'ln> : Clone + Copy + Sized {
 
 // These can violate the thread-safety and therefore are not public.
 trait DangerousThreadSafeLayoutNode<'ln> : ThreadSafeLayoutNode<'ln> {
-    unsafe fn dangerous_first_child(&self) -> Option<Self>;
-    unsafe fn dangerous_next_sibling(&self) -> Option<Self>;
+    unsafe fn dangerous_first_child(&'ln self) -> Option<Self>;
+    unsafe fn dangerous_next_sibling(&'ln self) -> Option<Self>;
 }
 
 pub trait ThreadSafeLayoutElement<'le>: Clone + Copy + Sized {
@@ -997,11 +988,11 @@ pub struct ServoThreadSafeLayoutNode<'ln> {
 }
 
 impl<'ln> DangerousThreadSafeLayoutNode<'ln> for ServoThreadSafeLayoutNode<'ln> {
-    unsafe fn dangerous_first_child(&self) -> Option<Self> {
+    unsafe fn dangerous_first_child(&'ln self) -> Option<Self> {
             self.get_jsmanaged().first_child_ref()
                 .map(|node| self.new_with_this_lifetime(&node))
     }
-    unsafe fn dangerous_next_sibling(&self) -> Option<Self> {
+    unsafe fn dangerous_next_sibling(&'ln self) -> Option<Self> {
             self.get_jsmanaged().next_sibling_ref()
                 .map(|node| self.new_with_this_lifetime(&node))
     }
@@ -1009,7 +1000,7 @@ impl<'ln> DangerousThreadSafeLayoutNode<'ln> for ServoThreadSafeLayoutNode<'ln> 
 
 impl<'ln> ServoThreadSafeLayoutNode<'ln> {
     /// Creates a new layout node with the same lifetime as this layout node.
-    pub unsafe fn new_with_this_lifetime(&self, node: &LayoutJS<Node>) -> ServoThreadSafeLayoutNode<'ln> {
+    pub unsafe fn new_with_this_lifetime(&self, node: &LayoutJS<'ln, Node>) -> ServoThreadSafeLayoutNode<'ln> {
         ServoThreadSafeLayoutNode {
             node: self.node.new_with_this_lifetime(node),
             pseudo: PseudoElementType::Normal,
