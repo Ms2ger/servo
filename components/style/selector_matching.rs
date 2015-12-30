@@ -20,8 +20,8 @@ use selectors::matching::{Rule, SelectorMap};
 use selectors::parser::PseudoElement;
 use selectors::states::*;
 use smallvec::VecLike;
+use std::ops::Deref;
 use std::process;
-use std::sync::Arc;
 use style_traits::viewport::ViewportConstraints;
 use stylesheets::{CSSRuleIteratorExt, Origin, Stylesheet};
 use url::Url;
@@ -145,8 +145,10 @@ impl Stylist {
         stylist
     }
 
-    pub fn update(&mut self, doc_stylesheets: &[Arc<Stylesheet>],
-                      stylesheets_changed: bool) -> bool {
+    pub fn update<'a, I, S>(&mut self, doc_stylesheets: &'a I, stylesheets_changed: bool) -> bool
+        where S: 'a + Deref<Target=Stylesheet>,
+              &'a I: IntoIterator<Item=&'a S>
+    {
         if !(self.is_device_dirty || stylesheets_changed) {
             return false;
         }
@@ -164,7 +166,7 @@ impl Stylist {
             self.add_stylesheet(&QUIRKS_MODE_STYLESHEET);
         }
 
-        for ref stylesheet in doc_stylesheets.iter() {
+        for ref stylesheet in doc_stylesheets.into_iter() {
             self.add_stylesheet(stylesheet);
         }
 
@@ -243,8 +245,11 @@ impl Stylist {
         self.state_deps.compute_hint(element, snapshot, current_state)
     }
 
-    pub fn set_device(&mut self, mut device: Device, stylesheets: &[Arc<Stylesheet>]) {
-        let cascaded_rule = stylesheets.iter()
+    pub fn set_device<'a, I, S>(&mut self, mut device: Device, stylesheets: &'a I)
+        where S: 'a + Deref<Target=Stylesheet>,
+              &'a I: IntoIterator<Item=&'a S>
+    {
+        let cascaded_rule = stylesheets.into_iter()
             .flat_map(|s| s.effective_rules(&self.device).viewport())
             .cascade();
 
@@ -252,7 +257,7 @@ impl Stylist {
         if let Some(ref constraints) = self.viewport_constraints {
             device = Device::new(MediaType::Screen, constraints.size);
         }
-        let is_device_dirty = self.is_device_dirty || stylesheets.iter()
+        let is_device_dirty = self.is_device_dirty || stylesheets.into_iter()
             .flat_map(|stylesheet| stylesheet.rules().media())
             .any(|media_rule| media_rule.evaluate(&self.device) != media_rule.evaluate(&device));
 
