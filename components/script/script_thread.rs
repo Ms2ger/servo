@@ -243,8 +243,6 @@ pub enum ScriptThreadEventCategory {
 pub enum MainThreadScriptMsg {
     /// Common variants associated with the script messages
     Common(CommonScriptMsg),
-    /// Notify a document that all pending loads are complete.
-    DocumentLoadsComplete(PipelineId),
     /// Notifies the script that a window associated with a particular pipeline
     /// should be closed (only dispatched to ScriptThread).
     ExitWindow(PipelineId),
@@ -490,7 +488,7 @@ pub struct ScriptThread {
     port: Receiver<MainThreadScriptMsg>,
     /// A channel to hand out to script thread-based entities that need to be able to enqueue
     /// events in the event queue.
-    chan: MainThreadScriptChan,
+    pub chan: MainThreadScriptChan,
     dom_manipulation_thread_source: DOMManipulationThreadSource,
 
     user_interaction_thread_source: UserInteractionThreadSource,
@@ -509,7 +507,7 @@ pub struct ScriptThread {
     control_port: Receiver<ConstellationControlMsg>,
 
     /// For communicating load url messages to the constellation
-    constellation_chan: ConstellationChan<ConstellationMsg>,
+    pub constellation_chan: ConstellationChan<ConstellationMsg>,
 
     /// For communicating layout messages to the constellation
     layout_to_constellation_chan: ConstellationChan<LayoutMsg>,
@@ -1146,8 +1144,6 @@ impl ScriptThread {
                 self.handle_exit_window_msg(id),
             MainThreadScriptMsg::MainThreadRunnableMsg(runnable) =>
                 runnable.handler(self),
-            MainThreadScriptMsg::DocumentLoadsComplete(id) =>
-                self.handle_loads_complete(id),
             MainThreadScriptMsg::Common(CommonScriptMsg::RunnableMsg(_, runnable)) => {
                 // The category of the runnable is ignored by the pattern, however
                 // it is still respected by profiling (see categorize_msg).
@@ -1338,25 +1334,6 @@ impl ScriptThread {
                                            layout_chan, parent_window.window_size(),
                                            load_data.url.clone());
         self.start_page_load(new_load, load_data);
-    }
-
-    fn handle_loads_complete(&self, pipeline: PipelineId) {
-        let page = get_page(&self.root_page(), pipeline);
-        let doc = page.document();
-        let doc = doc.r();
-        if doc.loader().is_blocked() {
-            return;
-        }
-
-        doc.mut_loader().inhibit_events();
-
-        // https://html.spec.whatwg.org/multipage/#the-end step 7
-        let addr: Trusted<Document> = Trusted::new(doc, self.chan.clone());
-        let handler = box DocumentProgressHandler::new(addr.clone());
-        self.chan.send(CommonScriptMsg::RunnableMsg(ScriptThreadEventCategory::DocumentEvent, handler)).unwrap();
-
-        let ConstellationChan(ref chan) = self.constellation_chan;
-        chan.send(ConstellationMsg::LoadComplete(pipeline)).unwrap();
     }
 
     pub fn get_reports(cx: *mut JSContext, path_seg: String) -> Vec<Report> {

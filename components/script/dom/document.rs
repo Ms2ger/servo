@@ -88,8 +88,8 @@ use net_traits::ControlMsg::{GetCookiesForUrl, SetCookiesForUrl};
 use net_traits::CookieSource::NonHTTP;
 use net_traits::{AsyncResponseTarget, PendingAsyncLoad};
 use num::ToPrimitive;
-use script_thread::CSSError;
-use script_thread::{MainThreadScriptMsg, Runnable};
+use script_thread::{CSSError, ScriptThread, get_page, ScriptThreadEventCategory, ScriptChan};
+use script_thread::{MainThreadScriptMsg, Runnable, CommonScriptMsg, MainThreadRunnable};
 use script_traits::{ScriptMsg as ConstellationMsg, ScriptToCompositorMsg};
 use script_traits::{TouchEventType, TouchId, UntrustedNodeAddress};
 use std::ascii::AsciiExt;
@@ -1265,8 +1265,38 @@ impl Document {
         let loader = self.loader.borrow();
         if !loader.is_blocked() && !loader.events_inhibited() {
             let win = self.window();
-            let msg = MainThreadScriptMsg::DocumentLoadsComplete(win.pipeline());
+            let msg = box DocumentLoadsComplete {
+                pipeline: win.pipeline(),
+            };
+            let msg = MainThreadScriptMsg::MainThreadRunnableMsg(msg);
             win.main_thread_script_chan().send(msg).unwrap();
+        }
+
+        struct DocumentLoadsComplete {
+            pipeline: PipelineId,
+        }
+
+        impl MainThreadRunnable for DocumentLoadsComplete {
+            fn handler(self: Box<DocumentLoadsComplete>, script_thread: &ScriptThread) {
+                let this = *self;
+
+                let page = get_page(&script_thread.root_page(), this.pipeline);
+                let doc = page.document();
+                let doc = doc.r();
+                if doc.loader().is_blocked() {
+                    return;
+                }
+
+                doc.mut_loader().inhibit_events();
+
+                // https://html.spec.whatwg.org/multipage/#the-end step 7
+                let addr = Trusted::new(doc, script_thread.chan.clone());
+                let handler = box DocumentProgressHandler::new(addr);
+                script_thread.chan.send(CommonScriptMsg::RunnableMsg(ScriptThreadEventCategory::DocumentEvent, handler)).unwrap();
+
+                let ConstellationChan(ref chan) = script_thread.constellation_chan;
+                chan.send(ConstellationMsg::LoadComplete(this.pipeline)).unwrap();
+            }
         }
     }
 
