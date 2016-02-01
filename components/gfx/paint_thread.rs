@@ -187,7 +187,9 @@ pub struct PaintRequest {
 
 pub enum Msg {
     FromLayout(LayoutToPaintMsg),
-    FromChrome(ChromeToPaintMsg),
+    FromCompositor(CompositorToPaintMsg),
+    FromConstellation(ConstellationToPaintMsg),
+    FromProfiler(ProfilerToPaintMsg)
 }
 
 #[derive(Deserialize, Serialize)]
@@ -197,19 +199,27 @@ pub enum LayoutToPaintMsg {
     Exit(IpcSender<()>),
 }
 
-pub enum ChromeToPaintMsg {
+pub enum CompositorToPaintMsg {
     Paint(Vec<PaintRequest>, FrameTreeId),
+}
+
+pub enum ConstellationToPaintMsg {
     PaintPermissionGranted,
     PaintPermissionRevoked,
-    CollectReports(ReportsChan),
     Exit,
+}
+
+pub enum ProfilerToPaintMsg {
+    CollectReports(ReportsChan),
 }
 
 pub struct PaintThread<C> {
     id: PipelineId,
     _url: Url,
     layout_to_paint_port: Receiver<LayoutToPaintMsg>,
-    chrome_to_paint_port: Receiver<ChromeToPaintMsg>,
+    compositor_to_paint_port: Receiver<CompositorToPaintMsg>,
+    constellation_to_paint_port: Receiver<ConstellationToPaintMsg>,
+    profiler_to_paint_port: Receiver<ProfilerToPaintMsg>,
     compositor: C,
 
     /// A channel to the time profiler.
@@ -242,9 +252,11 @@ macro_rules! native_display(
 impl<C> PaintThread<C> where C: PaintListener + Send + 'static {
     pub fn create(id: PipelineId,
                   url: Url,
-                  chrome_to_paint_chan: Sender<ChromeToPaintMsg>,
+                  profiler_to_paint_chan: Sender<ProfilerToPaintMsg>,
                   layout_to_paint_port: Receiver<LayoutToPaintMsg>,
-                  chrome_to_paint_port: Receiver<ChromeToPaintMsg>,
+                  compositor_to_paint_port: Receiver<CompositorToPaintMsg>,
+                  constellation_to_paint_port: Receiver<ConstellationToPaintMsg>,
+                  profiler_to_paint_port: Receiver<ProfilerToPaintMsg>,
                   compositor: C,
                   constellation_chan: ConstellationChan<ConstellationMsg>,
                   font_cache_thread: FontCacheThread,
@@ -270,7 +282,9 @@ impl<C> PaintThread<C> where C: PaintListener + Send + 'static {
                     id: id,
                     _url: url,
                     layout_to_paint_port: layout_to_paint_port,
-                    chrome_to_paint_port: chrome_to_paint_port,
+                    compositor_to_paint_port: compositor_to_paint_port,
+                    constellation_to_paint_port: constellation_to_paint_port,
+                    profiler_to_paint_port: profiler_to_paint_port,
                     compositor: compositor,
                     time_profiler_chan: time_profiler_chan,
                     root_paint_layer: None,
@@ -283,7 +297,7 @@ impl<C> PaintThread<C> where C: PaintListener + Send + 'static {
                 let reporter_name = format!("paint-reporter-{}", id);
                 mem_profiler_chan.run_with_memory_reporting(|| {
                     paint_thread.start();
-                }, reporter_name, chrome_to_paint_chan, ChromeToPaintMsg::CollectReports);
+                }, reporter_name, profiler_to_paint_chan, ProfilerToPaintMsg::CollectReports);
 
                 // Tell all the worker threads to shut down.
                 for worker_thread in &mut paint_thread.worker_threads {
@@ -302,12 +316,18 @@ impl<C> PaintThread<C> where C: PaintListener + Send + 'static {
         loop {
             let message = {
                 let layout_to_paint = &self.layout_to_paint_port;
-                let chrome_to_paint = &self.chrome_to_paint_port;
+                let compositor_to_paint = &self.compositor_to_paint_port;
+                let constellation_to_paint = &self.constellation_to_paint_port;
+                let profiler_to_paint = &self.profiler_to_paint_port;
                 select! {
                     msg = layout_to_paint.recv() =>
                         Msg::FromLayout(msg.unwrap()),
-                    msg = chrome_to_paint.recv() =>
-                        Msg::FromChrome(msg.unwrap())
+                    msg = compositor_to_paint.recv() =>
+                        Msg::FromCompositor(msg.unwrap()),
+                    msg = constellation_to_paint.recv() =>
+                        Msg::FromConstellation(msg.unwrap()),
+                    msg = profiler_to_paint.recv() =>
+                        Msg::FromProfiler(msg.unwrap())
                 }
             };
 
@@ -325,7 +345,7 @@ impl<C> PaintThread<C> where C: PaintListener + Send + 'static {
                     debug!("Renderer received for canvas with layer {:?}", layer_id);
                     self.canvas_map.insert(layer_id, canvas_renderer);
                 }
-                Msg::FromChrome(ChromeToPaintMsg::Paint(requests, frame_tree_id)) => {
+                Msg::FromCompositor(CompositorToPaintMsg::Paint(requests, frame_tree_id)) => {
                     if self.paint_permission && self.root_paint_layer.is_some() {
                         let mut replies = Vec::new();
                         for PaintRequest { buffer_requests, scale, layer_id, epoch, layer_kind }
@@ -347,17 +367,17 @@ impl<C> PaintThread<C> where C: PaintListener + Send + 'static {
                                                                frame_tree_id);
                     }
                 }
-                Msg::FromChrome(ChromeToPaintMsg::PaintPermissionGranted) => {
+                Msg::FromConstellation(ConstellationToPaintMsg::PaintPermissionGranted) => {
                     self.paint_permission = true;
 
                     if self.root_paint_layer.is_some() {
                         self.initialize_layers();
                     }
                 }
-                Msg::FromChrome(ChromeToPaintMsg::PaintPermissionRevoked) => {
+                Msg::FromConstellation(ConstellationToPaintMsg::PaintPermissionRevoked) => {
                     self.paint_permission = false;
                 }
-                Msg::FromChrome(ChromeToPaintMsg::CollectReports(ref channel)) => {
+                Msg::FromProfiler(ProfilerToPaintMsg::CollectReports(ref channel)) => {
                     // FIXME(njn): should eventually measure the paint thread.
                     channel.send(Vec::new())
                 }
@@ -370,7 +390,7 @@ impl<C> PaintThread<C> where C: PaintListener + Send + 'static {
                     let _ = response_channel.send(());
                     break;
                 }
-                Msg::FromChrome(ChromeToPaintMsg::Exit) => {
+                Msg::FromConstellation(ConstellationToPaintMsg::Exit) => {
                     // Ask the compositor to remove any layers it is holding for this paint thread.
                     // FIXME(mrobinson): This can probably move back to the constellation now.
                     self.compositor.notify_paint_thread_exiting(self.id);

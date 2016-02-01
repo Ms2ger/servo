@@ -9,7 +9,7 @@ use devtools_traits::{DevtoolsControlMsg, ScriptToDevtoolsControlMsg};
 use euclid::scale_factor::ScaleFactor;
 use euclid::size::TypedSize2D;
 use gfx::font_cache_thread::FontCacheThread;
-use gfx::paint_thread::{ChromeToPaintMsg, LayoutToPaintMsg, PaintThread};
+use gfx::paint_thread::{ConstellationToPaintMsg, LayoutToPaintMsg, PaintThread};
 use gfx_traits::PaintMsg;
 use ipc_channel::ipc::{self, IpcReceiver, IpcSender};
 use ipc_channel::router::ROUTER;
@@ -45,7 +45,7 @@ pub struct Pipeline {
     pub layout_chan: LayoutControlChan,
     /// A channel to the compositor.
     pub compositor_proxy: Box<CompositorProxy + 'static + Send>,
-    pub chrome_to_paint_chan: Sender<ChromeToPaintMsg>,
+    pub chrome_to_paint_chan: Sender<ConstellationToPaintMsg>,
     pub layout_shutdown_port: IpcReceiver<()>,
     pub paint_shutdown_port: IpcReceiver<()>,
     /// URL corresponding to the most recently-loaded page.
@@ -65,7 +65,7 @@ pub struct CompositionPipeline {
     pub id: PipelineId,
     pub script_chan: IpcSender<ConstellationControlMsg>,
     pub layout_chan: LayoutControlChan,
-    pub chrome_to_paint_chan: Sender<ChromeToPaintMsg>,
+    pub chrome_to_paint_chan: Sender<ConstellationToPaintMsg>,
 }
 
 /// Initial setup data needed to construct a pipeline.
@@ -251,7 +251,7 @@ impl Pipeline {
                script_chan: IpcSender<ConstellationControlMsg>,
                layout_chan: LayoutControlChan,
                compositor_proxy: Box<CompositorProxy + 'static + Send>,
-               chrome_to_paint_chan: Sender<ChromeToPaintMsg>,
+               chrome_to_paint_chan: Sender<ConstellationToPaintMsg>,
                layout_shutdown_port: IpcReceiver<()>,
                paint_shutdown_port: IpcReceiver<()>,
                url: Url,
@@ -275,12 +275,12 @@ impl Pipeline {
     }
 
     pub fn grant_paint_permission(&self) {
-        let _ = self.chrome_to_paint_chan.send(ChromeToPaintMsg::PaintPermissionGranted);
+        let _ = self.chrome_to_paint_chan.send(ConstellationToPaintMsg::PaintPermissionGranted);
     }
 
     pub fn revoke_paint_permission(&self) {
         debug!("pipeline revoking paint channel paint permission");
-        let _ = self.chrome_to_paint_chan.send(ChromeToPaintMsg::PaintPermissionRevoked);
+        let _ = self.chrome_to_paint_chan.send(ConstellationToPaintMsg::PaintPermissionRevoked);
     }
 
     pub fn exit(&self) {
@@ -311,7 +311,7 @@ impl Pipeline {
 
     pub fn force_exit(&self) {
         let _ = self.script_chan.send(ConstellationControlMsg::ExitPipeline(self.id)).unwrap();
-        let _ = self.chrome_to_paint_chan.send(ChromeToPaintMsg::Exit);
+        let _ = self.chrome_to_paint_chan.send(ConstellationToPaintMsg::Exit);
         let LayoutControlChan(ref layout_channel) = self.layout_chan;
         let _ = layout_channel.send(LayoutControlMsg::ExitNow).unwrap();
     }
@@ -443,8 +443,8 @@ pub struct PrivilegedPipelineContent {
     load_data: LoadData,
     failure: Failure,
     layout_to_paint_port: Receiver<LayoutToPaintMsg>,
-    chrome_to_paint_chan: Sender<ChromeToPaintMsg>,
-    chrome_to_paint_port: Receiver<ChromeToPaintMsg>,
+    chrome_to_paint_chan: Sender<ConstellationToPaintMsg>,
+    chrome_to_paint_port: Receiver<ConstellationToPaintMsg>,
     paint_shutdown_chan: IpcSender<()>,
 }
 

@@ -13,7 +13,7 @@ use euclid::rect::TypedRect;
 use euclid::scale_factor::ScaleFactor;
 use euclid::size::TypedSize2D;
 use euclid::{Matrix4, Point2D, Rect, Size2D};
-use gfx::paint_thread::{ChromeToPaintMsg, PaintRequest};
+use gfx::paint_thread::{CompositorToPaintMsg, PaintRequest};
 use gfx_traits::{color, Epoch, FrameTreeId, LayerId, LayerKind, LayerProperties, ScrollPolicy};
 use gleam::gl;
 use gleam::gl::types::{GLint, GLsizei};
@@ -1565,7 +1565,7 @@ impl<Window: WindowMethods> IOCompositor<Window> {
             self.convert_buffer_requests_to_pipeline_requests_map(layers_and_requests);
 
         for (pipeline_id, requests) in pipeline_requests {
-            let msg = ChromeToPaintMsg::Paint(requests, self.frame_tree_id);
+            let msg = CompositorToPaintMsg::Paint(requests, self.frame_tree_id);
             if let Some(pipeline) = self.pipeline(pipeline_id) {
                 pipeline.chrome_to_paint_chan.send(msg).unwrap();
             }
