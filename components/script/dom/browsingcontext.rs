@@ -113,6 +113,7 @@ impl SessionHistoryEntry {
     }
 }
 
+
 #[allow(unsafe_code)]
 unsafe fn GetSubframeWindow(cx: *mut JSContext,
                             proxy: HandleObject,

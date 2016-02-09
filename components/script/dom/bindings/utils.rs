@@ -390,11 +390,19 @@ pub static WRAP_CALLBACKS: JSWrapObjectCallbacks = JSWrapObjectCallbacks {
 };
 
 /// Callback to outerize windows.
-pub unsafe extern "C" fn outerize_global(_cx: *mut JSContext, obj: HandleObject) -> *mut JSObject {
+pub unsafe extern "C" fn outerize_global(cx: *mut JSContext, obj: HandleObject) -> *mut JSObject {
+    use js::jsapi::JS_WrapObject;
+
     debug!("outerizing");
+    debug!("  obj: {:p}", obj.get());
     let win = root_from_handleobject::<window::Window>(obj).unwrap();
+    debug!("  win: {:p} {}", &*win as *const window::Window, win.get_url().serialize());
     let context = win.browsing_context();
-    context.as_ref().unwrap().window_proxy()
+    let mut proxy = RootedObject::new(cx, context.window_proxy());
+    debug!("  pre-wrapping: {:p}", proxy.ptr);
+    assert!(JS_WrapObject(cx, proxy.handle_mut()));
+    debug!("  post-wrapping: {:p}", proxy.ptr);
+    proxy.ptr
 }
 
 /// Deletes the property `id` from `object`.

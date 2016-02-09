@@ -312,10 +312,13 @@ impl Document {
 
     // https://html.spec.whatwg.org/multipage/#fully-active
     pub fn is_fully_active(&self) -> bool {
-        let browsing_context = self.window.browsing_context();
-        let browsing_context = browsing_context.as_ref().unwrap();
-        let active_document = browsing_context.active_document();
+        let browsing_context = self.browsing_context();
+        let browsing_context = match browsing_context {
+            Some(browsing_context) => browsing_context,
+            None => return false,
+        };
 
+        let active_document = browsing_context.active_document();
         if self != &*active_document {
             return false;
         }
@@ -1717,8 +1720,7 @@ impl DocumentMethods for Document {
     fn HasFocus(&self) -> bool {
         // Step 1.
         let target = self;
-        let browsing_context = self.window.browsing_context();
-        let browsing_context = browsing_context.as_ref();
+        let browsing_context = self.browsing_context();
 
         match browsing_context {
             Some(browsing_context) => {
