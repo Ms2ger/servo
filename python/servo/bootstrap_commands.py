@@ -17,10 +17,19 @@ import re
 import shutil
 import subprocess
 import sys
-import StringIO
 import tarfile
-import urllib2
 from distutils.version import LooseVersion
+
+try:
+    from StringIO import StringIO
+except ImportError:
+    from io import StringIO
+
+try:
+    from urllib2 import (urlopen, HTTPError, URLError)
+except ImportError:
+    from urllib.request import urlopen
+    from urllib.error import (HTTPError, URLError)
 
 from mach.decorators import (
     CommandArgument,
@@ -36,7 +45,7 @@ def download(desc, src, writer):
     dumb = (os.environ.get("TERM") == "dumb") or (not sys.stdout.isatty())
 
     try:
-        resp = urllib2.urlopen(src)
+        resp = urlopen(src)
 
         fsize = None
         if resp.info().getheader('Content-Length'):
@@ -60,7 +69,7 @@ def download(desc, src, writer):
 
         if not dumb:
             print()
-    except urllib2.HTTPError, e:
+    except urllib2.HTTPError as e:
         print("Download failed (%d): %s - %s" % (e.code, e.reason, src))
         sys.exit(1)
 
@@ -276,7 +285,7 @@ class MachCommands(CommandBase):
 
             with open(path.join(preload_path, preload_filename), 'w') as fd:
                 json.dump(entries, fd, indent=4)
-        except ValueError, e:
+        except ValueError as e:
             print("Unable to parse chromium HSTS preload list, has the format changed?")
             sys.exit(1)
 

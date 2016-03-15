@@ -15,8 +15,6 @@ from subprocess import PIPE
 import sys
 import platform
 
-import toml
-
 from mach.registrar import Registrar
 
 BIN_SUFFIX = ".exe" if sys.platform == "win32" else ""
@@ -129,6 +127,7 @@ class CommandBase(object):
         config_path = path.join(context.topdir, ".servobuild")
         if path.exists(config_path):
             with open(config_path) as f:
+                import toml
                 self.config = toml.loads(f.read())
         else:
             self.config = {}

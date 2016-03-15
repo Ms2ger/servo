@@ -27,7 +27,6 @@ from mach.decorators import (
 )
 
 from servo.command_base import CommandBase, call, check_call
-from wptrunner import wptcommandline
 from update import updatecommandline
 import tidy
 
@@ -38,6 +37,7 @@ SERVO_TESTS_PATH = os.path.join("tests", "wpt", "mozilla", "tests")
 
 
 def create_parser_wpt():
+    from wptrunner import wptcommandline
     parser = wptcommandline.create_parser()
     parser.add_argument('--release', default=False, action="store_true",
                         help="Run with a release build of servo")

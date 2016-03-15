@@ -250,10 +250,10 @@ To see more help for a specific command, run:
             # Ensure parent module is present otherwise we'll (likely) get
             # an error due to unknown parent.
             if b'mach.commands' not in sys.modules:
-                mod = imp.new_module(b'mach.commands')
+                mod = imp.new_module('mach.commands')
                 sys.modules[b'mach.commands'] = mod
 
-            module_name = 'mach.commands.%s' % uuid.uuid1().get_hex()
+            module_name = 'mach.commands.%s' % uuid.uuid1().hex
 
         imp.load_source(module_name, path)
 

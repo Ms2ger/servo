@@ -88,9 +88,9 @@ def _get_virtualenv_script_dir():
 
 
 # Possible names of executables, sorted from most to least specific
-PYTHON_NAMES = ["python-2.7", "python2.7", "python2", "python"]
-VIRTUALENV_NAMES = ["virtualenv-2.7", "virtualenv2.7", "virtualenv2", "virtualenv"]
-PIP_NAMES = ["pip-2.7", "pip2.7", "pip2", "pip"]
+PYTHON_NAMES = ["python3"]
+VIRTUALENV_NAMES = ["virtualenv"]
+PIP_NAMES = ["pip3"]
 
 
 def _activate_virtualenv(topdir):
@@ -111,7 +111,9 @@ def _activate_virtualenv(topdir):
         except (subprocess.CalledProcessError, OSError):
             sys.exit("Python virtualenv failed to execute properly.")
 
-    execfile(activate_path, dict(__file__=quote(activate_path)))
+    with open(activate_path) as f:
+        code = compile(f.read(), activate_path, "exec")
+        exec(code, dict(__file__=quote(activate_path)))
 
     # TODO: Right now, we iteratively install all the requirements by invoking
     # `pip install` each time. If it were the case that there were conflicting
@@ -159,7 +161,7 @@ def bootstrap(topdir):
     # Ensure we are running Python 2.7+. We put this check here so we generate a
     # user-friendly error message rather than a cryptic stack trace on module
     # import.
-    if not (3, 0) > sys.version_info >= (2, 7):
+    if not sys.version_info >= (2, 7):
         print('Python 2.7 or above (but not Python 3) is required to run mach.')
         print('You are running Python', platform.python_version())
         sys.exit(1)
