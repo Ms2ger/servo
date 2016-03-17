@@ -102,10 +102,7 @@ pub fn fetch(request: Rc<Request>) -> Response {
     main_fetch(request, false, false)
 }
 
-/// [Main fetch](https://fetch.spec.whatwg.org/#concept-main-fetch)
-fn main_fetch(request: Rc<Request>, cors_flag: bool, recursive_flag: bool) -> Response {
-    // TODO: Implement main fetch spec
-
+fn start_main_fetch(request: &Request) -> Option<Response> {
     // Step 1
     let mut response = None;
 
@@ -134,11 +131,11 @@ fn main_fetch(request: Rc<Request>, cors_flag: bool, recursive_flag: bool) -> Re
     // Step 7
     // TODO this step
 
-    // Step 8
-    // this step is obsoleted by fetch_async
+    response
+}
 
-    // Step 9
-    let response = match response {
+fn do_main_fetch(request: &Rc<Request>, response: Option<Response>, cors_flag: bool) -> Response {
+    match response {
         Some(response) => response,
         None => {
             let current_url = request.current_url();
@@ -183,7 +180,25 @@ fn main_fetch(request: Rc<Request>, cors_flag: bool, recursive_flag: bool) -> Re
                 http_fetch(request.clone(), BasicCORSCache::new(), true, false, false)
             }
         }
-    };
+    }
+}
+
+/// [Main fetch](https://fetch.spec.whatwg.org/#concept-main-fetch)
+fn recursive_main_fetch(request: Rc<Request>, cors_flag: bool) -> Response {
+    panic!()
+}
+
+fn main_fetch(request: Rc<Request>, cors_flag: bool, recursive_flag: bool) -> Response {
+    // TODO: Implement main fetch spec
+
+    // Step 1-7
+    let response = start_main_fetch(&request);
+
+    // Step 8
+    // this step is obsoleted by fetch_async
+
+    // Step 9
+    let response = do_main_fetch(&request, response, cors_flag);
 
     // Step 10
     if recursive_flag {
