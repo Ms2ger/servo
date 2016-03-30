@@ -133,8 +133,12 @@ impl WorkerGlobalScope {
         self.from_devtools_sender.clone()
     }
 
-    pub fn from_devtools_receiver(&self) -> &Receiver<DevtoolScriptControlMsg> {
-        &self.from_devtools_receiver
+    pub fn from_devtools_receiver(&self) -> Option<&Receiver<DevtoolScriptControlMsg>> {
+        if self.from_devtools_sender.is_some() {
+            Some(&self.from_devtools_receiver)
+        } else {
+            None
+        }
     }
 
     pub fn constellation_chan(&self) -> ConstellationChan<ConstellationMsg> {

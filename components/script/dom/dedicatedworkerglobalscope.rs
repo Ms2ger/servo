@@ -304,11 +304,11 @@ impl DedicatedWorkerGlobalScope {
         let sel = Select::new();
         let mut worker_handle = sel.handle(worker_port);
         let mut timer_event_handle = sel.handle(timer_event_port);
-        let mut devtools_handle = sel.handle(devtools_port);
+        let mut devtools_handle = devtools_port.map(|port| sel.handle(port));
         unsafe {
             worker_handle.add();
             timer_event_handle.add();
-            if scope.from_devtools_sender().is_some() {
+            if let Some(devtools_handle) = devtools_handle {
                 devtools_handle.add();
             }
         }
@@ -317,8 +317,8 @@ impl DedicatedWorkerGlobalScope {
             Ok(MixedMessage::FromWorker(try!(worker_port.recv())))
         } else if ret == timer_event_handle.id() {
             Ok(MixedMessage::FromScheduler(try!(timer_event_port.recv())))
-        } else if ret == devtools_handle.id() {
-            Ok(MixedMessage::FromDevtools(try!(devtools_port.recv())))
+        } else if devtools_handle.map_or(false, |handle| ret == handle.id()) {
+            Ok(MixedMessage::FromDevtools(try!(devtools_port.unwrap().recv())))
         } else {
             panic!("unexpected select result!")
         }
