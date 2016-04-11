@@ -8,14 +8,14 @@ use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
 
 lazy_static! {
-    static ref CMD_RESOURCE_DIR: Arc<Mutex<Option<String>>> = {
+    static ref CMD_RESOURCE_DIR: Arc<Mutex<Option<PathBuf>>> = {
         Arc::new(Mutex::new(None))
     };
 }
 
 pub fn set_resources_path(path: Option<String>) {
     let mut dir = CMD_RESOURCE_DIR.lock().unwrap();
-    *dir = path;
+    *dir = path.map(PathBuf::from);
 }
 
 #[cfg(target_os = "android")]
@@ -28,7 +28,7 @@ pub fn resources_dir_path() -> PathBuf {
     use std::env;
 
     match *CMD_RESOURCE_DIR.lock().unwrap() {
-        Some(ref path) => PathBuf::from(path),
+        Some(ref path) => path.clone(),
         None => {
             // FIXME: Find a way to not rely on the executable being
             // under `<servo source>[/$target_triple]/target/debug`
