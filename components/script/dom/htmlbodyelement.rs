@@ -146,7 +146,7 @@ impl VirtualMethods for HTMLBodyElement {
             atom!("bgcolor") |
             atom!("text") => AttrValue::from_legacy_color(value.into()),
             atom!("background") => {
-                AttrValue::from_url(document_from_node(self).url(), value.into())
+                AttrValue::from_url(document_from_node(self).base_url(), value.into())
             },
             _ => self.super_type().unwrap().parse_plain_attribute(name, value),
         }
