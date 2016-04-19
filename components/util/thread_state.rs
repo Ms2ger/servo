@@ -58,7 +58,7 @@ mod imp {
         STATE.with(|ref k| {
             match *k.borrow() {
                 Some(s) => panic!("Thread state already initialized as {:?}", s),
-                None => ()
+                None => (),
             };
             *k.borrow_mut() = Some(x);
         });
@@ -98,8 +98,14 @@ mod imp {
 #[cfg(not(debug_assertions))]
 mod imp {
     use super::ThreadState;
-    #[inline(always)] pub fn initialize(_: ThreadState) { }
-    #[inline(always)] pub fn get() -> ThreadState { ThreadState::empty() }
-    #[inline(always)] pub fn enter(_: ThreadState) { }
-    #[inline(always)] pub fn exit(_: ThreadState) { }
+    #[inline(always)]
+    pub fn initialize(_: ThreadState) {}
+    #[inline(always)]
+    pub fn get() -> ThreadState {
+        ThreadState::empty()
+    }
+    #[inline(always)]
+    pub fn enter(_: ThreadState) {}
+    #[inline(always)]
+    pub fn exit(_: ThreadState) {}
 }

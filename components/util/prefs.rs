@@ -24,7 +24,7 @@ pub enum PrefValue {
     Boolean(bool),
     String(String),
     Number(f64),
-    Missing
+    Missing,
 }
 
 impl PrefValue {
@@ -35,26 +35,22 @@ impl PrefValue {
             Json::F64(x) => PrefValue::Number(x),
             Json::I64(x) => PrefValue::Number(x as f64),
             Json::U64(x) => PrefValue::Number(x as f64),
-            _ => return Err(())
+            _ => return Err(()),
         };
         Ok(value)
     }
 
     pub fn as_boolean(&self) -> Option<bool> {
         match *self {
-            PrefValue::Boolean(value) => {
-                Some(value)
-            },
-            _ => None
+            PrefValue::Boolean(value) => Some(value),
+            _ => None,
         }
     }
 
     pub fn as_string(&self) -> Option<&str> {
         match *self {
-            PrefValue::String(ref value) => {
-                Some(&value)
-            },
-            _ => None
+            PrefValue::String(ref value) => Some(&value),
+            _ => None,
         }
     }
 
@@ -69,16 +65,10 @@ impl PrefValue {
 impl ToJson for PrefValue {
     fn to_json(&self) -> Json {
         match *self {
-            PrefValue::Boolean(x) => {
-                Json::Boolean(x)
-            },
-            PrefValue::String(ref x) => {
-                Json::String(x.clone())
-            },
-            PrefValue::Number(x) => {
-                Json::F64(x)
-            },
-            PrefValue::Missing => Json::Null
+            PrefValue::Boolean(x) => Json::Boolean(x),
+            PrefValue::String(ref x) => Json::String(x.clone()),
+            PrefValue::Number(x) => Json::F64(x),
+            PrefValue::Missing => Json::Null,
         }
     }
 }
@@ -86,7 +76,7 @@ impl ToJson for PrefValue {
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub enum Pref {
     NoDefault(Arc<PrefValue>),
-    WithDefault(Arc<PrefValue>, Option<Arc<PrefValue>>)
+    WithDefault(Arc<PrefValue>, Option<Arc<PrefValue>>),
 }
 
 
@@ -110,9 +100,9 @@ impl Pref {
             Pref::WithDefault(ref default, ref override_value) => {
                 match *override_value {
                     Some(ref x) => x,
-                    None => default
+                    None => default,
                 }
-            }
+            },
         }
     }
 
@@ -120,12 +110,8 @@ impl Pref {
         // TODO - this should error if we try to override a pref of one type
         // with a value of a different type
         match *self {
-            Pref::NoDefault(ref mut pref_value) => {
-                *pref_value = Arc::new(value)
-            },
-            Pref::WithDefault(_, ref mut override_value) => {
-                *override_value = Some(Arc::new(value))
-            }
+            Pref::NoDefault(ref mut pref_value) => *pref_value = Arc::new(value),
+            Pref::WithDefault(_, ref mut override_value) => *override_value = Some(Arc::new(value)),
         }
     }
 }
@@ -136,8 +122,9 @@ impl ToJson for Pref {
     }
 }
 
-pub fn read_prefs_from_file<T>(mut file: T)
-    -> Result<HashMap<String, Pref>, ()> where T: Read {
+pub fn read_prefs_from_file<T>(mut file: T) -> Result<HashMap<String, Pref>, ()>
+    where T: Read,
+{
     let json = try!(Json::from_reader(&mut file).or_else(|e| {
         println!("Ignoring invalid JSON in preferences: {:?}.", e);
         Err(())
@@ -150,7 +137,10 @@ pub fn read_prefs_from_file<T>(mut file: T)
                 Ok(x) => {
                     prefs.insert(name, x);
                 },
-                Err(_) => println!("Ignoring non-boolean/string/i64 preference value for {:?}", name),
+                Err(_) => {
+                    println!("Ignoring non-boolean/string/i64 preference value for {:?}",
+                             name)
+                },
             }
         }
     }
@@ -174,8 +164,7 @@ pub fn add_user_prefs() {
                 extend_prefs(prefs);
             }
         } else {
-            writeln!(&mut stderr(), "Error opening prefs.json from profile_dir")
-                .expect("failed printing to stderr");
+            writeln!(&mut stderr(), "Error opening prefs.json from profile_dir").expect("failed printing to stderr");
         }
     }
 }
@@ -185,8 +174,7 @@ fn read_prefs() -> Result<HashMap<String, Pref>, ()> {
     path.push("prefs.json");
 
     let file = try!(File::open(path).or_else(|e| {
-        writeln!(&mut stderr(), "Error opening preferences: {:?}.", e)
-            .expect("failed printing to stderr");
+        writeln!(&mut stderr(), "Error opening preferences: {:?}.", e).expect("failed printing to stderr");
         Err(())
     }));
 

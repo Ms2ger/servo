@@ -22,18 +22,22 @@ lazy_static! {
 
 static NEXT_SENDER_ID: AtomicUsize = ATOMIC_USIZE_INIT;
 
-pub enum OptionalIpcSender<T> where T: Deserialize + Serialize + Send + Any {
+pub enum OptionalIpcSender<T>
+    where T: Deserialize + Serialize + Send + Any,
+{
     OutOfProcess(IpcSender<T>),
     InProcess(Sender<T>),
 }
 
-impl<T> OptionalIpcSender<T> where T: Deserialize + Serialize + Send + Any {
+impl<T> OptionalIpcSender<T>
+    where T: Deserialize + Serialize + Send + Any,
+{
     pub fn send(&self, value: T) -> Result<(), Error> {
         match *self {
             OptionalIpcSender::OutOfProcess(ref ipc_sender) => ipc_sender.send(value),
             OptionalIpcSender::InProcess(ref sender) => {
                 sender.send(value).map_err(|_| Error::new(ErrorKind::Other, "MPSC send failed"))
-            }
+            },
         }
     }
 
@@ -41,42 +45,44 @@ impl<T> OptionalIpcSender<T> where T: Deserialize + Serialize + Send + Any {
         match self {
             OptionalIpcSender::OutOfProcess(ipc_sender) => {
                 OptionalOpaqueIpcSender::OutOfProcess(ipc_sender.to_opaque())
-            }
-            OptionalIpcSender::InProcess(sender) => {
-                OptionalOpaqueIpcSender::InProcess(OpaqueSender::new(sender))
-            }
+            },
+            OptionalIpcSender::InProcess(sender) => OptionalOpaqueIpcSender::InProcess(OpaqueSender::new(sender)),
         }
     }
 }
 
-impl<T> Clone for OptionalIpcSender<T> where T: Deserialize + Serialize + Send + Any {
+impl<T> Clone for OptionalIpcSender<T>
+    where T: Deserialize + Serialize + Send + Any,
+{
     fn clone(&self) -> OptionalIpcSender<T> {
         match *self {
-            OptionalIpcSender::OutOfProcess(ref ipc_sender) => {
-                OptionalIpcSender::OutOfProcess((*ipc_sender).clone())
-            }
-            OptionalIpcSender::InProcess(ref sender) => {
-                OptionalIpcSender::InProcess((*sender).clone())
-            }
+            OptionalIpcSender::OutOfProcess(ref ipc_sender) => OptionalIpcSender::OutOfProcess((*ipc_sender).clone()),
+            OptionalIpcSender::InProcess(ref sender) => OptionalIpcSender::InProcess((*sender).clone()),
         }
     }
 }
 
-impl<T> Deserialize for OptionalIpcSender<T> where T: Deserialize + Serialize + Send + Any {
-    fn deserialize<D>(deserializer: &mut D)
-                      -> Result<OptionalIpcSender<T>, D::Error> where D: Deserializer {
+impl<T> Deserialize for OptionalIpcSender<T>
+    where T: Deserialize + Serialize + Send + Any,
+{
+    fn deserialize<D>(deserializer: &mut D) -> Result<OptionalIpcSender<T>, D::Error>
+        where D: Deserializer,
+    {
         if opts::multiprocess() {
-            return Ok(OptionalIpcSender::OutOfProcess(try!(Deserialize::deserialize(
-                            deserializer))))
+            return Ok(OptionalIpcSender::OutOfProcess(try!(Deserialize::deserialize(deserializer))));
         }
         let id: usize = try!(Deserialize::deserialize(deserializer));
         let sender = IN_PROCESS_SENDERS.lock().unwrap().remove(&id).unwrap();
         Ok(OptionalIpcSender::InProcess(sender.to().unwrap()))
-     }
+    }
 }
 
-impl<T> Serialize for OptionalIpcSender<T> where T: Deserialize + Serialize + Send + Any {
-    fn serialize<S>(&self, serializer: &mut S) -> Result<(), S::Error> where S: Serializer {
+impl<T> Serialize for OptionalIpcSender<T>
+    where T: Deserialize + Serialize + Send + Any,
+{
+    fn serialize<S>(&self, serializer: &mut S) -> Result<(), S::Error>
+        where S: Serializer,
+    {
         match *self {
             OptionalIpcSender::OutOfProcess(ref ipc_sender) => ipc_sender.serialize(serializer),
             OptionalIpcSender::InProcess(ref sender) => {
@@ -85,7 +91,7 @@ impl<T> Serialize for OptionalIpcSender<T> where T: Deserialize + Serialize + Se
                                   .unwrap()
                                   .insert(id, OpaqueSender::new((*sender).clone()));
                 id.serialize(serializer)
-            }
+            },
         }
     }
 }
@@ -98,42 +104,39 @@ pub enum OptionalOpaqueIpcSender {
 
 impl OptionalOpaqueIpcSender {
     pub fn to<T>(self) -> OptionalIpcSender<T>
-                 where T: Deserialize + Serialize + Send + Any + 'static {
+        where T: Deserialize + Serialize + Send + Any + 'static,
+    {
         match self {
-            OptionalOpaqueIpcSender::OutOfProcess(ipc_sender) => {
-                OptionalIpcSender::OutOfProcess(ipc_sender.to())
-            }
-            OptionalOpaqueIpcSender::InProcess(sender) => {
-                OptionalIpcSender::InProcess(sender.to().unwrap())
-            }
+            OptionalOpaqueIpcSender::OutOfProcess(ipc_sender) => OptionalIpcSender::OutOfProcess(ipc_sender.to()),
+            OptionalOpaqueIpcSender::InProcess(sender) => OptionalIpcSender::InProcess(sender.to().unwrap()),
         }
     }
 }
 
 impl Deserialize for OptionalOpaqueIpcSender {
-    fn deserialize<D>(deserializer: &mut D)
-                      -> Result<OptionalOpaqueIpcSender, D::Error> where D: Deserializer {
+    fn deserialize<D>(deserializer: &mut D) -> Result<OptionalOpaqueIpcSender, D::Error>
+        where D: Deserializer,
+    {
         if opts::multiprocess() {
-            return Ok(OptionalOpaqueIpcSender::OutOfProcess(try!(Deserialize::deserialize(
-                            deserializer))))
+            return Ok(OptionalOpaqueIpcSender::OutOfProcess(try!(Deserialize::deserialize(deserializer))));
         }
         let id: usize = try!(Deserialize::deserialize(deserializer));
         let sender = IN_PROCESS_SENDERS.lock().unwrap().remove(&id).unwrap();
         Ok(OptionalOpaqueIpcSender::InProcess(sender))
-     }
+    }
 }
 
 impl Serialize for OptionalOpaqueIpcSender {
-    fn serialize<S>(&self, serializer: &mut S) -> Result<(), S::Error> where S: Serializer {
+    fn serialize<S>(&self, serializer: &mut S) -> Result<(), S::Error>
+        where S: Serializer,
+    {
         match *self {
-            OptionalOpaqueIpcSender::OutOfProcess(ref ipc_sender) => {
-                ipc_sender.serialize(serializer)
-            }
+            OptionalOpaqueIpcSender::OutOfProcess(ref ipc_sender) => ipc_sender.serialize(serializer),
             OptionalOpaqueIpcSender::InProcess(ref sender) => {
                 let id = NEXT_SENDER_ID.fetch_add(1, Ordering::SeqCst);
                 IN_PROCESS_SENDERS.lock().unwrap().insert(id, (*sender).clone());
                 id.serialize(serializer)
-            }
+            },
         }
     }
 }
@@ -145,7 +148,9 @@ pub struct OpaqueSender {
 }
 
 impl OpaqueSender {
-    fn new<T>(sender: Sender<T>) -> OpaqueSender where T: 'static + Reflect + Send {
+    fn new<T>(sender: Sender<T>) -> OpaqueSender
+        where T: 'static + Reflect + Send,
+    {
         unsafe {
             OpaqueSender {
                 sender: mem::transmute::<_, Sender<()>>(sender),
@@ -154,7 +159,9 @@ impl OpaqueSender {
         }
     }
 
-    fn to<T>(self) -> Option<Sender<T>> where T: 'static + Reflect + Send {
+    fn to<T>(self) -> Option<Sender<T>>
+        where T: 'static + Reflect + Send,
+    {
         unsafe {
             if self.id != TypeId::of::<T>() {
                 None
@@ -166,7 +173,8 @@ impl OpaqueSender {
 }
 
 pub fn optional_ipc_channel<T>() -> (OptionalIpcSender<T>, Receiver<T>)
-                                 where T: Deserialize + Serialize + Send + Any {
+    where T: Deserialize + Serialize + Send + Any,
+{
     if opts::multiprocess() {
         let (ipc_sender, ipc_receiver) = ipc::channel().unwrap();
         let receiver = ROUTER.route_ipc_receiver_to_new_mpsc_receiver(ipc_receiver);
@@ -176,4 +184,3 @@ pub fn optional_ipc_channel<T>() -> (OptionalIpcSender<T>, Receiver<T>)
         (OptionalIpcSender::InProcess(sender), receiver)
     }
 }
-

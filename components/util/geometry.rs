@@ -66,13 +66,15 @@ pub static MAX_RECT: Rect<Au> = Rect {
     size: Size2D {
         width: MAX_AU,
         height: MAX_AU,
-    }
+    },
 };
 
 /// A helper function to convert a rect of `f32` pixels to a rect of app units.
 pub fn f32_rect_to_au_rect(rect: Rect<f32>) -> Rect<Au> {
-    Rect::new(Point2D::new(Au::from_f32_px(rect.origin.x), Au::from_f32_px(rect.origin.y)),
-              Size2D::new(Au::from_f32_px(rect.size.width), Au::from_f32_px(rect.size.height)))
+    Rect::new(Point2D::new(Au::from_f32_px(rect.origin.x),
+                           Au::from_f32_px(rect.origin.y)),
+              Size2D::new(Au::from_f32_px(rect.size.width),
+                          Au::from_f32_px(rect.size.height)))
 }
 
 /// A helper function to convert a rect of `Au` pixels to a rect of f32 units.
@@ -89,11 +91,10 @@ impl ExpandToPixelBoundaries for Rect<Au> {
     fn expand_to_px_boundaries(&self) -> Rect<Au> {
         let bottom_right = self.bottom_right();
         let bottom_right = Point2D::new(Au::from_px(bottom_right.x.ceil_to_px()),
-                                       Au::from_px(bottom_right.y.ceil_to_px()));
+                                        Au::from_px(bottom_right.y.ceil_to_px()));
         let new_origin = Point2D::new(Au::from_px(self.origin.x.to_px()),
                                       Au::from_px(self.origin.y.to_px()));
         Rect::new(new_origin,
-                  Size2D::new(bottom_right.x - new_origin.x,
-                              bottom_right.y - new_origin.y))
+                  Size2D::new(bottom_right.x - new_origin.x, bottom_right.y - new_origin.y))
     }
 }

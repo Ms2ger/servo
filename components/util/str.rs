@@ -116,7 +116,9 @@ impl Into<Vec<u8>> for DOMString {
 }
 
 impl Extend<char> for DOMString {
-    fn extend<I>(&mut self, iterable: I) where I: IntoIterator<Item=char> {
+    fn extend<I>(&mut self, iterable: I)
+        where I: IntoIterator<Item = char>,
+    {
         self.0.extend(iterable)
     }
 }
@@ -140,17 +142,12 @@ pub fn char_is_whitespace(c: char) -> bool {
 /// A "space character" according to:
 ///
 /// https://html.spec.whatwg.org/multipage/#space-character
-pub static HTML_SPACE_CHARACTERS: StaticCharVec = &[
-    '\u{0020}',
-    '\u{0009}',
-    '\u{000a}',
-    '\u{000c}',
-    '\u{000d}',
-];
+pub static HTML_SPACE_CHARACTERS: StaticCharVec = &['\u{0020}', '\u{0009}', '\u{000a}', '\u{000c}', '\u{000d}'];
 
-pub fn split_html_space_chars<'a>(s: &'a str) ->
-                                  Filter<Split<'a, StaticCharVec>, fn(&&str) -> bool> {
-    fn not_empty(&split: &&str) -> bool { !split.is_empty() }
+pub fn split_html_space_chars<'a>(s: &'a str) -> Filter<Split<'a, StaticCharVec>, fn(&&str) -> bool> {
+    fn not_empty(&split: &&str) -> bool {
+        !split.is_empty()
+    }
     s.split(HTML_SPACE_CHARACTERS).filter(not_empty as fn(&&str) -> bool)
 }
 
@@ -163,21 +160,18 @@ fn is_ascii_digit(c: &char) -> bool {
 }
 
 
-pub fn read_numbers<I: Iterator<Item=char>>(mut iter: Peekable<I>) -> Option<i64> {
+pub fn read_numbers<I: Iterator<Item = char>>(mut iter: Peekable<I>) -> Option<i64> {
     match iter.peek() {
         Some(c) if is_ascii_digit(c) => (),
         _ => return None,
     }
 
-    iter.take_while(is_ascii_digit).map(|d| {
-        d as i64 - '0' as i64
-    }).fold(Some(0i64), |accumulator, d| {
-        accumulator.and_then(|accumulator| {
-            accumulator.checked_mul(10)
-        }).and_then(|accumulator| {
-            accumulator.checked_add(d)
+    iter.take_while(is_ascii_digit)
+        .map(|d| d as i64 - '0' as i64)
+        .fold(Some(0i64), |accumulator, d| {
+            accumulator.and_then(|accumulator| accumulator.checked_mul(10))
+                       .and_then(|accumulator| accumulator.checked_add(d))
         })
-    })
 }
 
 #[derive(Clone, Copy, Debug, HeapSizeOf, PartialEq)]
@@ -216,10 +210,13 @@ pub unsafe fn c_str_to_string(s: *const c_char) -> String {
 }
 
 pub fn str_join<I, T>(strs: I, join: &str) -> String
-    where I: IntoIterator<Item=T>, T: AsRef<str>,
+    where I: IntoIterator<Item = T>,
+          T: AsRef<str>,
 {
     strs.into_iter().enumerate().fold(String::new(), |mut acc, (i, s)| {
-        if i > 0 { acc.push_str(join); }
+        if i > 0 {
+            acc.push_str(join);
+        }
         acc.push_str(s.as_ref());
         acc
     })
@@ -235,17 +232,26 @@ pub fn slice_chars(s: &str, begin: usize, end: usize) -> &str {
     // This could be even more efficient by not decoding,
     // only finding the char boundaries
     for (idx, _) in s.char_indices() {
-        if count == begin { begin_byte = Some(idx); }
-        if count == end { end_byte = Some(idx); break; }
+        if count == begin {
+            begin_byte = Some(idx);
+        }
+        if count == end {
+            end_byte = Some(idx);
+            break;
+        }
         count += 1;
     }
-    if begin_byte.is_none() && count == begin { begin_byte = Some(s.len()) }
-    if end_byte.is_none() && count == end { end_byte = Some(s.len()) }
+    if begin_byte.is_none() && count == begin {
+        begin_byte = Some(s.len())
+    }
+    if end_byte.is_none() && count == end {
+        end_byte = Some(s.len())
+    }
 
     match (begin_byte, end_byte) {
         (None, _) => panic!("slice_chars: `begin` is beyond end of string"),
         (_, None) => panic!("slice_chars: `end` is beyond end of string"),
-        (Some(a), Some(b)) => unsafe { s.slice_unchecked(a, b) }
+        (Some(a), Some(b)) => unsafe { s.slice_unchecked(a, b) },
     }
 }
 

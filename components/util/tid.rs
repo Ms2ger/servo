@@ -13,11 +13,10 @@ thread_local!(static TASK_LOCAL_TID: Rc<RefCell<Option<usize>>> = Rc::new(RefCel
 /// Every thread gets one, that's unique.
 pub fn tid() -> usize {
     TASK_LOCAL_TID.with(|ref k| {
-        let ret =
-            match *k.borrow() {
-                None => NEXT_TID.fetch_add(1, Ordering::SeqCst),
-                Some(x) => x,
-            };
+        let ret = match *k.borrow() {
+            None => NEXT_TID.fetch_add(1, Ordering::SeqCst),
+            Some(x) => x,
+        };
 
         *k.borrow_mut() = Some(ret);
 

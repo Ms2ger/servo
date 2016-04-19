@@ -14,7 +14,7 @@ use thread_state;
 pub type PanicReason = Option<String>;
 
 pub fn spawn_named<F>(name: String, f: F)
-    where F: FnOnce() + Send + 'static
+    where F: FnOnce() + Send + 'static,
 {
     spawn_named_with_send_on_failure_maybe(name, None, f, |_| {});
 }
@@ -37,7 +37,9 @@ pub trait SendOnFailure {
     fn send_on_failure(&mut self, value: Self::Value);
 }
 
-impl<T> SendOnFailure for Sender<T> where T: Send + 'static {
+impl<T> SendOnFailure for Sender<T>
+    where T: Send + 'static,
+{
     type Value = T;
     fn send_on_failure(&mut self, value: T) {
         // Discard any errors to avoid double-panic
@@ -45,7 +47,9 @@ impl<T> SendOnFailure for Sender<T> where T: Send + 'static {
     }
 }
 
-impl<T> SendOnFailure for IpcSender<T> where T: Send + Serialize + 'static {
+impl<T> SendOnFailure for IpcSender<T>
+    where T: Send + Serialize + 'static,
+{
     type Value = T;
     fn send_on_failure(&mut self, value: T) {
         // Discard any errors to avoid double-panic
@@ -64,19 +68,16 @@ pub fn spawn_named_with_send_on_failure<F, T, S>(name: String,
           S: Send + SendOnFailure + 'static,
           S::Value: From<T>,
 {
-    spawn_named_with_send_on_failure_maybe(name, Some(state), f,
-                                           move |err| {
-                                               msg.add_panic_object(err);
-                                               dest.send_on_failure(S::Value::from(msg));
-                                           });
+    spawn_named_with_send_on_failure_maybe(name, Some(state), f, move |err| {
+        msg.add_panic_object(err);
+        dest.send_on_failure(S::Value::from(msg));
+    });
 }
 
-fn spawn_named_with_send_on_failure_maybe<F, G>(name: String,
-                                                 state: Option<thread_state::ThreadState>,
-                                                 f: F,
-                                                 fail: G)
-                                                 where F: FnOnce() + Send + 'static,
-                                                       G: FnOnce(&(Any + Send)) + Send + 'static {
+fn spawn_named_with_send_on_failure_maybe<F, G>(name: String, state: Option<thread_state::ThreadState>, f: F, fail: G)
+    where F: FnOnce() + Send + 'static,
+          G: FnOnce(&(Any + Send)) + Send + 'static,
+{
 
 
     let builder = thread::Builder::new().name(name.clone());

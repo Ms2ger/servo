@@ -40,7 +40,8 @@ pub fn resources_dir_path() -> PathBuf {
     path = path.canonicalize().expect("path does not exist");
     path.pop();
     path.push("resources");
-    if !path.is_dir() {   // resources dir not in same dir as exe?
+    if !path.is_dir() {
+        // resources dir not in same dir as exe?
         // exe is probably in target/{debug,release} so we need to go back to topdir
         path.pop();
         path.pop();

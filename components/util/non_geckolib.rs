@@ -37,8 +37,7 @@ impl FromJSValConvertible for DOMString {
                          value: HandleValue,
                          null_behavior: StringificationBehavior)
                          -> Result<DOMString, ()> {
-        if null_behavior == StringificationBehavior::Empty &&
-           value.get().is_null() {
+        if null_behavior == StringificationBehavior::Empty && value.get().is_null() {
             Ok(DOMString::new())
         } else {
             let jsstr = ToString(cx, value);
@@ -80,10 +79,11 @@ pub unsafe fn jsstring_to_str(cx: *mut JSContext, s: *mut JSString) -> DOMString
                         error!(message!());
                         s.push('\u{FFFD}');
                     } else {
-                        panic!(concat!(message!(), " Use `-Z replace-surrogates` \
-                            on the command line to make this non-fatal."));
+                        panic!(concat!(message!(),
+                                       " Use `-Z replace-surrogates` on the command line to \
+                                        make this non-fatal."));
                     }
-                }
+                },
             }
         }
         s

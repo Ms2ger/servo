@@ -27,7 +27,7 @@ use thread_state;
 /// - `WorkData`: custom data specific to each unit of work.
 pub struct WorkUnit<QueueData, WorkData: Send> {
     /// The function to execute.
-    pub fun: extern "Rust" fn(WorkData, &mut WorkerProxy<QueueData, WorkData>),
+    pub fun: fn(WorkData, &mut WorkerProxy<QueueData, WorkData>),
     /// Arbitrary data.
     pub data: WorkData,
 }
@@ -124,7 +124,7 @@ impl<QueueData: Sync, WorkData: Send> WorkerThread<QueueData, WorkData> {
                 WorkerMsg::HeapSizeOfTLS(f) => {
                     self.chan.send(SupervisorMsg::HeapSizeOfTLS(f())).unwrap();
                     continue;
-                }
+                },
             };
 
             let mut back_off_sleep = 0 as u32;
@@ -143,29 +143,28 @@ impl<QueueData: Sync, WorkData: Send> WorkerThread<QueueData, WorkData> {
                             loop {
                                 victim = self.rng.next_u32() & deque_index_mask;
                                 if (victim as usize) < self.other_deques.len() {
-                                    break
+                                    break;
                                 }
                             }
 
                             match self.other_deques[victim as usize].steal() {
                                 Empty | Abort => {
                                     // Continue.
-                                }
+                                },
                                 Data(work) => {
                                     work_unit = work;
                                     back_off_sleep = 0 as u32;
-                                    break
-                                }
+                                    break;
+                                },
                             }
 
                             if i > SPINS_UNTIL_BACKOFF {
-                                if back_off_sleep >= BACKOFF_INCREMENT_IN_US *
-                                        BACKOFFS_UNTIL_CONTROL_CHECK {
+                                if back_off_sleep >= BACKOFF_INCREMENT_IN_US * BACKOFFS_UNTIL_CONTROL_CHECK {
                                     match self.port.try_recv() {
                                         Ok(WorkerMsg::Stop) => break 'outer,
                                         Ok(WorkerMsg::Exit) => return,
                                         Ok(_) => panic!("unexpected message"),
-                                        _ => {}
+                                        _ => {},
                                     }
                                 }
 
@@ -177,7 +176,7 @@ impl<QueueData: Sync, WorkData: Send> WorkerThread<QueueData, WorkData> {
                                 i += 1
                             }
                         }
-                    }
+                    },
                 }
 
                 // At this point, we have some work. Perform it.
@@ -253,10 +252,11 @@ impl<QueueData: Sync, WorkData: Send> WorkQueue<QueueData, WorkData> {
     /// it.
     pub fn new(thread_name: &'static str,
                state: thread_state::ThreadState,
-               thread_count: usize) -> WorkQueue<QueueData, WorkData> {
+               thread_count: usize)
+               -> WorkQueue<QueueData, WorkData> {
         // Set up data structures.
         let (supervisor_chan, supervisor_port) = channel();
-        let (mut infos, mut threads) = (vec!(), vec!());
+        let (mut infos, mut threads) = (vec![], vec![]);
         for i in 0..thread_count {
             let (worker_chan, worker_port) = channel();
             let (worker, thief) = deque::new();
@@ -269,7 +269,7 @@ impl<QueueData: Sync, WorkData: Send> WorkQueue<QueueData, WorkData> {
                 index: i,
                 port: worker_port,
                 chan: supervisor_chan.clone(),
-                other_deques: vec!(),
+                other_deques: vec![],
                 rng: weak_rng(),
             });
         }
@@ -287,13 +287,12 @@ impl<QueueData: Sync, WorkData: Send> WorkQueue<QueueData, WorkData> {
         // Spawn threads.
         for (i, thread) in threads.into_iter().enumerate() {
 
-            spawn_named(
-                format!("{} worker {}/{}", thread_name, i + 1, thread_count),
-                move || {
-                    thread_state::initialize(state | thread_state::IN_WORKER);
-                    let mut thread = thread;
-                    thread.start()
-                })
+            spawn_named(format!("{} worker {}/{}", thread_name, i + 1, thread_count),
+                        move || {
+                            thread_state::initialize(state | thread_state::IN_WORKER);
+                            let mut thread = thread;
+                            thread.start()
+                        })
         }
 
         WorkQueue {
@@ -308,9 +307,7 @@ impl<QueueData: Sync, WorkData: Send> WorkQueue<QueueData, WorkData> {
     pub fn push(&mut self, work_unit: WorkUnit<QueueData, WorkData>) {
         let deque = &mut self.workers[0].deque;
         match *deque {
-            None => {
-                panic!("tried to push a block but we don't have the deque?!")
-            }
+            None => panic!("tried to push a block but we don't have the deque?!"),
             Some(ref mut deque) => deque.push(work_unit),
         }
         self.work_count += 1
@@ -321,9 +318,9 @@ impl<QueueData: Sync, WorkData: Send> WorkQueue<QueueData, WorkData> {
         // Tell the workers to start.
         let mut work_count = AtomicUsize::new(self.work_count);
         for worker in &mut self.workers {
-            worker.chan.send(WorkerMsg::Start(worker.deque.take().unwrap(),
-                                              &mut work_count,
-                                              data)).unwrap()
+            worker.chan
+                  .send(WorkerMsg::Start(worker.deque.take().unwrap(), &mut work_count, data))
+                  .unwrap()
         }
 
         // Wait for the work to finish.
@@ -358,7 +355,7 @@ impl<QueueData: Sync, WorkData: Send> WorkQueue<QueueData, WorkData> {
             match self.port.recv().unwrap() {
                 SupervisorMsg::HeapSizeOfTLS(size) => {
                     sizes.push(size);
-                }
+                },
                 _ => panic!("unexpected message!"),
             }
         }

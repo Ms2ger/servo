@@ -17,7 +17,7 @@ static HOOK_SET: Once = ONCE_INIT;
 /// TLS data pertaining to how failures should be reported
 pub struct PanicHandlerLocal {
     /// failure handler passed through spawn_named_with_send_on_failure
-    pub fail: Box<(FnBox(&(Any + Send))) + Send + 'static>
+    pub fail: Box<(FnBox(&(Any + Send))) + Send + 'static>,
 }
 
 thread_local!(pub static LOCAL_INFO: RefCell<Option<PanicHandlerLocal>> = RefCell::new(None));
@@ -41,7 +41,7 @@ pub fn initiate_panic_hook() {
             LOCAL_INFO.with(|i| {
                 if let Some(info) = i.borrow_mut().take() {
                     debug!("Thread `{}` failed, notifying error handlers", name);
-                    (info.fail).call_box((payload, ));
+                    (info.fail).call_box((payload,));
                 }
             });
 
@@ -50,13 +50,17 @@ pub fn initiate_panic_hook() {
                 if let Some(s) = payload.downcast_ref::<String>() {
                     if s.contains("SendError") {
                         let err = stderr();
-                        let _ = write!(err.lock(), "Thread \"{}\" panicked with an unwrap of \
-                                                    `SendError` (backtrace skipped)\n", name);
+                        let _ = write!(err.lock(),
+                                       "Thread \"{}\" panicked with an unwrap of `SendError` \
+                                        (backtrace skipped)\n",
+                                       name);
                         return;
-                    } else if s.contains("RecvError")  {
+                    } else if s.contains("RecvError") {
                         let err = stderr();
-                        let _ = write!(err.lock(), "Thread \"{}\" panicked with an unwrap of \
-                                                    `RecvError` (backtrace skipped)\n", name);
+                        let _ = write!(err.lock(),
+                                       "Thread \"{}\" panicked with an unwrap of `RecvError` \
+                                        (backtrace skipped)\n",
+                                       name);
                         return;
                     }
                 }

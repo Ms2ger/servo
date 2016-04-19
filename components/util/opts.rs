@@ -204,7 +204,8 @@ pub struct Opts {
 }
 
 fn print_usage(app: &str, opts: &Options) {
-    let message = format!("Usage: {} [ options ... ] [URL]\n\twhere options include", app);
+    let message = format!("Usage: {} [ options ... ] [URL]\n\twhere options include",
+                          app);
     println!("{}", opts.usage(&message));
 }
 
@@ -290,7 +291,6 @@ pub struct DebugOptions {
 
     // don't skip any backtraces on panic
     pub full_backtraces: bool,
-
 }
 
 
@@ -327,9 +327,9 @@ impl DebugOptions {
                 "msaa" => debug_options.use_msaa = true,
                 "full-backtraces" => debug_options.full_backtraces = true,
                 "" => {},
-                _ => return Err(option)
+                _ => return Err(option),
             };
-        };
+        }
 
         Ok(debug_options)
     }
@@ -341,35 +341,54 @@ pub fn print_debug_usage(app: &str) -> ! {
         println!("\t{:<35} {}", name, description);
     }
 
-    println!("Usage: {} debug option,[options,...]\n\twhere options include\n\nOptions:", app);
+    println!("Usage: {} debug option,[options,...]\n\twhere options include\n\nOptions:",
+             app);
 
-    print_option("bubble-widths", "Bubble intrinsic widths separately like other engines.");
+    print_option("bubble-widths",
+                 "Bubble intrinsic widths separately like other engines.");
     print_option("disable-text-aa", "Disable antialiasing of rendered text.");
-    print_option("disable-canvas-aa", "Disable antialiasing on the HTML canvas element.");
+    print_option("disable-canvas-aa",
+                 "Disable antialiasing on the HTML canvas element.");
     print_option("dump-flow-tree", "Print the flow tree after each layout.");
-    print_option("dump-display-list", "Print the display list after each layout.");
-    print_option("dump-display-list-json", "Print the display list in JSON form.");
-    print_option("dump-layer-tree", "Print the layer tree whenever it changes.");
-    print_option("relayout-event", "Print notifications when there is a relayout.");
-    print_option("profile-script-events", "Enable profiling of script-related events.");
-    print_option("profile-heartbeats", "Enable heartbeats for all thread categories.");
-    print_option("show-compositor-borders", "Paint borders along layer and tile boundaries.");
-    print_option("show-fragment-borders", "Paint borders along fragment boundaries.");
-    print_option("show-parallel-paint", "Overlay tiles with colors showing which thread painted them.");
-    print_option("show-parallel-layout", "Mark which thread laid each flow out with colors.");
-    print_option("paint-flashing", "Overlay repainted areas with a random color.");
-    print_option("trace-layout", "Write layout trace to an external file for debugging.");
+    print_option("dump-display-list",
+                 "Print the display list after each layout.");
+    print_option("dump-display-list-json",
+                 "Print the display list in JSON form.");
+    print_option("dump-layer-tree",
+                 "Print the layer tree whenever it changes.");
+    print_option("relayout-event",
+                 "Print notifications when there is a relayout.");
+    print_option("profile-script-events",
+                 "Enable profiling of script-related events.");
+    print_option("profile-heartbeats",
+                 "Enable heartbeats for all thread categories.");
+    print_option("show-compositor-borders",
+                 "Paint borders along layer and tile boundaries.");
+    print_option("show-fragment-borders",
+                 "Paint borders along fragment boundaries.");
+    print_option("show-parallel-paint",
+                 "Overlay tiles with colors showing which thread painted them.");
+    print_option("show-parallel-layout",
+                 "Mark which thread laid each flow out with colors.");
+    print_option("paint-flashing",
+                 "Overlay repainted areas with a random color.");
+    print_option("trace-layout",
+                 "Write layout trace to an external file for debugging.");
     print_option("disable-share-style-cache",
                  "Disable the style sharing cache.");
-    print_option("parallel-display-list-building", "Build display lists in parallel.");
-    print_option("convert-mouse-to-touch", "Send touch events instead of mouse events");
-    print_option("replace-surrogates", "Replace unpaires surrogates in DOM strings with U+FFFD. \
-                                        See https://github.com/servo/servo/issues/6564");
+    print_option("parallel-display-list-building",
+                 "Build display lists in parallel.");
+    print_option("convert-mouse-to-touch",
+                 "Send touch events instead of mouse events");
+    print_option("replace-surrogates",
+                 "Replace unpaires surrogates in DOM strings with U+FFFD. See \
+                  https://github.com/servo/servo/issues/6564");
     print_option("gc-profile", "Log GC passes and their durations.");
     print_option("load-webfonts-synchronously",
                  "Load web fonts synchronously to avoid non-deterministic network-driven reflows");
     print_option("disable-vsync",
-                 "Disable vsync mode in the compositor to allow profiling at more than monitor refresh rate");
+                 "Disable vsync mode in the compositor to allow profiling at more than monitor \
+                  refresh rate");
     print_option("wr-stats", "Show WebRender profiler on screen.");
     print_option("msaa", "Use multisample antialiasing in WebRender.");
     print_option("full-backtraces", "Print full backtraces for all errors");
@@ -417,36 +436,31 @@ const DEFAULT_RENDER_API: RenderApi = RenderApi::GL;
 
 fn default_user_agent_string(agent: UserAgent) -> String {
     #[cfg(all(target_os = "linux", target_arch = "x86_64"))]
-    const DESKTOP_UA_STRING: &'static str =
-        "Mozilla/5.0 (X11; Linux x86_64; rv:37.0) Servo/1.0 Firefox/37.0";
+    const DESKTOP_UA_STRING: &'static str = "Mozilla/5.0 (X11; Linux x86_64; rv:37.0) Servo/1.0 \
+                                             Firefox/37.0";
     #[cfg(all(target_os = "linux", not(target_arch = "x86_64")))]
-    const DESKTOP_UA_STRING: &'static str =
-        "Mozilla/5.0 (X11; Linux i686; rv:37.0) Servo/1.0 Firefox/37.0";
+    const DESKTOP_UA_STRING: &'static str = "Mozilla/5.0 (X11; Linux i686; rv:37.0) Servo/1.0 \
+                                             Firefox/37.0";
 
     #[cfg(all(target_os = "windows", target_arch = "x86_64"))]
-    const DESKTOP_UA_STRING: &'static str =
-        "Mozilla/5.0 (Windows NT 6.1; Win64; x64; rv:37.0) Servo/1.0 Firefox/37.0";
+    const DESKTOP_UA_STRING: &'static str = "Mozilla/5.0 (Windows NT 6.1; Win64; x64; rv:37.0) \
+                                             Servo/1.0 Firefox/37.0";
     #[cfg(all(target_os = "windows", not(target_arch = "x86_64")))]
-    const DESKTOP_UA_STRING: &'static str =
-        "Mozilla/5.0 (Windows NT 6.1; rv:37.0) Servo/1.0 Firefox/37.0";
+    const DESKTOP_UA_STRING: &'static str = "Mozilla/5.0 (Windows NT 6.1; rv:37.0) Servo/1.0 \
+                                             Firefox/37.0";
 
     #[cfg(not(any(target_os = "linux", target_os = "windows")))]
     // Neither Linux nor Windows, so maybe OS X, and if not then OS X is an okay fallback.
-    const DESKTOP_UA_STRING: &'static str =
-        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.10; rv:37.0) Servo/1.0 Firefox/37.0";
+    const DESKTOP_UA_STRING: &'static str = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.10; \
+                                             rv:37.0) Servo/1.0 Firefox/37.0";
 
 
     match agent {
-        UserAgent::Desktop => {
-            DESKTOP_UA_STRING
-        }
-        UserAgent::Android => {
-            "Mozilla/5.0 (Android; Mobile; rv:37.0) Servo/1.0 Firefox/37.0"
-        }
-        UserAgent::Gonk => {
-            "Mozilla/5.0 (Mobile; rv:37.0) Servo/1.0 Firefox/37.0"
-        }
-    }.to_owned()
+        UserAgent::Desktop => DESKTOP_UA_STRING,
+        UserAgent::Android => "Mozilla/5.0 (Android; Mobile; rv:37.0) Servo/1.0 Firefox/37.0",
+        UserAgent::Gonk => "Mozilla/5.0 (Mobile; rv:37.0) Servo/1.0 Firefox/37.0",
+    }
+    .to_owned()
 }
 
 #[cfg(target_os = "android")]
@@ -529,20 +543,42 @@ pub fn from_cmdline_args(args: &[String]) -> ArgumentParsingResult {
     opts.optopt("", "device-pixel-ratio", "Device pixels per px", "");
     opts.optopt("t", "threads", "Number of paint threads", "1");
     opts.optflagopt("p", "profile", "Profiler flag and output interval", "10");
-    opts.optflagopt("m", "memory-profile", "Memory profiler flag and output interval", "10");
+    opts.optflagopt("m",
+                    "memory-profile",
+                    "Memory profiler flag and output interval",
+                    "10");
     opts.optflag("x", "exit", "Exit after load flag");
-    opts.optopt("y", "layout-threads", "Number of threads to use for layout", "1");
-    opts.optflag("i", "nonincremental-layout", "Enable to turn off incremental layout.");
+    opts.optopt("y",
+                "layout-threads",
+                "Number of threads to use for layout",
+                "1");
+    opts.optflag("i",
+                 "nonincremental-layout",
+                 "Enable to turn off incremental layout.");
     opts.optflag("", "no-ssl", "Disables ssl certificate verification.");
-    opts.optflagopt("", "userscripts",
-                    "Uses userscripts in resources/user-agent-js, or a specified full path", "");
-    opts.optmulti("", "user-stylesheet",
-                  "A user stylesheet to be added to every document", "file.css");
+    opts.optflagopt("",
+                    "userscripts",
+                    "Uses userscripts in resources/user-agent-js, or a specified full path",
+                    "");
+    opts.optmulti("",
+                  "user-stylesheet",
+                  "A user stylesheet to be added to every document",
+                  "file.css");
     opts.optflag("z", "headless", "Headless mode");
-    opts.optflag("f", "hard-fail", "Exit on thread failure instead of displaying about:failure");
-    opts.optflag("F", "soft-fail", "Display about:failure on thread failure instead of exiting");
-    opts.optflagopt("", "devtools", "Start remote devtools server on port", "6000");
-    opts.optflagopt("", "webdriver", "Start remote WebDriver server on port", "7000");
+    opts.optflag("f",
+                 "hard-fail",
+                 "Exit on thread failure instead of displaying about:failure");
+    opts.optflag("F",
+                 "soft-fail",
+                 "Display about:failure on thread failure instead of exiting");
+    opts.optflagopt("",
+                    "devtools",
+                    "Start remote devtools server on port",
+                    "6000");
+    opts.optflagopt("",
+                    "webdriver",
+                    "Start remote WebDriver server on port",
+                    "7000");
     opts.optopt("", "resolution", "Set window resolution.", "800x600");
     opts.optopt("u",
                 "user-agent",
@@ -552,22 +588,37 @@ pub fn from_cmdline_args(args: &[String]) -> ArgumentParsingResult {
     opts.optflag("S", "sandbox", "Run in a sandbox if multiprocess");
     opts.optopt("",
                 "random-pipeline-closure-probability",
-                "Probability of randomly closing a pipeline (for testing constellation hardening).",
+                "Probability of randomly closing a pipeline (for testing constellation \
+                 hardening).",
                 "0.0");
-    opts.optopt("", "random-pipeline-closure-seed", "A fixed seed for repeatbility of random pipeline closure.", "");
-    opts.optopt("Z", "debug",
-                "A comma-separated string of debug options. Pass help to show available options.", "");
+    opts.optopt("",
+                "random-pipeline-closure-seed",
+                "A fixed seed for repeatbility of random pipeline closure.",
+                "");
+    opts.optopt("Z",
+                "debug",
+                "A comma-separated string of debug options. Pass help to show available options.",
+                "");
     opts.optflag("h", "help", "Print this message");
-    opts.optopt("", "resources-path", "Path to find static resources", "/home/servo/resources");
-    opts.optopt("", "content-process" , "Run as a content process and connect to the given pipe",
+    opts.optopt("",
+                "resources-path",
+                "Path to find static resources",
+                "/home/servo/resources");
+    opts.optopt("",
+                "content-process",
+                "Run as a content process and connect to the given pipe",
                 "servo-ipc-channel.abcdefg");
-    opts.optmulti("", "pref",
-                  "A preference to set to enable", "dom.mozbrowser.enabled");
+    opts.optmulti("",
+                  "pref",
+                  "A preference to set to enable",
+                  "dom.mozbrowser.enabled");
     opts.optflag("b", "no-native-titlebar", "Do not use native titlebar");
     opts.optflag("w", "webrender", "Use webrender backend");
     opts.optopt("G", "graphics", "Select graphics backend (gl or es2)", "gl");
-    opts.optopt("", "profile-dir",
-                    "optional directory path for user sessions", "");
+    opts.optopt("",
+                "profile-dir",
+                "optional directory path for user sessions",
+                "");
 
     let opt_match = match opts.parse(args) {
         Ok(m) => m,
@@ -583,7 +634,9 @@ pub fn from_cmdline_args(args: &[String]) -> ArgumentParsingResult {
 
     if let Some(ref profile_dir) = opt_match.opt_str("profile-dir") {
         if let Err(why) = fs::create_dir_all(profile_dir) {
-            error!("Couldn't create/open {:?}: {:?}", Path::new(profile_dir).to_string_lossy(), why);
+            error!("Couldn't create/open {:?}: {:?}",
+                   Path::new(profile_dir).to_string_lossy(),
+                   why);
         }
     }
 
@@ -596,7 +649,7 @@ pub fn from_cmdline_args(args: &[String]) -> ArgumentParsingResult {
 
     let debug_string = match opt_match.opt_str("Z") {
         Some(string) => string,
-        None => String::new()
+        None => String::new(),
     };
 
     let debug_options = match DebugOptions::new(&debug_string) {
@@ -615,72 +668,85 @@ pub fn from_cmdline_args(args: &[String]) -> ArgumentParsingResult {
     } else {
         homepage_pref.as_string()
     };
-    let is_running_problem_test =
-        url_opt
-        .as_ref()
-        .map_or(false, |url|
-             url.starts_with("http://web-platform.test:8000/2dcontext/drawing-images-to-the-canvas/") ||
-             url.starts_with("http://web-platform.test:8000/_mozilla/mozilla/canvas/") ||
-             url.starts_with("http://web-platform.test:8000/_mozilla/css/canvas_over_area.html"));
+    let is_running_problem_test = url_opt.as_ref()
+                                         .map_or(false, |url| {
+                                             url.starts_with("http://web-platform.test:\
+                                    8000/2dcontext/drawing-images-to-the-canvas/") ||
+                                             url.starts_with("http://web-platform.test:\
+                                                              8000/_mozilla/mozilla/canvas/") ||
+                                             url.starts_with("http://web-platform.test:\
+                                                              8000/_mozilla/css/canvas_over_area.html")
+                                         });
 
     let url = match url_opt {
         Some(url_string) => {
-            parse_url_or_filename(&cwd, url_string)
-                .unwrap_or_else(|()| args_fail("URL parsing failed"))
+            parse_url_or_filename(&cwd, url_string).unwrap_or_else(|()| args_fail("URL parsing failed"))
         },
         None => {
             print_usage(app_name, &opts);
             args_fail("servo asks that you provide a URL")
-        }
+        },
     };
 
     let tile_size: usize = match opt_match.opt_str("s") {
-        Some(tile_size_str) => tile_size_str.parse()
-            .unwrap_or_else(|err| args_fail(&format!("Error parsing option: -s ({})", err))),
+        Some(tile_size_str) => {
+            tile_size_str.parse()
+                         .unwrap_or_else(|err| args_fail(&format!("Error parsing option: -s ({})", err)))
+        },
         None => 512,
     };
 
-    let device_pixels_per_px = opt_match.opt_str("device-pixel-ratio").map(|dppx_str|
+    let device_pixels_per_px = opt_match.opt_str("device-pixel-ratio").map(|dppx_str| {
         dppx_str.parse()
-            .unwrap_or_else(|err| args_fail(&format!("Error parsing option: --device-pixel-ratio ({})", err)))
-    );
+                .unwrap_or_else(|err| args_fail(&format!("Error parsing option: --device-pixel-ratio ({})", err)))
+    });
 
     let mut paint_threads: usize = match opt_match.opt_str("t") {
-        Some(paint_threads_str) => paint_threads_str.parse()
-            .unwrap_or_else(|err| args_fail(&format!("Error parsing option: -t ({})", err))),
+        Some(paint_threads_str) => {
+            paint_threads_str.parse()
+                             .unwrap_or_else(|err| args_fail(&format!("Error parsing option: -t ({})", err)))
+        },
         None => cmp::max(num_cpus::get() * 3 / 4, 1),
     };
 
     // If only the flag is present, default to a 5 second period for both profilers.
     let time_profiler_period = opt_match.opt_default("p", "5").map(|period| {
-        period.parse().unwrap_or_else(|err| args_fail(&format!("Error parsing option: -p ({})", err)))
+        period.parse()
+              .unwrap_or_else(|err| args_fail(&format!("Error parsing option: -p ({})", err)))
     });
 
     let mem_profiler_period = opt_match.opt_default("m", "5").map(|period| {
-        period.parse().unwrap_or_else(|err| args_fail(&format!("Error parsing option: -m ({})", err)))
+        period.parse()
+              .unwrap_or_else(|err| args_fail(&format!("Error parsing option: -m ({})", err)))
     });
 
     let gpu_painting = !FORCE_CPU_PAINTING && opt_match.opt_present("g");
 
     let mut layout_threads: usize = match opt_match.opt_str("y") {
-        Some(layout_threads_str) => layout_threads_str.parse()
-            .unwrap_or_else(|err| args_fail(&format!("Error parsing option: -y ({})", err))),
+        Some(layout_threads_str) => {
+            layout_threads_str.parse()
+                              .unwrap_or_else(|err| args_fail(&format!("Error parsing option: -y ({})", err)))
+        },
         None => cmp::max(num_cpus::get() * 3 / 4, 1),
     };
 
     let nonincremental_layout = opt_match.opt_present("i");
 
-    let random_pipeline_closure_probability = opt_match.opt_str("random-pipeline-closure-probability").map(|prob|
+    let random_pipeline_closure_probability = opt_match.opt_str("random-pipeline-closure-probability").map(|prob| {
         prob.parse().unwrap_or_else(|err| {
-            args_fail(&format!("Error parsing option: --random-pipeline-closure-probability ({})", err))
+            args_fail(&format!("Error parsing option: --random-pipeline-closure-probability ({})",
+                               err))
         })
-    );
+    });
 
-    let random_pipeline_closure_seed = opt_match.opt_str("random-pipeline-closure-seed").map(|seed|
-        seed.parse().unwrap_or_else(|err| {
-            args_fail(&format!("Error parsing option: --random-pipeline-closure-seed ({})", err))
-        })
-    );
+    let random_pipeline_closure_seed = opt_match.opt_str("random-pipeline-closure-seed")
+                                                .map(|seed| {
+                                                    seed.parse().unwrap_or_else(|err| {
+                                                        args_fail(&format!("Error parsing option: \
+                                                                            --random-pipeline-closure-seed ({})",
+                                                                           err))
+                                                    })
+                                                });
 
     let mut bubble_inline_sizes_separately = debug_options.bubble_widths;
     if debug_options.trace_layout {
@@ -690,7 +756,8 @@ pub fn from_cmdline_args(args: &[String]) -> ArgumentParsingResult {
     }
 
     let devtools_port = opt_match.opt_default("devtools", "6000").map(|port| {
-        port.parse().unwrap_or_else(|err| args_fail(&format!("Error parsing option: --devtools ({})", err)))
+        port.parse()
+            .unwrap_or_else(|err| args_fail(&format!("Error parsing option: --devtools ({})", err)))
     });
 
     let webdriver_port = opt_match.opt_default("webdriver", "7000").map(|port| {
@@ -699,14 +766,18 @@ pub fn from_cmdline_args(args: &[String]) -> ArgumentParsingResult {
 
     let initial_window_size = match opt_match.opt_str("resolution") {
         Some(res_string) => {
-            let res: Vec<u32> = res_string.split('x').map(|r| {
-                r.parse().unwrap_or_else(|err| args_fail(&format!("Error parsing option: --resolution ({})", err)))
-            }).collect();
+            let res: Vec<u32> = res_string.split('x')
+                                          .map(|r| {
+                                              r.parse().unwrap_or_else(|err| {
+                                                  args_fail(&format!("Error parsing option: \
+                                                                      --resolution ({})",
+                                                                     err))
+                                              })
+                                          })
+                                          .collect();
             Size2D::typed(res[0], res[1])
-        }
-        None => {
-            Size2D::typed(800, 600)
-        }
+        },
+        None => Size2D::typed(800, 600),
     };
 
     if opt_match.opt_present("M") {
@@ -721,24 +792,31 @@ pub fn from_cmdline_args(args: &[String]) -> ArgumentParsingResult {
         None => default_user_agent_string(DEFAULT_USER_AGENT),
     };
 
-    let user_stylesheets = opt_match.opt_strs("user-stylesheet").iter().map(|filename| {
-        let path = cwd.join(filename);
-        let url = Url::from_file_path(&path).unwrap();
-        let mut contents = Vec::new();
-        File::open(path)
-            .unwrap_or_else(|err| args_fail(&format!("Couldn’t open {}: {}", filename, err)))
-            .read_to_end(&mut contents)
-            .unwrap_or_else(|err| args_fail(&format!("Couldn’t read {}: {}", filename, err)));
-        (contents, url)
-    }).collect();
+    let user_stylesheets = opt_match.opt_strs("user-stylesheet")
+                                    .iter()
+                                    .map(|filename| {
+                                        let path = cwd.join(filename);
+                                        let url = Url::from_file_path(&path).unwrap();
+                                        let mut contents = Vec::new();
+                                        File::open(path)
+                                            .unwrap_or_else(|err| {
+                                                args_fail(&format!("Couldn’t open {}: {}", filename, err))
+                                            })
+                                            .read_to_end(&mut contents)
+                                            .unwrap_or_else(|err| {
+                                                args_fail(&format!("Couldn’t read {}: {}", filename, err))
+                                            });
+                                        (contents, url)
+                                    })
+                                    .collect();
 
-    let do_not_use_native_titlebar =
-        opt_match.opt_present("b") ||
-        !prefs::get_pref("shell.native-titlebar.enabled").as_boolean().unwrap();
+    let do_not_use_native_titlebar = opt_match.opt_present("b") ||
+                                     !prefs::get_pref("shell.native-titlebar.enabled")
+                                          .as_boolean()
+                                          .unwrap();
 
-    let use_webrender =
-        (prefs::get_pref("gfx.webrender.enabled").as_boolean().unwrap() || opt_match.opt_present("w")) &&
-        !opt_match.opt_present("z");
+    let use_webrender = (prefs::get_pref("gfx.webrender.enabled").as_boolean().unwrap() ||
+                         opt_match.opt_present("w")) && !opt_match.opt_present("z");
 
     let render_api = match opt_match.opt_str("G") {
         Some(ref ga) if ga == "gl" => RenderApi::GL,
@@ -818,7 +896,7 @@ pub fn from_cmdline_args(args: &[String]) -> ArgumentParsingResult {
         match value {
             Some(&"false") => prefs::set_pref(pref_name, PrefValue::Boolean(false)),
             Some(&"true") | None => prefs::set_pref(pref_name, PrefValue::Boolean(true)),
-            _ => prefs::set_pref(pref_name, PrefValue::String(value.unwrap().to_string()))
+            _ => prefs::set_pref(pref_name, PrefValue::String(value.unwrap().to_string())),
         };
     }
 
@@ -877,9 +955,7 @@ pub fn get() -> &'static Opts {
 pub fn parse_url_or_filename(cwd: &Path, input: &str) -> Result<Url, ()> {
     match Url::parse(input) {
         Ok(url) => Ok(url),
-        Err(url::ParseError::RelativeUrlWithoutBase) => {
-            Url::from_file_path(&*cwd.join(input))
-        }
+        Err(url::ParseError::RelativeUrlWithoutBase) => Url::from_file_path(&*cwd.join(input)),
         Err(_) => Err(()),
     }
 }

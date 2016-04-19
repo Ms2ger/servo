@@ -25,7 +25,7 @@ impl<K, V> HashCache<K, V>
 {
     pub fn new() -> HashCache<K, V> {
         HashCache {
-          entries: HashMap::with_hasher(Default::default()),
+            entries: HashMap::with_hasher(Default::default()),
         }
     }
 
@@ -40,14 +40,12 @@ impl<K, V> HashCache<K, V>
         }
     }
 
-    pub fn find_or_create<F>(&mut self, key: &K, blk: F) -> V where F: Fn(&K) -> V {
+    pub fn find_or_create<F>(&mut self, key: &K, blk: F) -> V
+        where F: Fn(&K) -> V,
+    {
         match self.entries.entry(key.clone()) {
-            Occupied(occupied) => {
-                (*occupied.get()).clone()
-            }
-            Vacant(vacant) => {
-                (*vacant.insert(blk(key))).clone()
-            }
+            Occupied(occupied) => (*occupied.get()).clone(),
+            Vacant(vacant) => (*vacant.insert(blk(key))).clone(),
         }
     }
 
@@ -64,8 +62,8 @@ pub struct LRUCache<K, V> {
 impl<K: Clone + PartialEq, V: Clone> LRUCache<K, V> {
     pub fn new(size: usize) -> LRUCache<K, V> {
         LRUCache {
-          entries: vec!(),
-          cache_size: size,
+            entries: vec![],
+            cache_size: size,
         }
     }
 
@@ -93,18 +91,20 @@ impl<K: Clone + PartialEq, V: Clone> LRUCache<K, V> {
     pub fn find(&mut self, key: &K) -> Option<V> {
         match self.entries.iter().position(|&(ref k, _)| key == k) {
             Some(pos) => Some(self.touch(pos)),
-            None      => None,
+            None => None,
         }
     }
 
-    pub fn find_or_create<F>(&mut self, key: &K, blk: F) -> V where F: Fn(&K) -> V {
+    pub fn find_or_create<F>(&mut self, key: &K, blk: F) -> V
+        where F: Fn(&K) -> V,
+    {
         match self.entries.iter().position(|&(ref k, _)| *k == *key) {
             Some(pos) => self.touch(pos),
             None => {
                 let val = blk(key);
                 self.insert(key.clone(), val.clone());
                 val
-            }
+            },
         }
     }
 
@@ -146,7 +146,9 @@ impl<K: Clone + Eq + Hash, V: Clone> SimpleHashCache<K, V> {
         self.entries[bucket_index] = Some((key, value));
     }
 
-    pub fn find<Q>(&self, key: &Q) -> Option<V> where Q: PartialEq<K> + Hash + Eq {
+    pub fn find<Q>(&self, key: &Q) -> Option<V>
+        where Q: PartialEq<K> + Hash + Eq,
+    {
         let bucket_index = self.bucket_for_key(key);
         match self.entries[bucket_index] {
             Some((ref existing_key, ref value)) if key == existing_key => Some((*value).clone()),
@@ -154,10 +156,12 @@ impl<K: Clone + Eq + Hash, V: Clone> SimpleHashCache<K, V> {
         }
     }
 
-    pub fn find_or_create<F>(&mut self, key: &K, blk: F) -> V where F: Fn(&K) -> V {
+    pub fn find_or_create<F>(&mut self, key: &K, blk: F) -> V
+        where F: Fn(&K) -> V,
+    {
         match self.find(key) {
             Some(value) => return value,
-            None => {}
+            None => {},
         }
         let value = blk(key);
         self.insert((*key).clone(), value.clone());
