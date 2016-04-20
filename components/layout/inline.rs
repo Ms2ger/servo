@@ -810,7 +810,6 @@ impl InlineFragments {
 }
 
 /// Flows for inline layout.
-#[derive(RustcEncodable)]
 pub struct InlineFlow {
     /// Data common to all flows.
     pub base: BaseFlow,

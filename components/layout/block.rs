@@ -500,7 +500,6 @@ pub enum FormattingContextType {
 }
 
 // A block formatting context.
-#[derive(RustcEncodable)]
 pub struct BlockFlow {
     /// Data common to all flows.
     pub base: BaseFlow,

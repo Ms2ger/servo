@@ -62,16 +62,6 @@ struct State {
 /// will be output at the beginning and end of this scope.
 impl Scope {
     pub fn new(name: String) -> Scope {
-        STATE_KEY.with(|ref r| {
-            match *r.borrow_mut() {
-                Some(ref mut state) => {
-                    let flow_trace = json::encode(&flow::base(&*state.flow_root)).unwrap();
-                    let data = box ScopeData::new(name.clone(), flow_trace);
-                    state.scope_stack.push(data);
-                }
-                None => {}
-            }
-        });
         Scope
     }
 }
@@ -79,17 +69,6 @@ impl Scope {
 #[cfg(debug_assertions)]
 impl Drop for Scope {
     fn drop(&mut self) {
-        STATE_KEY.with(|ref r| {
-            match *r.borrow_mut() {
-                 Some(ref mut state) => {
-                    let mut current_scope = state.scope_stack.pop().unwrap();
-                    current_scope.post = json::encode(&flow::base(&*state.flow_root)).unwrap();
-                    let previous_scope = state.scope_stack.last_mut().unwrap();
-                    previous_scope.children.push(current_scope);
-                }
-                None => {}
-            }
-        });
     }
 }
 
@@ -104,27 +83,10 @@ pub fn generate_unique_debug_id() -> u16 {
 /// creating debug scopes has no effect.
 pub fn begin_trace(flow_root: FlowRef) {
     assert!(STATE_KEY.with(|ref r| r.borrow().is_none()));
-
-    STATE_KEY.with(|ref r| {
-        let flow_trace = json::encode(&flow::base(&*flow_root)).unwrap();
-        let state = State {
-            scope_stack: vec![box ScopeData::new("root".to_owned(), flow_trace)],
-            flow_root: flow_root.clone(),
-        };
-        *r.borrow_mut() = Some(state);
-    });
 }
 
 /// End the debug layout trace. This will write the layout
 /// trace to disk in the current directory. The output
 /// file can then be viewed with an external tool.
 pub fn end_trace() {
-    let mut thread_state = STATE_KEY.with(|ref r| r.borrow_mut().take().unwrap());
-    assert!(thread_state.scope_stack.len() == 1);
-    let mut root_scope = thread_state.scope_stack.pop().unwrap();
-    root_scope.post = json::encode(&flow::base(&*thread_state.flow_root)).unwrap();
-
-    let result = json::encode(&root_scope).unwrap();
-    let mut file = File::create("layout_trace.json").unwrap();
-    file.write_all(result.as_bytes()).unwrap();
 }
