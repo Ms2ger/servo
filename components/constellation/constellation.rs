@@ -220,11 +220,22 @@ pub struct InitialConstellationState {
     pub webrender_api_sender: Option<webrender_traits::RenderApiSender>,
 }
 
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord)]
+enum HistoryEntry {
+    Alive {
+        id: PipelineId,
+    },
+    Dead {
+        url: Url,
+        is_private: bool,
+    }
+}
+
 /// Stores the navigation context for a single frame in the frame tree.
 struct Frame {
-    prev: Vec<(PipelineId, Instant)>,
+    prev: Vec<(HistoryEntry, Instant)>,
     current: (PipelineId, Instant),
-    next: Vec<(PipelineId, Instant)>,
+    next: Vec<(HistoryEntry, Instant)>,
 }
 
 impl Frame {
@@ -236,22 +247,73 @@ impl Frame {
         }
     }
 
-    fn load(&mut self, pipeline_id: PipelineId) {
-        self.prev.push(self.current);
+    fn load(&mut self,
+            pipeline_id: PipelineId,
+            pipelines: &HashMap<PipelineId, Pipeline>,
+            through_history: bool)
+            -> Vec<HistoryEntry> {
+        if through_history {
+            self.current = (pipeline_id, Instant::now());
+            return vec![];
+        }
+
+        // TODO(gw): To also allow navigations within subframes
+        // to affect the parent navigation history, this should bubble
+        // up the navigation change to each parent.
+        self.prev.push((HistoryEntry::Alive { id: self.current.0 }, self.current.1));
         self.current = (pipeline_id, Instant::now());
+        let removed = replace(&mut self.next, vec!());
+        self.maybe_purge(pipelines);
+        removed.into_iter().map(|(e, _)| e).collect()
+    }
+
+    fn maybe_purge(&mut self, pipelines: &HashMap<PipelineId, Pipeline>) {
+        fn unload(entries: &mut [(HistoryEntry, Instant)], pipelines: &HashMap<PipelineId, Pipeline>) {
+            for &mut (ref mut entry, _) in entries {
+                let (url, is_private) = match *entry {
+                    HistoryEntry::Alive { ref id } => {
+                        let pipeline = match pipelines.get(id) {
+                            Some(pipeline) => pipeline,
+                            None => continue,
+                        };
+                        pipeline.exit();
+                        (pipeline.url.clone(), pipeline.is_private)
+                    },
+                    HistoryEntry::Dead { .. } => continue,
+                };
+                *entry = HistoryEntry::Dead {
+                    url: url,
+                    is_private: is_private,
+                };
+            }
+        }
+
+        const HISTORY_TO_KEEP: usize = 3;
+
+        if self.prev.len() > HISTORY_TO_KEEP {
+            let boundary = self.prev.len() - HISTORY_TO_KEEP;
+            unload(&mut self.prev[..boundary], pipelines);
+        }
+
+        if self.next.len() > HISTORY_TO_KEEP {
+            unload(&mut self.next[HISTORY_TO_KEEP..], pipelines);
+        }
     }
 
     fn remove_forward_entries(&mut self) -> Vec<(PipelineId, Instant)> {
-        replace(&mut self.next, vec!())
+        //replace(&mut self.next, vec!())
+        panic!()
     }
 }
 
 /// Represents a pending change in the frame tree, that will be applied
 /// once the new pipeline has loaded and completed initial layout / paint.
+#[derive(Debug)]
 struct FrameChange {
     old_pipeline_id: Option<PipelineId>,
     new_pipeline_id: PipelineId,
     document_ready: bool,
+    through_history: bool,
 }
 
 /// An iterator over a frame tree, returning nodes in depth-first order.
@@ -561,11 +623,13 @@ impl<Message, LTF, STF> Constellation<Message, LTF, STF>
 
     // Push a new (loading) pipeline to the list of pending frame changes
     fn push_pending_frame(&mut self, new_pipeline_id: PipelineId,
-                          old_pipeline_id: Option<PipelineId>) {
+                          old_pipeline_id: Option<PipelineId>,
+                          through_history: bool) {
         self.pending_frames.push(FrameChange {
             old_pipeline_id: old_pipeline_id,
             new_pipeline_id: new_pipeline_id,
             document_ready: false,
+            through_history: through_history,
         });
     }
 
@@ -579,7 +643,7 @@ impl<Message, LTF, STF> Constellation<Message, LTF, STF>
         }
     }
 
-    fn joint_session_future(&self, frame_id_root: FrameId) -> Vec<(Instant, FrameId, PipelineId)> {
+    fn joint_session_future(&self, frame_id_root: FrameId) -> Vec<(Instant, FrameId, HistoryEntry)> {
         let mut future = vec!();
         self.get_future_entries(frame_id_root, &mut future);
 
@@ -588,7 +652,7 @@ impl<Message, LTF, STF> Constellation<Message, LTF, STF>
         future
     }
 
-    fn get_future_entries(&self, frame_id_root: FrameId, mut future: &mut Vec<(Instant, FrameId, PipelineId)>) {
+    fn get_future_entries(&self, frame_id_root: FrameId, mut future: &mut Vec<(Instant, FrameId, HistoryEntry)>) {
         let frame = match self.frames.get(&frame_id_root) {
             Some(frame) => frame,
             None => return warn!("Tried to get frame future after frame {:?} closed.", frame_id_root),
@@ -596,7 +660,12 @@ impl<Message, LTF, STF> Constellation<Message, LTF, STF>
 
         future.extend(frame.next.iter().map(|&(pipeline_id, instant)| (instant, frame_id_root, pipeline_id)));
 
-        for &(pipeline_id, _) in frame.next.iter().chain(once(&frame.current)) {
+        for entry in frame.next.iter().map(|&(ref e, _)| e).chain(once(&HistoryEntry::Alive { id: frame.current.0 })) {
+            let pipeline_id = match *entry {
+                HistoryEntry::Alive { id } => id,
+                HistoryEntry::Dead { .. } => continue,
+            };
+
             let pipeline = match self.pipelines.get(&pipeline_id) {
                 Some(pipeline) => pipeline,
                 None => {
@@ -605,12 +674,12 @@ impl<Message, LTF, STF> Constellation<Message, LTF, STF>
                 }
             };
             for &frame_id in &pipeline.children {
-                self.get_future_entries(frame_id, &mut future);
+                self.get_future_entries(frame_id, future);
             }
         }
     }
 
-    fn joint_session_past(&self, frame_id_root: FrameId) -> Vec<(Instant, FrameId, PipelineId)> {
+    fn joint_session_past(&self, frame_id_root: FrameId) -> Vec<(Instant, FrameId, HistoryEntry)> {
         let mut past = vec!();
         self.get_past_entries(frame_id_root, &mut past);
 
@@ -618,7 +687,7 @@ impl<Message, LTF, STF> Constellation<Message, LTF, STF>
         past
     }
 
-    fn get_past_entries(&self, frame_id_root: FrameId, mut past: &mut Vec<(Instant, FrameId, PipelineId)>) {
+    fn get_past_entries(&self, frame_id_root: FrameId, mut past: &mut Vec<(Instant, FrameId, HistoryEntry)>) {
         let frame = match self.frames.get(&frame_id_root) {
             Some(frame) => frame,
             None => return warn!("Tried to get frame past after frame {:?} closed.", frame_id_root),
@@ -629,7 +698,13 @@ impl<Message, LTF, STF> Constellation<Message, LTF, STF>
             past.push((prev_instant, frame_id_root, pipeline_id));
             prev_instant = instant;
         }
-        for &(pipeline_id, _) in frame.prev.iter().chain(once(&frame.current)) {
+
+        for entry in frame.prev.iter().map(|&(ref e, _)| e).chain(once(&HistoryEntry::Alive { id: frame.current.0 })) {
+            let pipeline_id = match *entry {
+                HistoryEntry::Alive { id } => id,
+                HistoryEntry::Dead { .. } => continue,
+            };
+
             let pipeline = match self.pipelines.get(&pipeline_id) {
                 Some(pipeline) => pipeline,
                 None => {
@@ -1127,7 +1202,7 @@ impl<Message, LTF, STF> Constellation<Message, LTF, STF>
             let load_data = LoadData::new(failure_url, None, None);
             self.new_pipeline(new_pipeline_id, parent_info, window_size, None, load_data, false);
 
-            self.push_pending_frame(new_pipeline_id, Some(pipeline_id));
+            self.push_pending_frame(new_pipeline_id, Some(pipeline_id), false);
 
         }
     }
@@ -1153,7 +1228,7 @@ impl<Message, LTF, STF> Constellation<Message, LTF, STF>
         self.new_pipeline(root_pipeline_id, None, Some(window_size), None,
                           LoadData::new(url.clone(), None, None), false);
         self.handle_load_start_msg(root_pipeline_id);
-        self.push_pending_frame(root_pipeline_id, None);
+        self.push_pending_frame(root_pipeline_id, None, false);
         self.compositor_proxy.send(ToCompositorMsg::ChangePageUrl(root_pipeline_id, url));
     }
 
@@ -1281,7 +1356,7 @@ impl<Message, LTF, STF> Constellation<Message, LTF, STF>
         self.subpage_map.insert((load_info.containing_pipeline_id, load_info.new_subpage_id),
                                 load_info.new_pipeline_id);
 
-        self.push_pending_frame(load_info.new_pipeline_id, old_pipeline_id);
+        self.push_pending_frame(load_info.new_pipeline_id, old_pipeline_id, false);
     }
 
     fn handle_set_cursor_msg(&mut self, cursor: Cursor) {
@@ -1371,8 +1446,8 @@ impl<Message, LTF, STF> Constellation<Message, LTF, STF>
         match parent_info {
             Some((parent_pipeline_id, subpage_id, _)) => {
                 self.handle_load_start_msg(source_id);
-                // Message the constellation to find the script thread for this iframe
-                // and issue an iframe load through there.
+                // Message the script thread for the parent browsing context to
+                // load the iframe through there.
                 let msg = ConstellationControlMsg::Navigate(parent_pipeline_id, subpage_id, load_data);
                 let result = match self.pipelines.get(&parent_pipeline_id) {
                     Some(parent_pipeline) => parent_pipeline.script_chan.send(msg),
@@ -1411,7 +1486,7 @@ impl<Message, LTF, STF> Constellation<Message, LTF, STF>
                 let window_size = self.pipelines.get(&source_id).and_then(|source| source.size);
                 let new_pipeline_id = PipelineId::new();
                 self.new_pipeline(new_pipeline_id, None, window_size, None, load_data, false);
-                self.push_pending_frame(new_pipeline_id, Some(source_id));
+                self.push_pending_frame(new_pipeline_id, Some(source_id), false);
 
                 // Send message to ScriptThread that will suspend all timers
                 match self.pipelines.get(&source_id) {
@@ -1462,6 +1537,7 @@ impl<Message, LTF, STF> Constellation<Message, LTF, STF>
 
         let mut traversal_info = HashMap::new();
 
+<<<<<<< HEAD
         match direction {
             TraversalDirection::Forward(delta) => {
                 let mut future = self.joint_session_future(frame_id);
@@ -1485,6 +1561,63 @@ impl<Message, LTF, STF> Constellation<Message, LTF, STF>
                     }
                 }
             },
+=======
+        // Get the ids for the previous and next pipelines.
+        let (prev_pipeline_id, next_pipeline_id) = {
+            let (prev, next) = match self.frames.get_mut(&frame_id) {
+                Some(frame) => {
+                    let prev = frame.current;
+                    let next = match direction {
+                        NavigationDirection::Forward(delta) => {
+                            if delta > frame.next.len() && delta > 0 {
+                                return warn!("Invalid navigation delta");
+                            }
+                            let new_next_len = frame.next.len() - (delta - 1);
+                            frame.prev.push(HistoryEntry::Alive { id: frame.current });
+                            frame.prev.extend(frame.next.drain(new_next_len..).rev());
+                            match frame.next.pop() {
+                                Some(frame) => frame,
+                                None => return warn!("Could not get next frame for forward navigation"),
+                            }
+                        }
+                        NavigationDirection::Back(delta) => {
+                            if delta > frame.prev.len() && delta > 0 {
+                                return warn!("Invalid navigation delta");
+                            }
+                            let new_prev_len = frame.prev.len() - (delta - 1);
+                            frame.next.push(HistoryEntry::Alive { id: frame.current });
+                            frame.next.extend(frame.prev.drain(new_prev_len..).rev());
+                            match frame.prev.pop() {
+                                Some(frame) => frame,
+                                None => return warn!("Could not get prev frame for back navigation"),
+                            }
+                        }
+                    };
+                    if let HistoryEntry::Alive { id } = next {
+                        frame.current = id;
+                    }
+                    (prev, next)
+                },
+                None => {
+                    warn!("no frame to navigate from");
+                    return;
+                },
+            };
+
+            match next {
+                HistoryEntry::Alive { id } => (prev, id),
+                HistoryEntry::Dead { url, is_private } => {
+                    let window_size = self.window_size.visible_viewport;
+                    let pipeline_id = PipelineId::new();
+                    self.new_pipeline(pipeline_id, None, Some(window_size), None,
+                                      LoadData::new(url.clone(), None, None), is_private);
+                    self.handle_load_start_msg(&pipeline_id);
+                    self.push_pending_frame(pipeline_id, Some(prev), true);
+                    self.compositor_proxy.send(ToCompositorMsg::ChangePageUrl(pipeline_id, url));
+                    return;
+                }
+            }
+>>>>>>> 2f4953a... Purge pipelines from distant history.
         };
         for (frame_id, pipeline_id) in traversal_info {
             self.traverse_frame_to_pipeline(frame_id, pipeline_id);
@@ -1747,7 +1880,7 @@ impl<Message, LTF, STF> Constellation<Message, LTF, STF>
         }
     }
 
-    fn traverse_frame_to_pipeline(&mut self, frame_id: FrameId, next_pipeline_id: PipelineId) {
+    fn traverse_frame_to_pipeline(&mut self, frame_id: FrameId, next_pipeline_id: HistoryEntry) {
         // Check if the currently focused pipeline is the pipeline being replaced
         // (or a child of it). This has to be done here, before the current
         // frame tree is modified below.
@@ -1762,7 +1895,7 @@ impl<Message, LTF, STF> Constellation<Message, LTF, STF>
 
                 if frame.next.iter().find(|&&(pipeline_id, _)| next_pipeline_id == pipeline_id).is_some() {
                     contains_pipeline = true;
-                    frame.prev.push(frame.current);
+                    frame.prev.push((HistoryEntry::Alive { id: frame.current.0 }, frame.current.1));
                     while let Some(entry) = frame.next.pop() {
                         if entry.0 == next_pipeline_id {
                             frame.current = entry;
@@ -1890,10 +2023,14 @@ impl<Message, LTF, STF> Constellation<Message, LTF, STF>
         });
 
         if let Some(frame_id) = frame_id {
+            let pipelines = &mut self.pipelines;
+            let frames = &mut self.frames;
             // Add new pipeline to navigation frame, and return frames evicted from history.
             self.pipelines.get_mut(&frame_change.new_pipeline_id)
                           .map(|pipeline| pipeline.frame = Some(frame_id));
-            self.frames.get_mut(&frame_id).map(|frame| frame.load(frame_change.new_pipeline_id));
+            self.frames.get_mut(&frame_id).map(|frame| {
+                frame.load(frame_change.new_pipeline_id, pipelines, frame_change.through_history)
+            });
         }
 
         if let None = frame_id {
@@ -2001,7 +2138,11 @@ impl<Message, LTF, STF> Constellation<Message, LTF, STF>
                 new_size,
                 size_type
             ));
-            for &(pipeline_id, _) in frame.prev.iter().chain(&frame.next) {
+            for entry in frame.prev.iter().chain(&frame.next) {
+                let pipeline_id = match entry.0 {
+                    HistoryEntry::Alive { id } => id,
+                    HistoryEntry::Dead { .. } => continue,
+                };
                 let pipeline = match self.pipelines.get(&pipeline_id) {
                     None => {
                         warn!("Inactive pipeline {:?} resized after closing.", pipeline_id);
@@ -2178,8 +2319,10 @@ impl<Message, LTF, STF> Constellation<Message, LTF, STF>
                 frames_to_clear.extend_from_slice(&pipeline.children);
             }
         }
-        for (pipeline_id, _) in evicted_pipelines {
-            self.close_pipeline(pipeline_id, ExitPipelineMode::Normal);
+        for entry in evicted_pipelines {
+            if let HistoryEntry::Alive { id } = entry {
+                self.close_pipeline(id, ExitPipelineMode::Normal);
+            }
         }
     }
 
@@ -2197,9 +2340,19 @@ impl<Message, LTF, STF> Constellation<Message, LTF, STF>
             let mut pipelines_to_close = vec!();
 
             if let Some(frame) = self.frames.get(&frame_id) {
-                pipelines_to_close.extend_from_slice(&frame.next);
+                pipelines_to_close.extend(frame.next.iter().filter_map(|entry| {
+                    match entry.0 {
+                        HistoryEntry::Alive { id } => Some((id, entry.1)),
+                        HistoryEntry::Dead { .. } => None,
+                    }
+                }));
                 pipelines_to_close.push(frame.current);
-                pipelines_to_close.extend_from_slice(&frame.prev);
+                pipelines_to_close.extend(frame.prev.iter().filter_map(|entry| {
+                    match entry.0 {
+                        HistoryEntry::Alive { id } => Some((id, entry.1)),
+                        HistoryEntry::Dead { .. } => None,
+                    }
+                }));
             }
 
             pipelines_to_close
