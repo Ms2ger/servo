@@ -551,7 +551,10 @@ impl<Window: WindowMethods> IOCompositor<Window> {
 
             (Msg::SetFrameTree(frame_tree, response_chan, new_constellation_chan),
              ShutdownState::NotShuttingDown) => {
-                self.set_frame_tree(&frame_tree, response_chan, new_constellation_chan);
+                if let Err(e) = response_chan.send(()) {
+                    warn!("Sending reponse to set frame tree failed ({}).", e);
+                }
+                self.set_frame_tree(&frame_tree, new_constellation_chan);
                 self.send_viewport_rects_for_all_layers();
                 self.title_for_main_frame();
             }
@@ -819,12 +822,7 @@ impl<Window: WindowMethods> IOCompositor<Window> {
 
     fn set_frame_tree(&mut self,
                       frame_tree: &SendableFrameTree,
-                      response_chan: IpcSender<()>,
                       new_constellation_chan: Sender<ConstellationMsg>) {
-        if let Err(e) = response_chan.send(()) {
-            warn!("Sending reponse to set frame tree failed ({}).", e);
-        }
-
         // There are now no more pending iframes.
         self.pending_subpages.clear();
 
