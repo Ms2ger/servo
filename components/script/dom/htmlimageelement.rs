@@ -25,7 +25,7 @@ use dom::virtualmethods::VirtualMethods;
 use ipc_channel::ipc;
 use ipc_channel::router::ROUTER;
 use net_traits::image::base::{Image, ImageMetadata};
-use net_traits::image_cache_thread::{ImageResponder, ImageResponse};
+use net_traits::image_cache_thread::{ImageCacheChan, ImageCacheResult, ImageResponse};
 use script_runtime::CommonScriptMsg;
 use script_runtime::ScriptThreadEventCategory::UpdateReplacedElement;
 use script_thread::Runnable;
@@ -135,17 +135,15 @@ impl HTMLImageElement {
                 ROUTER.add_route(responder_receiver.to_opaque(), box move |message| {
                     // Return the image via a message to the script thread, which marks the element
                     // as dirty and triggers a reflow.
-                    let image_response = message.to().unwrap();
+                    let image_response: ImageCacheResult = message.to().unwrap();
                     let runnable = ImageResponseHandlerRunnable::new(
-                        trusted_node.clone(), image_response);
+                        trusted_node.clone(), image_response.image_response);
                     let runnable = wrapper.wrap_runnable(runnable);
                     let _ = script_chan.send(CommonScriptMsg::RunnableMsg(
                         UpdateReplacedElement, runnable));
                 });
 
-                image_cache.request_image_and_metadata(img_url,
-                                          window.image_cache_chan(),
-                                          Some(ImageResponder::new(responder_sender)));
+                image_cache.request_image_and_metadata(img_url, ImageCacheChan(responder_sender), None);
             }
         }
     }
