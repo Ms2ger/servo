@@ -64,7 +64,7 @@ use msg::constellation_msg::{SubpageId, WindowSizeData, WindowSizeType};
 use msg::webdriver_msg::WebDriverScriptCommand;
 use net_traits::LoadData as NetLoadData;
 use net_traits::bluetooth_thread::BluetoothMethodMsg;
-use net_traits::image_cache_thread::{ImageCacheResult, ImageCacheThread};
+use net_traits::image_cache_thread::ImageCacheThread;
 use net_traits::{AsyncResponseTarget, CoreResourceMsg, LoadConsumer, LoadContext, Metadata, ResourceThreads};
 use net_traits::{RequestSource, CustomResponse, CustomResponseSender, IpcSend};
 use network_listener::NetworkListener;
@@ -202,7 +202,6 @@ enum MixedMessage {
     FromConstellation(ConstellationControlMsg),
     FromScript(MainThreadScriptMsg),
     FromDevtools(DevtoolScriptControlMsg),
-    FromImageCache(ImageCacheResult),
     FromScheduler(TimerEvent),
     FromNetwork(IpcSender<Option<CustomResponse>>),
 }
@@ -346,9 +345,6 @@ pub struct ScriptThread {
 
     /// For communicating load url messages to the constellation
     constellation_chan: IpcSender<ConstellationMsg>,
-
-    /// The port on which we receive messages from the image cache
-    image_cache_port: Receiver<ImageCacheResult>,
 
     /// For providing contact with the time profiler.
     time_profiler_chan: time::ProfilerChan,
@@ -531,11 +527,6 @@ impl ScriptThread {
         let (ipc_custom_resp_chan, ipc_custom_resp_port) = ipc::channel().unwrap();
         let custom_msg_port = ROUTER.route_ipc_receiver_to_new_mpsc_receiver(ipc_custom_resp_port);
 
-        // Ask the router to proxy IPC messages from the image cache thread to us.
-        let (_, ipc_image_cache_port) = ipc::channel().unwrap();
-        let image_cache_port =
-            ROUTER.route_ipc_receiver_to_new_mpsc_receiver(ipc_image_cache_port);
-
         let (timer_event_chan, timer_event_port) = channel();
 
         // Ask the router to proxy IPC messages from the control port to us.
@@ -546,7 +537,6 @@ impl ScriptThread {
             incomplete_loads: DOMRefCell::new(vec!()),
 
             image_cache_thread: state.image_cache_thread,
-            image_cache_port: image_cache_port,
 
             resource_threads: state.resource_threads,
             bluetooth_thread: state.bluetooth_thread,
@@ -614,7 +604,7 @@ impl ScriptThread {
 
     /// Handle incoming control messages.
     fn handle_msgs(&self) -> bool {
-        use self::MixedMessage::{FromConstellation, FromDevtools, FromImageCache};
+        use self::MixedMessage::{FromConstellation, FromDevtools};
         use self::MixedMessage::{FromScheduler, FromScript, FromNetwork};
 
         // Handle pending resize events.
@@ -648,7 +638,6 @@ impl ScriptThread {
             let mut control_port = sel.handle(&self.control_port);
             let mut timer_event_port = sel.handle(&self.timer_event_port);
             let mut devtools_port = sel.handle(&self.devtools_port);
-            let mut image_cache_port = sel.handle(&self.image_cache_port);
             let mut custom_message_port = sel.handle(&self.custom_message_port);
             unsafe {
                 script_port.add();
@@ -657,7 +646,6 @@ impl ScriptThread {
                 if self.devtools_chan.is_some() {
                     devtools_port.add();
                 }
-                image_cache_port.add();
                 custom_message_port.add();
             }
             let ret = sel.wait();
@@ -669,8 +657,6 @@ impl ScriptThread {
                 FromScheduler(self.timer_event_port.recv().unwrap())
             } else if ret == devtools_port.id() {
                 FromDevtools(self.devtools_port.recv().unwrap())
-            } else if ret == image_cache_port.id() {
-                FromImageCache(self.image_cache_port.recv().unwrap())
             } else if ret == custom_message_port.id() {
                 FromNetwork(self.custom_message_port.recv().unwrap())
             } else {
@@ -734,12 +720,9 @@ impl ScriptThread {
                 Err(_) => match self.port.try_recv() {
                     Err(_) => match self.timer_event_port.try_recv() {
                         Err(_) => match self.devtools_port.try_recv() {
-                            Err(_) => match self.image_cache_port.try_recv() {
-                                Err(_) => match self.custom_message_port.try_recv() {
-                                    Err(_) => break,
-                                    Ok(ev) => event = FromNetwork(ev)
-                                },
-                                Ok(ev) => event = FromImageCache(ev),
+                            Err(_) => match self.custom_message_port.try_recv() {
+                                Err(_) => break,
+                                Ok(ev) => event = FromNetwork(ev)
                             },
                             Ok(ev) => event = FromDevtools(ev),
                         },
@@ -767,7 +750,6 @@ impl ScriptThread {
                     FromNetwork(inner_msg) => self.handle_msg_from_network(inner_msg),
                     FromScheduler(inner_msg) => self.handle_timer_event(inner_msg),
                     FromDevtools(inner_msg) => self.handle_msg_from_devtools(inner_msg),
-                    FromImageCache(inner_msg) => self.handle_msg_from_image_cache(inner_msg),
                 }
 
                 None
@@ -815,7 +797,6 @@ impl ScriptThread {
                 }
             },
             MixedMessage::FromDevtools(_) => ScriptThreadEventCategory::DevtoolsMsg,
-            MixedMessage::FromImageCache(_) => ScriptThreadEventCategory::ImageCacheMsg,
             MixedMessage::FromScript(ref inner_msg) => {
                 match *inner_msg {
                     MainThreadScriptMsg::Common(CommonScriptMsg::RunnableMsg(ref category, _)) =>
@@ -987,10 +968,6 @@ impl ScriptThread {
             DevtoolScriptControlMsg::RequestAnimationFrame(pipeline_id, name) =>
                 devtools::handle_request_animation_frame(&context, pipeline_id, name),
         }
-    }
-
-    fn handle_msg_from_image_cache(&self, msg: ImageCacheResult) {
-        msg.responder.unwrap().respond(msg.image_response);
     }
 
     fn handle_msg_from_network(&self, msg: IpcSender<Option<CustomResponse>>) {
