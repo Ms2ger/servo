@@ -1448,7 +1448,6 @@ impl ScriptThread {
                                  NetworkingTaskSource(network_sender.clone()),
                                  HistoryTraversalTaskSource(history_sender.clone()),
                                  FileReadingTaskSource(file_sender.clone()),
-                                 self.image_cache_channel.clone(),
                                  self.custom_message_chan.clone(),
                                  self.image_cache_thread.clone(),
                                  self.resource_threads.clone(),

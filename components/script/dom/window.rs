@@ -48,7 +48,7 @@ use msg::constellation_msg::{LoadData, PanicMsg, PipelineId, SubpageId};
 use msg::constellation_msg::{WindowSizeData, WindowSizeType};
 use msg::webdriver_msg::{WebDriverJSError, WebDriverJSResult};
 use net_traits::bluetooth_thread::BluetoothMethodMsg;
-use net_traits::image_cache_thread::{ImageCacheChan, ImageCacheThread};
+use net_traits::image_cache_thread::ImageCacheThread;
 use net_traits::storage_thread::StorageType;
 use net_traits::{ResourceThreads, CustomResponseSender};
 use num_traits::ToPrimitive;
@@ -150,8 +150,6 @@ pub struct Window {
     navigator: MutNullableHeap<JS<Navigator>>,
     #[ignore_heap_size_of = "channels are hard"]
     image_cache_thread: ImageCacheThread,
-    #[ignore_heap_size_of = "channels are hard"]
-    image_cache_chan: ImageCacheChan,
     #[ignore_heap_size_of = "channels are hard"]
     custom_message_chan: IpcSender<CustomResponseSender>,
     browsing_context: MutNullableHeap<JS<BrowsingContext>>,
@@ -302,10 +300,6 @@ impl Window {
 
     pub fn main_thread_script_chan(&self) -> &Sender<MainThreadScriptMsg> {
         &self.script_chan.0
-    }
-
-    pub fn image_cache_chan(&self) -> ImageCacheChan {
-        self.image_cache_chan.clone()
     }
 
     pub fn custom_message_chan(&self) -> IpcSender<CustomResponseSender> {
@@ -1481,7 +1475,6 @@ impl Window {
                network_task_source: NetworkingTaskSource,
                history_task_source: HistoryTraversalTaskSource,
                file_task_source: FileReadingTaskSource,
-               image_cache_chan: ImageCacheChan,
                custom_message_chan: IpcSender<CustomResponseSender>,
                image_cache_thread: ImageCacheThread,
                resource_threads: ResourceThreads,
@@ -1517,7 +1510,6 @@ impl Window {
             networking_task_source: network_task_source,
             history_traversal_task_source: history_task_source,
             file_reading_task_source: file_task_source,
-            image_cache_chan: image_cache_chan,
             custom_message_chan: custom_message_chan,
             console: Default::default(),
             crypto: Default::default(),
