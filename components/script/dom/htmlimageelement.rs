@@ -133,6 +133,7 @@ impl HTMLImageElement {
                 let script_chan = window.networking_task_source();
                 let wrapper = window.get_runnable_wrapper();
                 ROUTER.add_route(responder_receiver.to_opaque(), box move |message| {
+                    // TODO: profiling?
                     // Return the image via a message to the script thread, which marks the element
                     // as dirty and triggers a reflow.
                     let image_response: ImageCacheResult = message.to().unwrap();
