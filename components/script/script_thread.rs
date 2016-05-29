@@ -64,7 +64,7 @@ use msg::constellation_msg::{SubpageId, WindowSizeData, WindowSizeType};
 use msg::webdriver_msg::WebDriverScriptCommand;
 use net_traits::LoadData as NetLoadData;
 use net_traits::bluetooth_thread::BluetoothMethodMsg;
-use net_traits::image_cache_thread::{ImageCacheChan, ImageCacheResult, ImageCacheThread};
+use net_traits::image_cache_thread::{ImageCacheResult, ImageCacheThread};
 use net_traits::{AsyncResponseTarget, CoreResourceMsg, LoadConsumer, LoadContext, Metadata, ResourceThreads};
 use net_traits::{RequestSource, CustomResponse, CustomResponseSender, IpcSend};
 use network_listener::NetworkListener;
@@ -350,9 +350,6 @@ pub struct ScriptThread {
     /// The port on which we receive messages from the image cache
     image_cache_port: Receiver<ImageCacheResult>,
 
-    /// The channel on which the image cache can send messages to ourself.
-    image_cache_channel: ImageCacheChan,
-
     /// For providing contact with the time profiler.
     time_profiler_chan: time::ProfilerChan,
 
@@ -535,7 +532,7 @@ impl ScriptThread {
         let custom_msg_port = ROUTER.route_ipc_receiver_to_new_mpsc_receiver(ipc_custom_resp_port);
 
         // Ask the router to proxy IPC messages from the image cache thread to us.
-        let (ipc_image_cache_channel, ipc_image_cache_port) = ipc::channel().unwrap();
+        let (_, ipc_image_cache_port) = ipc::channel().unwrap();
         let image_cache_port =
             ROUTER.route_ipc_receiver_to_new_mpsc_receiver(ipc_image_cache_port);
 
@@ -549,7 +546,6 @@ impl ScriptThread {
             incomplete_loads: DOMRefCell::new(vec!()),
 
             image_cache_thread: state.image_cache_thread,
-            image_cache_channel: ImageCacheChan(ipc_image_cache_channel),
             image_cache_port: image_cache_port,
 
             resource_threads: state.resource_threads,
