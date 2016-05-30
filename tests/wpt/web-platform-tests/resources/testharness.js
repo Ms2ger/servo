@@ -522,21 +522,21 @@ policies and contribution forms [3].
             if (!tests.promise_tests) {
                 tests.promise_tests = Promise.resolve();
             }
-        });
-        tests.promise_tests = tests.promise_tests.then(function() {
-            return Promise.resolve(test.step(func, test, test))
-                .then(
-                    function() {
-                        test.done();
-                    })
-                .catch(test.step_func(
-                    function(value) {
-                        if (value instanceof AssertionError) {
-                            throw value;
-                        }
-                        assert(false, "promise_test", null,
-                               "Unhandled rejection with value: ${value}", {value:value});
-                    }));
+            tests.promise_tests = tests.promise_tests.then(function() {
+                return Promise.resolve(test.step(func, test, test))
+                    .then(
+                        function() {
+                            test.done();
+                        })
+                    .catch(test.step_func(
+                        function(value) {
+                            if (value instanceof AssertionError) {
+                                throw value;
+                            }
+                            assert(false, "promise_test", null,
+                                   "Unhandled rejection with value: ${value}", {value:value});
+                        }));
+            });
         });
     }
 

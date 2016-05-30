@@ -143,7 +143,11 @@ class TestNode(ManifestItem):
     def test_type(self):
         """The type of the test represented by this TestNode"""
 
-        return self.get("type", None)
+        try:
+            return self.get("type", None)
+        except:
+            print(self.id)
+            raise
 
     @property
     def id(self):

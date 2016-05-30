@@ -1,8 +1,4 @@
 function run_test(algorithmNames) {
-    var subtle = crypto.subtle; // Change to test prefixed implementations
-
-    setup({explicit_timeout: true});
-
 // These tests check that generateKey throws an error, and that
 // the error is of the right type, for a wide set of incorrect parameters.
 //
@@ -21,26 +17,29 @@ function run_test(algorithmNames) {
 // helper functions that generate all possible test parameters for
 // different situations.
 
-    var allTestVectors = [ // Parameters that should work for generateKey
-        {name: "AES-CTR",  resultType: CryptoKey, usages: ["encrypt", "decrypt", "wrapKey", "unwrapKey"], mandatoryUsages: []},
-        {name: "AES-CBC",  resultType: CryptoKey, usages: ["encrypt", "decrypt", "wrapKey", "unwrapKey"], mandatoryUsages: []},
-        {name: "AES-GCM",  resultType: CryptoKey, usages: ["encrypt", "decrypt", "wrapKey", "unwrapKey"], mandatoryUsages: []},
-        {name: "AES-KW",   resultType: CryptoKey, usages: ["wrapKey", "unwrapKey"], mandatoryUsages: []},
-        {name: "HMAC",     resultType: CryptoKey, usages: ["sign", "verify"], mandatoryUsages: []},
-        {name: "RSASSA-PKCS1-v1_5", resultType: "CryptoKeyPair", usages: ["sign", "verify"], mandatoryUsages: ["sign"]},
-        {name: "RSA-PSS",  resultType: "CryptoKeyPair", usages: ["sign", "verify"], mandatoryUsages: ["sign"]},
-        {name: "RSA-OAEP", resultType: "CryptoKeyPair", usages: ["encrypt", "decrypt", "wrapKey", "unwrapKey"], mandatoryUsages: ["decrypt", "unwrapKey"]},
-        {name: "ECDSA",    resultType: "CryptoKeyPair", usages: ["sign", "verify"], mandatoryUsages: ["sign"]},
-        {name: "ECDH",     resultType: "CryptoKeyPair", usages: ["deriveKey", "deriveBits"], mandatoryUsages: ["deriveKey", "deriveBits"]}
-    ];
+    var subtle, allTestVectors = [], testVectors = [];
+    setup(function() {
+        subtle = crypto.subtle; // Change to test prefixed implementations
 
-    var testVectors = [];
-    allTestVectors.forEach(function(vector) {
-        if (!algorithmNames || algorithmNames.includes(vector.name)) {
-            testVectors.push(vector);
-        }
-    });
+        allTestVectors = [ // Parameters that should work for generateKey
+            {name: "AES-CTR",  resultType: CryptoKey, usages: ["encrypt", "decrypt", "wrapKey", "unwrapKey"], mandatoryUsages: []},
+            {name: "AES-CBC",  resultType: CryptoKey, usages: ["encrypt", "decrypt", "wrapKey", "unwrapKey"], mandatoryUsages: []},
+            {name: "AES-GCM",  resultType: CryptoKey, usages: ["encrypt", "decrypt", "wrapKey", "unwrapKey"], mandatoryUsages: []},
+            {name: "AES-KW",   resultType: CryptoKey, usages: ["wrapKey", "unwrapKey"], mandatoryUsages: []},
+            {name: "HMAC",     resultType: CryptoKey, usages: ["sign", "verify"], mandatoryUsages: []},
+            {name: "RSASSA-PKCS1-v1_5", resultType: "CryptoKeyPair", usages: ["sign", "verify"], mandatoryUsages: ["sign"]},
+            {name: "RSA-PSS",  resultType: "CryptoKeyPair", usages: ["sign", "verify"], mandatoryUsages: ["sign"]},
+            {name: "RSA-OAEP", resultType: "CryptoKeyPair", usages: ["encrypt", "decrypt", "wrapKey", "unwrapKey"], mandatoryUsages: ["decrypt", "unwrapKey"]},
+            {name: "ECDSA",    resultType: "CryptoKeyPair", usages: ["sign", "verify"], mandatoryUsages: ["sign"]},
+            {name: "ECDH",     resultType: "CryptoKeyPair", usages: ["deriveKey", "deriveBits"], mandatoryUsages: ["deriveKey", "deriveBits"]}
+        ];
 
+        allTestVectors.forEach(function(vector) {
+            if (!algorithmNames || algorithmNames.includes(vector.name)) {
+                testVectors.push(vector);
+            }
+        });
+    }, {explicit_timeout: true});
 
     function parameterString(algorithm, extractable, usages) {
         if (typeof algorithm !== "object" && typeof algorithm !== "string") {

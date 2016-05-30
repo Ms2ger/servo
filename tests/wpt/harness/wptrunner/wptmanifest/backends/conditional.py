@@ -231,7 +231,7 @@ class ManifestItem(object):
                         matches = False
                     if matches:
                         return cond_value.value
-        raise KeyError
+        raise KeyError(key)
 
     def set(self, key, value, condition=None):
         # First try to update the existing value
