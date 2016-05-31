@@ -1290,10 +1290,6 @@ impl Window {
         self.window_size.get()
     }
 
-    pub fn get_url(&self) -> Url {
-        (*self.Document().url()).clone()
-    }
-
     pub fn resource_threads(&self) -> &ResourceThreads {
         &self.resource_threads
     }
