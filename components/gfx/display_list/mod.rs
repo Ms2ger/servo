@@ -25,7 +25,7 @@ use fnv::FnvHasher;
 use gfx_traits::{LayerId, ScrollPolicy};
 use ipc_channel::ipc::IpcSharedMemory;
 use msg::constellation_msg::PipelineId;
-use net_traits::image::base::{Image, PixelFormat};
+use msg::constellation_msg::{Image, PixelFormat};
 use paint_context::PaintContext;
 use range::Range;
 use serde::de::{self, Deserialize, Deserializer, MapVisitor, Visitor};

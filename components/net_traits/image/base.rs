@@ -3,10 +3,9 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 use ipc_channel::ipc::IpcSharedMemory;
+use msg::constellation_msg::{Image, PixelFormat};
 use piston_image::{self, DynamicImage, ImageFormat};
 use util::opts;
-
-pub use msg::constellation_msg::{Image, PixelFormat};
 
 #[derive(Clone, Deserialize, Eq, PartialEq, Serialize, HeapSizeOf)]
 pub struct ImageMetadata {

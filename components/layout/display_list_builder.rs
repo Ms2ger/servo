@@ -36,7 +36,7 @@ use inline::{FIRST_FRAGMENT_OF_ELEMENT, InlineFlow, LAST_FRAGMENT_OF_ELEMENT};
 use ipc_channel::ipc;
 use list_item::ListItemFlow;
 use model::{self, MaybeAuto, ToGfxMatrix};
-use net_traits::image::base::PixelFormat;
+use msg::constellation_msg::PixelFormat;
 use net_traits::image_cache_thread::UsePlaceholder;
 use range::Range;
 use std::default::Default;

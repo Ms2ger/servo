@@ -27,7 +27,7 @@ use euclid::size::Size2D;
 use filters;
 use font_context::FontContext;
 use gfx_traits::{color, LayerKind};
-use net_traits::image::base::PixelFormat;
+use msg::constellation_msg::PixelFormat;
 use range::Range;
 use std::default::Default;
 use std::{f32, mem, ptr};

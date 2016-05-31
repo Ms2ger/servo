@@ -16,7 +16,7 @@ use gfx::font_context::FontContext;
 use gfx_traits::LayerId;
 use heapsize::HeapSizeOf;
 use ipc_channel::ipc::{self, IpcSharedMemory};
-use net_traits::image::base::Image;
+use msg::constellation_msg::Image;
 use net_traits::image_cache_thread::{ImageCacheChan, ImageCacheThread, ImageResponse, ImageState};
 use net_traits::image_cache_thread::{ImageOrMetadataAvailable, UsePlaceholder};
 use std::cell::{RefCell, RefMut};

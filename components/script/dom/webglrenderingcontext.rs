@@ -31,7 +31,7 @@ use euclid::size::Size2D;
 use ipc_channel::ipc::{self, IpcSender};
 use js::jsapi::{JSContext, JS_GetArrayBufferViewType, JSObject, RootedValue, Type};
 use js::jsval::{BooleanValue, DoubleValue, Int32Value, JSVal, NullValue, UndefinedValue};
-use net_traits::image::base::PixelFormat;
+use msg::constellation_msg::PixelFormat;
 use net_traits::image_cache_thread::ImageResponse;
 use offscreen_gl_context::{GLContextAttributes, GLLimits};
 use script_traits::ScriptMsg as ConstellationMsg;

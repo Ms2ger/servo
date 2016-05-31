@@ -17,7 +17,7 @@ use dom::node::{Node, window_from_node};
 use dom::validation::Validatable;
 use dom::validitystate::ValidityState;
 use dom::virtualmethods::VirtualMethods;
-use net_traits::image::base::Image;
+use msg::constellation_msg::Image;
 use std::sync::Arc;
 use string_cache::Atom;
 
