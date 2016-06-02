@@ -181,6 +181,7 @@ impl Profiler {
                           jemalloc_heap_allocated_size - jemalloc_heap_reported_size);
         }
         if let Some(system_heap_allocated_size) = system_heap_allocated_size {
+            println!("{} - {}", system_heap_allocated_size, system_heap_reported_size);
             forest.insert(&path!["explicit", "system-heap-unclassified"],
                           system_heap_allocated_size - system_heap_reported_size);
         }
@@ -392,7 +393,9 @@ mod system_reporter {
 
             // Total number of bytes allocated by the application on the system
             // heap.
-            report(path![SYSTEM_HEAP_ALLOCATED_STR], system_heap_allocated());
+            let system = system_heap_allocated();
+            println!("{:?}", system);
+            report(path![SYSTEM_HEAP_ALLOCATED_STR], system);
 
             // The descriptions of the following jemalloc measurements are taken
             // directly from the jemalloc documentation.
