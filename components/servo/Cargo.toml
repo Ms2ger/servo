@@ -44,7 +44,6 @@ compiletest_helper = {path = "../../tests/compiletest/helper"}
 plugin_compiletest = {path = "../../tests/compiletest/plugin"}
 
 [dependencies]
-webrender_traits = {git = "https://github.com/servo/webrender_traits"}
 webrender = {git = "https://github.com/servo/webrender"}
 compositing = {path = "../compositing"}
 constellation = {path = "../constellation"}

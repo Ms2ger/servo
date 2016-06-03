@@ -47,7 +47,6 @@ pub extern crate util;
 extern crate webdriver_server;
 
 extern crate webrender;
-extern crate webrender_traits;
 
 #[cfg(feature = "webdriver")]
 fn webdriver(port: u16, constellation: Sender<ConstellationMsg>) {
@@ -60,7 +59,7 @@ fn webdriver(_port: u16, _constellation: Sender<ConstellationMsg>) { }
 use compositing::compositor_thread::InitialCompositorState;
 use compositing::windowing::WindowEvent;
 use compositing::windowing::WindowMethods;
-use compositing::{CompositorProxy, IOCompositor};
+use compositing::IOCompositor;
 #[cfg(not(target_os = "windows"))]
 use constellation::content_process_sandbox_profile;
 use constellation::{Constellation, InitialConstellationState, UnprivilegedPipelineContent};
@@ -75,8 +74,6 @@ use net_traits::IpcSend;
 use net_traits::bluetooth_thread::BluetoothMethodMsg;
 use profile::mem as profile_mem;
 use profile::time as profile_time;
-use profile_traits::mem;
-use profile_traits::time;
 use script_traits::ConstellationMsg;
 use std::rc::Rc;
 use std::sync::mpsc::Sender;
@@ -151,13 +148,37 @@ impl<Window> Browser<Window> where Window: WindowMethods + 'static {
         // Create the constellation, which maintains the engine
         // pipelines, including the script and layout threads, as well
         // as the navigation context.
-        let constellation_chan = create_constellation(opts.clone(),
-                                                      compositor_proxy.clone_compositor_proxy(),
-                                                      time_profiler_chan.clone(),
-                                                      mem_profiler_chan.clone(),
-                                                      devtools_chan,
-                                                      supports_clipboard,
-                                                      webrender_api_sender.clone());
+        let bluetooth_thread: IpcSender<BluetoothMethodMsg> = BluetoothThreadFactory::new();
+
+        let resource_threads = new_resource_threads(opts.user_agent.clone(),
+                                                    devtools_chan.clone(),
+                                                    time_profiler_chan.clone());
+        let image_cache_thread = new_image_cache_thread(resource_threads.sender(),
+                                                        webrender_api_sender.as_ref().map(|wr| wr.create_api()));
+        let font_cache_thread = FontCacheThread::new(resource_threads.sender(),
+                                                     webrender_api_sender.as_ref().map(|wr| wr.create_api()));
+
+        let initial_state = InitialConstellationState {
+            compositor_proxy: compositor_proxy.clone_compositor_proxy(),
+            devtools_chan: devtools_chan,
+            bluetooth_thread: bluetooth_thread,
+            image_cache_thread: image_cache_thread,
+            font_cache_thread: font_cache_thread,
+            resource_threads: resource_threads,
+            time_profiler_chan: time_profiler_chan.clone(),
+            mem_profiler_chan: mem_profiler_chan.clone(),
+            supports_clipboard: supports_clipboard,
+            webrender_api_sender: webrender_api_sender.clone(),
+        };
+        let constellation_chan =
+            Constellation::<script::layout_interface::Msg,
+                            layout::layout_thread::LayoutThread,
+                            script::script_thread::ScriptThread>::start(initial_state);
+
+        // Send the URL command to the constellation.
+        if let Some(ref url) = opts.url {
+            constellation_chan.send(ConstellationMsg::InitLoadUrl(url.clone())).unwrap();
+        }
 
         if cfg!(feature = "webdriver") {
             if let Some(port) = opts.webdriver_port {
@@ -197,51 +218,6 @@ impl<Window> Browser<Window> where Window: WindowMethods + 'static {
     pub fn request_title_for_main_frame(&self) {
         self.compositor.title_for_main_frame()
     }
-}
-
-fn create_constellation(opts: opts::Opts,
-                        compositor_proxy: Box<CompositorProxy + Send>,
-                        time_profiler_chan: time::ProfilerChan,
-                        mem_profiler_chan: mem::ProfilerChan,
-                        devtools_chan: Option<Sender<devtools_traits::DevtoolsControlMsg>>,
-                        supports_clipboard: bool,
-                        webrender_api_sender: Option<webrender_traits::RenderApiSender>) -> Sender<ConstellationMsg> {
-    let bluetooth_thread: IpcSender<BluetoothMethodMsg> = BluetoothThreadFactory::new();
-
-    let resource_threads = new_resource_threads(opts.user_agent.clone(),
-                                                devtools_chan.clone(),
-                                                time_profiler_chan.clone());
-    let image_cache_thread = new_image_cache_thread(resource_threads.sender(),
-                                                    webrender_api_sender.as_ref().map(|wr| wr.create_api()));
-    let font_cache_thread = FontCacheThread::new(resource_threads.sender(),
-                                                 webrender_api_sender.as_ref().map(|wr| wr.create_api()));
-
-    let initial_state = InitialConstellationState {
-        compositor_proxy: compositor_proxy,
-        devtools_chan: devtools_chan,
-        bluetooth_thread: bluetooth_thread,
-        image_cache_thread: image_cache_thread,
-        font_cache_thread: font_cache_thread,
-        resource_threads: resource_threads,
-        time_profiler_chan: time_profiler_chan,
-        mem_profiler_chan: mem_profiler_chan,
-        supports_clipboard: supports_clipboard,
-        webrender_api_sender: webrender_api_sender,
-    };
-    let constellation_chan =
-        Constellation::<script::layout_interface::Msg,
-                        layout::layout_thread::LayoutThread,
-                        script::script_thread::ScriptThread>::start(initial_state);
-
-    // Send the URL command to the constellation.
-    match opts.url {
-        Some(url) => {
-            constellation_chan.send(ConstellationMsg::InitLoadUrl(url)).unwrap();
-        },
-        None => ()
-    };
-
-    constellation_chan
 }
 
 /// Content process entry point.

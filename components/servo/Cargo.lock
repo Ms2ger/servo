@@ -43,7 +43,6 @@ dependencies = [
  "util_tests 0.0.1",
  "webdriver_server 0.0.1",
  "webrender 0.1.0 (git+https://github.com/servo/webrender)",
- "webrender_traits 0.1.0 (git+https://github.com/servo/webrender_traits)",
 ]
 
 [[package]]
