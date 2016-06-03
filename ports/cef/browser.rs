@@ -14,6 +14,7 @@ use util::thread::spawn_named;
 use window;
 use wrappers::CefWrap;
 
+use compositing::IOCompositor;
 use compositing::windowing::{WindowNavigateMsg, WindowEvent};
 use glutin_app;
 use libc::c_int;
@@ -27,8 +28,8 @@ thread_local!(pub static BROWSERS: RefCell<Vec<CefBrowser>> = RefCell::new(vec!(
 
 pub enum ServoBrowser {
     Invalid,
-    OnScreen(Browser<glutin_app::window::Window>),
-    OffScreen(Browser<window::Window>),
+    OnScreen(IOCompositor<glutin_app::window::Window>),
+    OffScreen(IOCompositor<window::Window>),
 }
 
 impl ServoBrowser {
@@ -42,8 +43,8 @@ impl ServoBrowser {
 
     pub fn request_title_for_main_frame(&self) {
         match *self {
-            ServoBrowser::OnScreen(ref browser) => browser.request_title_for_main_frame(),
-            ServoBrowser::OffScreen(ref browser) => browser.request_title_for_main_frame(),
+            ServoBrowser::OnScreen(ref browser) => browser.title_for_main_frame(),
+            ServoBrowser::OffScreen(ref browser) => browser.title_for_main_frame(),
             ServoBrowser::Invalid => {}
         }
     }
@@ -128,11 +129,12 @@ impl ServoCefBrowser {
         let mut window_handle: cef_window_handle_t = get_null_window_handle();
 
         let (glutin_window, servo_browser) = if window_info.windowless_rendering_enabled == 0 {
+            let mut browser = Browser::new();
             let parent_window = glutin_app::WindowID::new(window_info.parent_window as *mut _);
             let glutin_window = glutin_app::create_window(Some(parent_window));
-            let servo_browser = Browser::new(glutin_window.clone());
+            let compositor = browser.create_compositor(glutin_window.clone());
             window_handle = glutin_window.platform_window().window as cef_window_handle_t;
-            (Some(glutin_window), ServoBrowser::OnScreen(servo_browser))
+            (Some(glutin_window), ServoBrowser::OnScreen(compositor))
         } else {
             (None, ServoBrowser::Invalid)
         };
@@ -169,10 +171,11 @@ pub trait ServoCefBrowserExtensions {
 impl ServoCefBrowserExtensions for CefBrowser {
     fn init(&self, window_info: &cef_window_info_t) {
         if window_info.windowless_rendering_enabled != 0 {
+            let mut browser = Browser::new();
             let window = window::Window::new(window_info.width, window_info.height);
             window.set_browser(self.clone());
-            let servo_browser = Browser::new(window.clone());
-            *self.downcast().servo_browser.borrow_mut() = ServoBrowser::OffScreen(servo_browser);
+            let compositor = browser.create_compositor(window.clone());
+            *self.downcast().servo_browser.borrow_mut() = ServoBrowser::OffScreen(compositor);
         }
 
         self.downcast().host.set_browser((*self).clone());

@@ -32,6 +32,7 @@ extern crate log;
 extern crate servo;
 
 use servo::Browser;
+use servo::compositing::IOCompositor;
 use servo::compositing::windowing::WindowEvent;
 use servo::util::opts::{self, ArgumentParsingResult};
 use servo::util::panicking::initiate_panic_hook;
@@ -60,22 +61,25 @@ fn main() {
         return servo::run_content_process(token)
     }
 
+    let mut browser = Browser::new();
+
     let window = app::create_window(None);
+    let compositor = browser.create_compositor(window.clone());
 
     // Our wrapper around `Browser` that also implements some
     // callbacks required by the glutin window implementation.
     let mut browser = BrowserWrapper {
-        browser: Browser::new(window.clone()),
+        compositor: compositor,
     };
 
     register_glutin_resize_handler(&window, &mut browser);
 
-    browser.browser.handle_events(vec![WindowEvent::InitializeCompositing]);
+    browser.compositor.handle_events(vec![WindowEvent::InitializeCompositing]);
 
     // Feed events from the window to the browser until the browser
     // says to stop.
     loop {
-        let should_continue = browser.browser.handle_events(window.wait_events());
+        let should_continue = browser.compositor.handle_events(window.wait_events());
         if !should_continue {
             break
         }
@@ -98,7 +102,7 @@ fn unregister_glutin_resize_handler(window: &Rc<app::window::Window>) {
 }
 
 struct BrowserWrapper {
-    browser: Browser<app::window::Window>,
+    compositor: IOCompositor<app::window::Window>,
 }
 
 impl app::NestedEventLoopListener for BrowserWrapper {
@@ -107,11 +111,11 @@ impl app::NestedEventLoopListener for BrowserWrapper {
             WindowEvent::Resize(..) => true,
             _ => false,
         };
-        if !self.browser.handle_events(vec![event]) {
+        if !self.compositor.handle_events(vec![event]) {
             return false
         }
         if is_resize {
-            self.browser.repaint_synchronously()
+            self.compositor.repaint_synchronously()
         }
         true
     }

@@ -57,12 +57,12 @@ fn webdriver(port: u16, constellation: Sender<ConstellationMsg>) {
 fn webdriver(_port: u16, _constellation: Sender<ConstellationMsg>) { }
 
 use compositing::compositor_thread::InitialCompositorState;
-use compositing::windowing::WindowEvent;
 use compositing::windowing::WindowMethods;
-use compositing::IOCompositor;
+use compositing::{CompositorProxy, IOCompositor};
 #[cfg(not(target_os = "windows"))]
 use constellation::content_process_sandbox_profile;
 use constellation::{Constellation, InitialConstellationState, UnprivilegedPipelineContent};
+use devtools_traits::DevtoolsControlMsg;
 #[cfg(not(target_os = "windows"))]
 use gaol::sandbox::{ChildSandbox, ChildSandboxMethods};
 use gfx::font_cache_thread::FontCacheThread;
@@ -70,11 +70,14 @@ use ipc_channel::ipc::{self, IpcSender};
 use net::bluetooth_thread::BluetoothThreadFactory;
 use net::image_cache_thread::new_image_cache_thread;
 use net::resource_thread::new_resource_threads;
-use net_traits::IpcSend;
+use net_traits::{IpcSend, ResourceThreads};
 use net_traits::bluetooth_thread::BluetoothMethodMsg;
 use profile::mem as profile_mem;
 use profile::time as profile_time;
+use profile_traits::mem;
+use profile_traits::time;
 use script_traits::ConstellationMsg;
+use std::marker::PhantomData;
 use std::rc::Rc;
 use std::sync::mpsc::Sender;
 use util::resource_files::resources_dir_path;
@@ -83,40 +86,49 @@ use util::{opts, prefs};
 pub use gleam::gl;
 
 /// The in-process interface to Servo.
-///
-/// It does everything necessary to render the web, primarily
-/// orchestrating the interaction between JavaScript, CSS layout,
-/// rendering, and the client window.
-///
-/// Clients create a `Browser` for a given reference-counted type
-/// implementing `WindowMethods`, which is the bridge to whatever
-/// application Servo is embedded in. Clients then create an event
-/// loop to pump messages between the embedding application and
-/// various browser components.
 pub struct Browser<Window: WindowMethods + 'static> {
-    compositor: IOCompositor<Window>,
+    compositors: Vec<Box<CompositorProxy>>,
+    bluetooth_sender: IpcSender<BluetoothMethodMsg>,
+    resource_threads: ResourceThreads,
+    time_profiler_sender: time::ProfilerChan,
+    mem_profiler_sender: mem::ProfilerChan,
+    devtools_sender: Option<Sender<DevtoolsControlMsg>>,
+    window_type: PhantomData<Window>,
 }
 
 impl<Window> Browser<Window> where Window: WindowMethods + 'static {
-    pub fn new(window: Rc<Window>) -> Browser<Window> {
+    pub fn new() -> Browser<Window> {
         // Global configuration options, parsed from the command line.
         let opts = opts::get();
 
         script::init();
 
-        // Get both endpoints of a special channel for communication between
-        // the client window and the compositor. This channel is unique because
-        // messages to client may need to pump a platform-specific event loop
-        // to deliver the message.
-        let (compositor_proxy, compositor_receiver) =
-            window.create_compositor_channel();
-        let supports_clipboard = window.supports_clipboard();
         let time_profiler_chan = profile_time::Profiler::create(&opts.time_profiling,
                                                                 opts.time_profiler_trace_path.clone());
         let mem_profiler_chan = profile_mem::Profiler::create(opts.mem_profiler_period);
         let devtools_chan = opts.devtools_port.map(|port| {
             devtools::start_server(port)
         });
+
+        let bluetooth_thread: IpcSender<BluetoothMethodMsg> = BluetoothThreadFactory::new();
+
+        let resource_threads = new_resource_threads(opts.user_agent.clone(),
+                                                    devtools_chan.clone(),
+                                                    time_profiler_chan.clone());
+
+        Browser {
+            compositors: vec![],
+            bluetooth_sender: bluetooth_thread,
+            resource_threads: resource_threads,
+            time_profiler_sender: time_profiler_chan,
+            mem_profiler_sender: mem_profiler_chan,
+            devtools_sender: devtools_chan,
+            window_type: PhantomData,
+        }
+    }
+
+    pub fn create_compositor(&mut self, window: Rc<Window>) -> IOCompositor<Window> {
+        let opts = opts::get();
 
         let (webrender, webrender_api_sender) = if opts::get().use_webrender {
             let mut resource_path = resources_dir_path();
@@ -145,28 +157,32 @@ impl<Window> Browser<Window> where Window: WindowMethods + 'static {
             (None, None)
         };
 
+        let image_cache_thread = new_image_cache_thread(self.resource_threads.sender(),
+                                                        webrender_api_sender.as_ref().map(|wr| wr.create_api()));
+        let font_cache_thread = FontCacheThread::new(self.resource_threads.sender(),
+                                                     webrender_api_sender.as_ref().map(|wr| wr.create_api()));
+
         // Create the constellation, which maintains the engine
         // pipelines, including the script and layout threads, as well
         // as the navigation context.
-        let bluetooth_thread: IpcSender<BluetoothMethodMsg> = BluetoothThreadFactory::new();
 
-        let resource_threads = new_resource_threads(opts.user_agent.clone(),
-                                                    devtools_chan.clone(),
-                                                    time_profiler_chan.clone());
-        let image_cache_thread = new_image_cache_thread(resource_threads.sender(),
-                                                        webrender_api_sender.as_ref().map(|wr| wr.create_api()));
-        let font_cache_thread = FontCacheThread::new(resource_threads.sender(),
-                                                     webrender_api_sender.as_ref().map(|wr| wr.create_api()));
+        // Get both endpoints of a special channel for communication between
+        // the client window and the compositor. This channel is unique because
+        // messages to client may need to pump a platform-specific event loop
+        // to deliver the message.
+        let (compositor_proxy, compositor_receiver) =
+            window.create_compositor_channel();
+        let supports_clipboard = window.supports_clipboard();
 
         let initial_state = InitialConstellationState {
             compositor_proxy: compositor_proxy.clone_compositor_proxy(),
-            devtools_chan: devtools_chan,
-            bluetooth_thread: bluetooth_thread,
+            devtools_chan: self.devtools_sender.clone(),
+            bluetooth_thread: self.bluetooth_sender.clone(),
             image_cache_thread: image_cache_thread,
             font_cache_thread: font_cache_thread,
-            resource_threads: resource_threads,
-            time_profiler_chan: time_profiler_chan.clone(),
-            mem_profiler_chan: mem_profiler_chan.clone(),
+            resource_threads: self.resource_threads.clone(),
+            time_profiler_chan: self.time_profiler_sender.clone(),
+            mem_profiler_chan: self.mem_profiler_sender.clone(),
             supports_clipboard: supports_clipboard,
             webrender_api_sender: webrender_api_sender.clone(),
         };
@@ -186,37 +202,19 @@ impl<Window> Browser<Window> where Window: WindowMethods + 'static {
             }
         }
 
+        self.compositors.push(compositor_proxy.clone_compositor_proxy());
+
         // The compositor coordinates with the client window to create the final
         // rendered page and display it somewhere.
-        let compositor = IOCompositor::create(window, InitialCompositorState {
+        IOCompositor::create(window, InitialCompositorState {
             sender: compositor_proxy,
             receiver: compositor_receiver,
             constellation_chan: constellation_chan,
-            time_profiler_chan: time_profiler_chan,
-            mem_profiler_chan: mem_profiler_chan,
+            time_profiler_chan: self.time_profiler_sender.clone(),
+            mem_profiler_chan: self.mem_profiler_sender.clone(),
             webrender: webrender,
             webrender_api_sender: webrender_api_sender,
-        });
-
-        Browser {
-            compositor: compositor,
-        }
-    }
-
-    pub fn handle_events(&mut self, events: Vec<WindowEvent>) -> bool {
-        self.compositor.handle_events(events)
-    }
-
-    pub fn repaint_synchronously(&mut self) {
-        self.compositor.repaint_synchronously()
-    }
-
-    pub fn pinch_zoom_level(&self) -> f32 {
-        self.compositor.pinch_zoom_level()
-    }
-
-    pub fn request_title_for_main_frame(&self) {
-        self.compositor.title_for_main_frame()
+        })
     }
 }
 
