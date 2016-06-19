@@ -27,14 +27,14 @@ pub const CHUNK_SIZE: usize = 64;
 
 pub struct WorkQueueData(usize, usize);
 
-pub fn run_queue_with_custom_work_data_type<To, F, SharedContext: Sync>(
-        queue: &mut WorkQueue<SharedContext, WorkQueueData>,
-        callback: F,
-        shared: &SharedContext)
-        where To: 'static + Send, F: FnOnce(&mut WorkQueue<SharedContext, To>) {
-    let queue: &mut WorkQueue<SharedContext, To> = unsafe {
-        mem::transmute(queue)
-    };
+pub fn run_queue_with_custom_work_data_type<To, F, SharedContext: Sync>(queue: &mut WorkQueue<SharedContext,
+                                                                                              WorkQueueData>,
+                                                                        callback: F,
+                                                                        shared: &SharedContext)
+    where To: 'static + Send,
+          F: FnOnce(&mut WorkQueue<SharedContext, To>),
+{
+    let queue: &mut WorkQueue<SharedContext, To> = unsafe { mem::transmute(queue) };
     callback(queue);
     queue.run(shared);
 }
@@ -42,20 +42,25 @@ pub fn run_queue_with_custom_work_data_type<To, F, SharedContext: Sync>(
 pub fn traverse_dom<N, C>(root: N,
                           queue_data: &C::SharedContext,
                           queue: &mut WorkQueue<C::SharedContext, WorkQueueData>)
-                          where N: TNode, C: DomTraversalContext<N> {
-    run_queue_with_custom_work_data_type(queue, |queue| {
-        queue.push(WorkUnit {
-            fun:  top_down_dom::<N, C>,
-            data: (box vec![root.to_unsafe()], root.opaque()),
-        });
-    }, queue_data);
+    where N: TNode,
+          C: DomTraversalContext<N>,
+{
+    run_queue_with_custom_work_data_type(queue,
+                                         |queue| {
+                                             queue.push(WorkUnit {
+                                                 fun: top_down_dom::<N, C>,
+                                                 data: (box vec![root.to_unsafe()], root.opaque()),
+                                             });
+                                         },
+                                         queue_data);
 }
 
 /// A parallel top-down DOM traversal.
 #[inline(always)]
-fn top_down_dom<N, C>(unsafe_nodes: UnsafeNodeList,
-                      proxy: &mut WorkerProxy<C::SharedContext, UnsafeNodeList>)
-                      where N: TNode, C: DomTraversalContext<N> {
+fn top_down_dom<N, C>(unsafe_nodes: UnsafeNodeList, proxy: &mut WorkerProxy<C::SharedContext, UnsafeNodeList>)
+    where N: TNode,
+          C: DomTraversalContext<N>,
+{
     let context = C::new(proxy.user_data(), unsafe_nodes.1);
 
     let mut discovered_child_nodes = Vec::new();
@@ -71,8 +76,7 @@ fn top_down_dom<N, C>(unsafe_nodes: UnsafeNodeList,
         // Reset the count of children.
         {
             let data = node.mutate_data().unwrap();
-            data.parallel.children_count.store(child_count as isize,
-                                               Ordering::Relaxed);
+            data.parallel.children_count.store(child_count as isize, Ordering::Relaxed);
         }
 
         // Possibly enqueue the children.
@@ -88,7 +92,7 @@ fn top_down_dom<N, C>(unsafe_nodes: UnsafeNodeList,
 
     for chunk in discovered_child_nodes.chunks(CHUNK_SIZE) {
         proxy.push(WorkUnit {
-            fun:  top_down_dom::<N, C>,
+            fun: top_down_dom::<N, C>,
             data: (box chunk.iter().cloned().collect(), unsafe_nodes.1),
         });
     }
@@ -108,7 +112,9 @@ fn top_down_dom<N, C>(unsafe_nodes: UnsafeNodeList,
 fn bottom_up_dom<N, C>(root: OpaqueNode,
                        unsafe_node: UnsafeNode,
                        proxy: &mut WorkerProxy<C::SharedContext, UnsafeNodeList>)
-                       where N: TNode, C: DomTraversalContext<N> {
+    where N: TNode,
+          C: DomTraversalContext<N>,
+{
     let context = C::new(proxy.user_data(), root);
 
     // Get a real layout node.
@@ -122,20 +128,16 @@ fn bottom_up_dom<N, C>(root: OpaqueNode,
             Some(parent) => parent,
         };
 
-        let parent_data = unsafe {
-            &*parent.borrow_data_unchecked().unwrap()
-        };
+        let parent_data = unsafe { &*parent.borrow_data_unchecked().unwrap() };
 
-        if parent_data
-            .parallel
+        if parent_data.parallel
             .children_count
             .fetch_sub(1, Ordering::Relaxed) != 1 {
             // Get out of here and find another node to work on.
-            break
+            break;
         }
 
         // We were the last child of our parent. Construct flows for our parent.
         node = parent;
     }
 }
-

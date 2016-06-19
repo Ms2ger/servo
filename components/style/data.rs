@@ -14,15 +14,16 @@ pub struct PrivateStyleData<Impl: SelectorImpl, ConcreteComputedValues: Computed
     pub style: Option<Arc<ConcreteComputedValues>>,
 
     /// The results of CSS styling for each pseudo-element (if any).
-    pub per_pseudo: HashMap<Impl::PseudoElement, Arc<ConcreteComputedValues>,
-                            BuildHasherDefault<::fnv::FnvHasher>>,
+    pub per_pseudo: HashMap<Impl::PseudoElement, Arc<ConcreteComputedValues>, BuildHasherDefault<::fnv::FnvHasher>>,
 
     /// Information needed during parallel traversals.
     pub parallel: DomParallelInfo,
 }
 
 impl<Impl, ConcreteComputedValues> PrivateStyleData<Impl, ConcreteComputedValues>
-    where Impl: SelectorImpl, ConcreteComputedValues: ComputedValues {
+    where Impl: SelectorImpl,
+          ConcreteComputedValues: ComputedValues,
+{
     pub fn new() -> PrivateStyleData<Impl, ConcreteComputedValues> {
         PrivateStyleData {
             style: None,
@@ -46,4 +47,3 @@ impl DomParallelInfo {
         }
     }
 }
-

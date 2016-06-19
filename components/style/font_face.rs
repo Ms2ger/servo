@@ -27,11 +27,13 @@ pub struct FontFaceRule {
     pub sources: Vec<Source>,
 }
 
-pub fn parse_font_face_block(context: &ParserContext, input: &mut Parser)
-                             -> Result<FontFaceRule, ()> {
+pub fn parse_font_face_block(context: &ParserContext, input: &mut Parser) -> Result<FontFaceRule, ()> {
     let mut family = None;
     let mut src = None;
-    let mut iter = DeclarationListParser::new(input, FontFaceRuleParser { context: context });
+    let mut iter = DeclarationListParser::new(input,
+                                              FontFaceRuleParser {
+                                                  context: context,
+                                              });
     while let Some(declaration) = iter.next() {
         match declaration {
             Err(range) => {
@@ -39,13 +41,13 @@ pub fn parse_font_face_block(context: &ParserContext, input: &mut Parser)
                 let message = format!("Unsupported @font-face descriptor declaration: '{}'",
                                       iter.input.slice(range));
                 log_css_error(iter.input, pos, &*message, context);
-            }
+            },
             Ok(FontFaceDescriptorDeclaration::Family(value)) => {
                 family = Some(value);
-            }
+            },
             Ok(FontFaceDescriptorDeclaration::Src(value)) => {
                 src = Some(value);
-            }
+            },
         }
     }
     match (family, src) {
@@ -54,8 +56,8 @@ pub fn parse_font_face_block(context: &ParserContext, input: &mut Parser)
                 family: family,
                 sources: src,
             })
-        }
-        _ => Err(())
+        },
+        _ => Err(()),
     }
 }
 
@@ -67,19 +69,23 @@ impl FontFaceRule {
     /// sources which don't list any format hint, or the ones which list at
     /// least "truetype" or "opentype".
     pub fn effective_sources(&self) -> EffectiveSources {
-        EffectiveSources(self.sources.iter().rev().filter(|source| {
-            if let Source::Url(ref url_source) = **source {
-                let hints = &url_source.format_hints;
-                // We support only opentype fonts and truetype is an alias for
-                // that format. Sources without format hints need to be
-                // downloaded in case we support them.
-                hints.is_empty() || hints.iter().any(|hint| {
-                    hint == "truetype" || hint == "opentype" || hint == "woff"
-                })
-            } else {
-                true
-            }
-        }).cloned().collect())
+        EffectiveSources(self.sources
+            .iter()
+            .rev()
+            .filter(|source| {
+                if let Source::Url(ref url_source) = **source {
+                    let hints = &url_source.format_hints;
+                    // We support only opentype fonts and truetype is an alias for
+                    // that format. Sources without format hints need to be
+                    // downloaded in case we support them.
+                    hints.is_empty() ||
+                    hints.iter().any(|hint| hint == "truetype" || hint == "opentype" || hint == "woff")
+                } else {
+                    true
+                }
+            })
+            .cloned()
+            .collect())
     }
 }
 
@@ -129,11 +135,10 @@ impl<'a, 'b> DeclarationParser for FontFaceRuleParser<'a, 'b> {
 
 fn parse_one_src(context: &ParserContext, input: &mut Parser) -> Result<Source, ()> {
     if input.try(|input| input.expect_function_matching("local")).is_ok() {
-        return Ok(Source::Local(try!(input.parse_nested_block(parse_one_family))))
+        return Ok(Source::Local(try!(input.parse_nested_block(parse_one_family))));
     }
     let url = try!(input.expect_url());
-    let url = context.base_url.join(&url).unwrap_or_else(
-        |_error| Url::parse("about:invalid").unwrap());
+    let url = context.base_url.join(&url).unwrap_or_else(|_error| Url::parse("about:invalid").unwrap());
 
     // Parsing optional format()
     let format_hints = if input.try(|input| input.expect_function_matching("format")).is_ok() {

@@ -41,10 +41,9 @@ pub enum AttrValue {
 /// Shared implementation to parse an integer according to
 /// <https://html.spec.whatwg.org/multipage/#rules-for-parsing-integers> or
 /// <https://html.spec.whatwg.org/multipage/#rules-for-parsing-non-negative-integers>
-fn do_parse_integer<T: Iterator<Item=char>>(input: T) -> Result<i64, ()> {
-    let mut input = input.skip_while(|c| {
-        HTML_SPACE_CHARACTERS.iter().any(|s| s == c)
-    }).peekable();
+fn do_parse_integer<T: Iterator<Item = char>>(input: T) -> Result<i64, ()> {
+    let mut input = input.skip_while(|c| HTML_SPACE_CHARACTERS.iter().any(|s| s == c))
+        .peekable();
 
     let sign = match input.peek() {
         None => return Err(()),
@@ -66,18 +65,14 @@ fn do_parse_integer<T: Iterator<Item=char>>(input: T) -> Result<i64, ()> {
 
 /// Parse an integer according to
 /// <https://html.spec.whatwg.org/multipage/#rules-for-parsing-integers>.
-pub fn parse_integer<T: Iterator<Item=char>>(input: T) -> Result<i32, ()> {
-    do_parse_integer(input).and_then(|result| {
-        result.to_i32().ok_or(())
-    })
+pub fn parse_integer<T: Iterator<Item = char>>(input: T) -> Result<i32, ()> {
+    do_parse_integer(input).and_then(|result| result.to_i32().ok_or(()))
 }
 
 /// Parse an integer according to
 /// <https://html.spec.whatwg.org/multipage/#rules-for-parsing-non-negative-integers>
-pub fn parse_unsigned_integer<T: Iterator<Item=char>>(input: T) -> Result<u32, ()> {
-    do_parse_integer(input).and_then(|result| {
-        result.to_u32().ok_or(())
-    })
+pub fn parse_unsigned_integer<T: Iterator<Item = char>>(input: T) -> Result<u32, ()> {
+    do_parse_integer(input).and_then(|result| result.to_u32().ok_or(()))
 }
 
 /// Parse a floating-point number according to
@@ -91,12 +86,12 @@ pub fn parse_double(string: &str) -> Result<f64, ()> {
         Some(&'-') => {
             input.next();
             (-1f64, -1f64)
-        }
+        },
         Some(&'+') => {
             input.next();
             (1f64, 1f64)
-        }
-        _ => (1f64, 1f64)
+        },
+        _ => (1f64, 1f64),
     };
 
     let (value, value_digits) = if let Some(&'.') = input.peek() {
@@ -121,22 +116,26 @@ pub fn parse_double(string: &str) -> Result<f64, ()> {
 
 impl AttrValue {
     pub fn from_serialized_tokenlist(tokens: String) -> AttrValue {
-        let atoms =
-            split_html_space_chars(&tokens)
+        let atoms = split_html_space_chars(&tokens)
             .map(Atom::from)
             .fold(vec![], |mut acc, atom| {
-                if !acc.contains(&atom) { acc.push(atom) }
+                if !acc.contains(&atom) {
+                    acc.push(atom)
+                }
                 acc
             });
         AttrValue::TokenList(tokens, atoms)
     }
 
     pub fn from_comma_separated_tokenlist(tokens: String) -> AttrValue {
-        let atoms = split_commas(&tokens).map(Atom::from)
-                                         .fold(vec![], |mut acc, atom| {
-                                            if !acc.contains(&atom) { acc.push(atom) }
-                                            acc
-                                         });
+        let atoms = split_commas(&tokens)
+            .map(Atom::from)
+            .fold(vec![], |mut acc, atom| {
+                if !acc.contains(&atom) {
+                    acc.push(atom)
+                }
+                acc
+            });
         AttrValue::TokenList(tokens, atoms)
     }
 
@@ -317,14 +316,14 @@ impl ::std::ops::Deref for AttrValue {
     fn deref(&self) -> &str {
         match *self {
             AttrValue::String(ref value) |
-                AttrValue::TokenList(ref value, _) |
-                AttrValue::UInt(ref value, _) |
-                AttrValue::Double(ref value, _) |
-                AttrValue::Length(ref value, _) |
-                AttrValue::Color(ref value, _) |
-                AttrValue::Int(ref value, _) |
-                AttrValue::Url(ref value, _) |
-                AttrValue::Dimension(ref value, _) => &value,
+            AttrValue::TokenList(ref value, _) |
+            AttrValue::UInt(ref value, _) |
+            AttrValue::Double(ref value, _) |
+            AttrValue::Length(ref value, _) |
+            AttrValue::Color(ref value, _) |
+            AttrValue::Int(ref value, _) |
+            AttrValue::Url(ref value, _) |
+            AttrValue::Dimension(ref value, _) => &value,
             AttrValue::Atom(ref value) => &value,
         }
     }
@@ -345,7 +344,7 @@ pub fn parse_nonzero_length(value: &str) -> LengthOrPercentageOrAuto {
 pub fn parse_legacy_color(mut input: &str) -> Result<RGBA, ()> {
     // Steps 1 and 2.
     if input.is_empty() {
-        return Err(())
+        return Err(());
     }
 
     // Step 3.
@@ -353,7 +352,7 @@ pub fn parse_legacy_color(mut input: &str) -> Result<RGBA, ()> {
 
     // Step 4.
     if input.eq_ignore_ascii_case("transparent") {
-        return Err(())
+        return Err(());
     }
 
     // Step 5.
@@ -363,17 +362,16 @@ pub fn parse_legacy_color(mut input: &str) -> Result<RGBA, ()> {
 
     // Step 6.
     if input.len() == 4 {
-        if let (b'#', Ok(r), Ok(g), Ok(b)) =
-                (input.as_bytes()[0],
-                hex(input.as_bytes()[1] as char),
-                hex(input.as_bytes()[2] as char),
-                hex(input.as_bytes()[3] as char)) {
+        if let (b'#', Ok(r), Ok(g), Ok(b)) = (input.as_bytes()[0],
+                                              hex(input.as_bytes()[1] as char),
+                                              hex(input.as_bytes()[2] as char),
+                                              hex(input.as_bytes()[3] as char)) {
             return Ok(RGBA {
                 red: (r as f32) * 17.0 / 255.0,
                 green: (g as f32) * 17.0 / 255.0,
                 blue: (b as f32) * 17.0 / 255.0,
                 alpha: 1.0,
-            })
+            });
         }
     }
 
@@ -392,7 +390,7 @@ pub fn parse_legacy_color(mut input: &str) -> Result<RGBA, ()> {
     for (char_count, (index, _)) in input.char_indices().enumerate() {
         if char_count == 128 {
             input = &input[..index];
-            break
+            break;
         }
     }
 
@@ -419,9 +417,7 @@ pub fn parse_legacy_color(mut input: &str) -> Result<RGBA, ()> {
 
     // Step 12.
     let mut length = input.len() / 3;
-    let (mut red, mut green, mut blue) = (&input[..length],
-                                          &input[length..length * 2],
-                                          &input[length * 2..]);
+    let (mut red, mut green, mut blue) = (&input[..length], &input[length..length * 2], &input[length * 2..]);
 
     // Step 13.
     if length > 8 {
@@ -464,7 +460,7 @@ pub fn parse_legacy_color(mut input: &str) -> Result<RGBA, ()> {
                 let upper = try!(hex(string[0] as char));
                 let lower = try!(hex(string[1] as char));
                 Ok((upper << 4) | lower)
-            }
+            },
         }
     }
 }
@@ -481,7 +477,7 @@ pub fn parse_length(mut value: &str) -> LengthOrPercentageOrAuto {
 
     // Step 4
     if value.is_empty() {
-        return LengthOrPercentageOrAuto::Auto
+        return LengthOrPercentageOrAuto::Auto;
     }
 
     // Step 5
@@ -510,16 +506,16 @@ pub fn parse_length(mut value: &str) -> LengthOrPercentageOrAuto {
             '%' => {
                 found_percent = true;
                 end_index = i;
-                break
-            }
+                break;
+            },
             '.' if !found_full_stop => {
                 found_full_stop = true;
-                continue
-            }
+                continue;
+            },
             _ => {
                 end_index = i;
-                break
-            }
+                break;
+            },
         }
     }
     value = &value[..end_index];

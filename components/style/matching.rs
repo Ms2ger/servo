@@ -29,8 +29,7 @@ use util::vec::ForgetfulSink;
 
 /// High-level interface to CSS selector matching.
 
-fn create_common_style_affecting_attributes_from_element<E: TElement>(element: &E)
-                                                         -> CommonStyleAffectingAttributes {
+fn create_common_style_affecting_attributes_from_element<E: TElement>(element: &E) -> CommonStyleAffectingAttributes {
     let mut flags = CommonStyleAffectingAttributes::empty();
     for attribute_info in &common_style_affecting_attributes() {
         match attribute_info.mode {
@@ -38,15 +37,13 @@ fn create_common_style_affecting_attributes_from_element<E: TElement>(element: &
                 if element.get_attr(&ns!(), &attribute_info.atom).is_some() {
                     flags.insert(flag)
                 }
-            }
+            },
             CommonStyleAffectingAttributeMode::IsEqual(target_value, flag) => {
                 match element.get_attr(&ns!(), &attribute_info.atom) {
-                    Some(element_value) if element_value == target_value => {
-                        flags.insert(flag)
-                    }
-                    _ => {}
+                    Some(element_value) if element_value == target_value => flags.insert(flag),
+                    _ => {},
                 }
-            }
+            },
         }
     }
     flags
@@ -119,11 +116,11 @@ impl<'a> ApplicableDeclarationsCacheQuery<'a> {
 impl<'a> PartialEq for ApplicableDeclarationsCacheQuery<'a> {
     fn eq(&self, other: &ApplicableDeclarationsCacheQuery<'a>) -> bool {
         if self.declarations.len() != other.declarations.len() {
-            return false
+            return false;
         }
         for (this, other) in self.declarations.iter().zip(other.declarations) {
             if !arc_ptr_eq(&this.declarations, &other.declarations) {
-                return false
+                return false;
             }
         }
         true
@@ -197,13 +194,10 @@ pub struct StyleSharingCandidate<C: ComputedValues> {
 
 impl<C: ComputedValues> PartialEq for StyleSharingCandidate<C> {
     fn eq(&self, other: &Self) -> bool {
-        arc_ptr_eq(&self.style, &other.style) &&
-            arc_ptr_eq(&self.parent_style, &other.parent_style) &&
-            self.local_name == other.local_name &&
-            self.class == other.class &&
-            self.link == other.link &&
-            self.namespace == other.namespace &&
-            self.common_style_affecting_attributes == other.common_style_affecting_attributes
+        arc_ptr_eq(&self.style, &other.style) && arc_ptr_eq(&self.parent_style, &other.parent_style) &&
+        self.local_name == other.local_name && self.class == other.class && self.link == other.link &&
+        self.namespace == other.namespace &&
+        self.common_style_affecting_attributes == other.common_style_affecting_attributes
     }
 }
 
@@ -212,7 +206,7 @@ impl<C: ComputedValues> StyleSharingCandidate<C> {
     /// the style sharing candidate or `None` if this node is ineligible for
     /// style sharing.
     #[allow(unsafe_code)]
-    fn new<N: TNode<ConcreteComputedValues=C>>(element: &N::ConcreteElement) -> Option<Self> {
+    fn new<N: TNode<ConcreteComputedValues = C>>(element: &N::ConcreteElement) -> Option<Self> {
         let parent_element = match element.parent_element() {
             None => return None,
             Some(parent_element) => parent_element,
@@ -226,7 +220,7 @@ impl<C: ComputedValues> StyleSharingCandidate<C> {
                         None => return None,
                         Some(ref data) => (*data).clone(),
                     }
-                }
+                },
             }
         };
         let parent_style = unsafe {
@@ -237,12 +231,12 @@ impl<C: ComputedValues> StyleSharingCandidate<C> {
                         None => return None,
                         Some(ref data) => (*data).clone(),
                     }
-                }
+                },
             }
         };
 
         if element.style_attribute().is_some() {
-            return None
+            return None;
         }
 
         Some(StyleSharingCandidate {
@@ -250,31 +244,29 @@ impl<C: ComputedValues> StyleSharingCandidate<C> {
             parent_style: parent_style,
             local_name: element.get_local_name().clone(),
             class: element.get_attr(&ns!(), &atom!("class"))
-                          .map(|string| string.to_owned()),
+                .map(|string| string.to_owned()),
             link: element.is_link(),
             namespace: (*element.get_namespace()).clone(),
             common_style_affecting_attributes:
-                   create_common_style_affecting_attributes_from_element::<N::ConcreteElement>(&element)
+                create_common_style_affecting_attributes_from_element::<N::ConcreteElement>(&element),
         })
     }
 
     pub fn can_share_style_with<E: TElement>(&self, element: &E) -> bool {
         if *element.get_local_name() != self.local_name {
-            return false
+            return false;
         }
 
         // FIXME(pcwalton): Use `each_class` here instead of slow string comparison.
         match (&self.class, element.get_attr(&ns!(), &atom!("class"))) {
             (&None, Some(_)) | (&Some(_), None) => return false,
-            (&Some(ref this_class), Some(element_class)) if
-                    element_class != &**this_class => {
-                return false
-            }
-            (&Some(_), Some(_)) | (&None, None) => {}
+            (&Some(ref this_class), Some(element_class)) if element_class != &**this_class => return false,
+            (&Some(_), Some(_)) |
+            (&None, None) => {},
         }
 
         if *element.get_namespace() != self.namespace {
-            return false
+            return false;
         }
 
         let mut matching_rules = ForgetfulSink::new();
@@ -290,37 +282,31 @@ impl<C: ComputedValues> StyleSharingCandidate<C> {
             match attribute_info.mode {
                 CommonStyleAffectingAttributeMode::IsPresent(flag) => {
                     if self.common_style_affecting_attributes.contains(flag) !=
-                            element.get_attr(&ns!(), &attribute_info.atom).is_some() {
-                        return false
+                       element.get_attr(&ns!(), &attribute_info.atom).is_some() {
+                        return false;
                     }
-                }
+                },
                 CommonStyleAffectingAttributeMode::IsEqual(target_value, flag) => {
                     match element.get_attr(&ns!(), &attribute_info.atom) {
                         Some(ref element_value) if self.common_style_affecting_attributes
-                                                       .contains(flag) &&
-                                                       *element_value != target_value => {
-                            return false
-                        }
-                        Some(_) if !self.common_style_affecting_attributes.contains(flag) => {
-                            return false
-                        }
-                        None if self.common_style_affecting_attributes.contains(flag) => {
-                            return false
-                        }
-                        _ => {}
+                            .contains(flag) &&
+                                                   *element_value != target_value => return false,
+                        Some(_) if !self.common_style_affecting_attributes.contains(flag) => return false,
+                        None if self.common_style_affecting_attributes.contains(flag) => return false,
+                        _ => {},
                     }
-                }
+                },
             }
         }
 
         for attribute_name in &rare_style_affecting_attributes() {
             if element.get_attr(&ns!(), attribute_name).is_some() {
-                return false
+                return false;
             }
         }
 
         if element.is_link() != self.link {
-            return false
+            return false;
         }
 
         // TODO(pcwalton): We don't support visited links yet, but when we do there will need to
@@ -343,10 +329,10 @@ impl<C: ComputedValues> StyleSharingCandidateCache<C> {
         self.cache.iter()
     }
 
-    pub fn insert_if_possible<N: TNode<ConcreteComputedValues=C>>(&mut self, element: &N::ConcreteElement) {
+    pub fn insert_if_possible<N: TNode<ConcreteComputedValues = C>>(&mut self, element: &N::ConcreteElement) {
         match StyleSharingCandidate::new::<N>(element) {
-            None => {}
-            Some(candidate) => self.cache.insert(candidate, ())
+            None => {},
+            Some(candidate) => self.cache.insert(candidate, ()),
         }
     }
 
@@ -365,7 +351,8 @@ pub enum StyleSharingResult<ConcreteRestyleDamage: TRestyleDamage> {
 }
 
 trait PrivateMatchMethods: TNode
-    where <Self::ConcreteElement as Element>::Impl: SelectorImplExt {
+    where <Self::ConcreteElement as Element>::Impl: SelectorImplExt,
+{
     fn cascade_node_pseudo_element(&self,
                                    context: &SharedStyleContext<<Self::ConcreteElement as Element>::Impl>,
                                    parent_style: Option<&Arc<Self::ConcreteComputedValues>>,
@@ -398,7 +385,7 @@ trait PrivateMatchMethods: TNode
                                                         context.error_reporter.clone());
                 cacheable = cacheable && is_cacheable;
                 this_style = the_style
-            }
+            },
             None => {
                 let (the_style, is_cacheable) = cascade(context.viewport_size,
                                                         applicable_declarations,
@@ -408,7 +395,7 @@ trait PrivateMatchMethods: TNode
                                                         context.error_reporter.clone());
                 cacheable = cacheable && is_cacheable;
                 this_style = the_style
-            }
+            },
         };
 
         // Trigger transitions if necessary. This will reset `this_style` back to its old value if
@@ -416,11 +403,10 @@ trait PrivateMatchMethods: TNode
         if animate_properties {
             if let Some(ref style) = style {
                 let animations_started =
-                    animation::start_transitions_if_applicable::<Self::ConcreteComputedValues>(
-                        new_animations_sender,
-                        self.opaque(),
-                        &**style,
-                        &mut this_style);
+                    animation::start_transitions_if_applicable::<Self::ConcreteComputedValues>(new_animations_sender,
+                                                                                               self.opaque(),
+                                                                                               &**style,
+                                                                                               &mut this_style);
                 cacheable = cacheable && !animations_started
             }
         }
@@ -431,8 +417,7 @@ trait PrivateMatchMethods: TNode
 
         // Cache the resolved style if it was cacheable.
         if cacheable {
-            applicable_declarations_cache.insert(applicable_declarations.to_vec(),
-                                                 this_style.clone());
+            applicable_declarations_cache.insert(applicable_declarations.to_vec(), this_style.clone());
         }
 
         // Return the final style and the damage done to our caller.
@@ -468,10 +453,10 @@ trait PrivateMatchMethods: TNode
 
         // Merge any running transitions into the current style, and cancel them.
         let had_running_animations = context.running_animations
-                                            .read()
-                                            .unwrap()
-                                            .get(&this_opaque)
-                                            .is_some();
+            .read()
+            .unwrap()
+            .get(&this_opaque)
+            .is_some();
         if had_running_animations {
             let mut all_running_animations = context.running_animations.write().unwrap();
             for running_animation in all_running_animations.get(&this_opaque).unwrap() {
@@ -485,8 +470,7 @@ trait PrivateMatchMethods: TNode
     }
 }
 
-impl<N: TNode> PrivateMatchMethods for N
-    where <N::ConcreteElement as Element>::Impl: SelectorImplExt {}
+impl<N: TNode> PrivateMatchMethods for N where <N::ConcreteElement as Element>::Impl: SelectorImplExt, {}
 
 trait PrivateElementMatchMethods: TElement {
     fn share_style_with_candidate_if_possible(&self,
@@ -499,21 +483,19 @@ trait PrivateElementMatchMethods: TElement {
             Some(_) | None => return None,
         };
 
-        let parent_data: Option<&PrivateStyleData<_, _>> = unsafe {
-            parent_node.borrow_data_unchecked().map(|d| &*d)
-        };
+        let parent_data: Option<&PrivateStyleData<_, _>> = unsafe { parent_node.borrow_data_unchecked().map(|d| &*d) };
 
         if let Some(parent_data_ref) = parent_data {
             // Check parent style.
             let parent_style = (*parent_data_ref).style.as_ref().unwrap();
             if !arc_ptr_eq(parent_style, &candidate.parent_style) {
-                return None
+                return None;
             }
             // Check tag names, classes, etc.
             if !candidate.can_share_style_with(self) {
-                return None
+                return None;
             }
-            return Some(candidate.style.clone())
+            return Some(candidate.style.clone());
         }
         None
     }
@@ -521,8 +503,9 @@ trait PrivateElementMatchMethods: TElement {
 
 impl<E: TElement> PrivateElementMatchMethods for E {}
 
-pub trait ElementMatchMethods : TElement
-    where Self::Impl: SelectorImplExt {
+pub trait ElementMatchMethods: TElement
+    where Self::Impl: SelectorImplExt,
+{
     fn match_element(&self,
                      stylist: &Stylist<Self::Impl>,
                      parent_bf: Option<&BloomFilter>,
@@ -530,12 +513,11 @@ pub trait ElementMatchMethods : TElement
                      -> bool {
         let style_attribute = self.style_attribute().as_ref();
 
-        applicable_declarations.normal_shareable =
-            stylist.push_applicable_declarations(self,
-                                                 parent_bf,
-                                                 style_attribute,
-                                                 None,
-                                                 &mut applicable_declarations.normal);
+        applicable_declarations.normal_shareable = stylist.push_applicable_declarations(self,
+                                          parent_bf,
+                                          style_attribute,
+                                          None,
+                                          &mut applicable_declarations.normal);
         Self::Impl::each_eagerly_cascaded_pseudo_element(|pseudo| {
             stylist.push_applicable_declarations(self,
                                                  parent_bf,
@@ -544,8 +526,7 @@ pub trait ElementMatchMethods : TElement
                                                  applicable_declarations.per_pseudo.entry(pseudo).or_insert(vec![]));
         });
 
-        applicable_declarations.normal_shareable &&
-        applicable_declarations.per_pseudo.values().all(|v| v.is_empty())
+        applicable_declarations.normal_shareable && applicable_declarations.per_pseudo.values().all(|v| v.is_empty())
     }
 
     /// Attempts to share a style with another node. This method is unsafe because it depends on
@@ -558,14 +539,14 @@ pub trait ElementMatchMethods : TElement
                                       parent: Option<Self::ConcreteNode>)
                                       -> StyleSharingResult<<Self::ConcreteNode as TNode>::ConcreteRestyleDamage> {
         if opts::get().disable_share_style_cache {
-            return StyleSharingResult::CannotShare
+            return StyleSharingResult::CannotShare;
         }
 
         if self.style_attribute().is_some() {
-            return StyleSharingResult::CannotShare
+            return StyleSharingResult::CannotShare;
         }
         if self.get_attr(&ns!(), &atom!("id")).is_some() {
-            return StyleSharingResult::CannotShare
+            return StyleSharingResult::CannotShare;
         }
 
         for (i, &(ref candidate, ())) in style_sharing_candidate_cache.iter().enumerate() {
@@ -577,9 +558,9 @@ pub trait ElementMatchMethods : TElement
                     let damage = <<Self as TElement>::ConcreteNode as TNode>
                                      ::ConcreteRestyleDamage::compute((*style).as_ref(), &*shared_style);
                     *style = Some(shared_style);
-                    return StyleSharingResult::StyleWasShared(i, damage)
-                }
-                None => {}
+                    return StyleSharingResult::StyleWasShared(i, damage);
+                },
+                None => {},
             }
         }
 
@@ -587,10 +568,9 @@ pub trait ElementMatchMethods : TElement
     }
 }
 
-impl<E: TElement> ElementMatchMethods for E
-    where E::Impl: SelectorImplExt {}
+impl<E: TElement> ElementMatchMethods for E where E::Impl: SelectorImplExt, {}
 
-pub trait MatchMethods : TNode {
+pub trait MatchMethods: TNode {
     // The below two functions are copy+paste because I can't figure out how to
     // write a function which takes a generic function. I don't think it can
     // be done.
@@ -657,7 +637,7 @@ pub trait MatchMethods : TNode {
             Some(parent_node) => {
                 let parent_style = (*parent_node.borrow_data_unchecked().unwrap()).style.as_ref().unwrap();
                 Some(parent_style)
-            }
+            },
         };
 
         let damage;
@@ -665,22 +645,20 @@ pub trait MatchMethods : TNode {
             let mut data_ref = self.mutate_data().unwrap();
             let mut data = &mut *data_ref;
             let cloned_parent_style = Self::ConcreteComputedValues::style_for_child_text_node(parent_style.unwrap());
-            damage = Self::ConcreteRestyleDamage::compute(data.style.as_ref(),
-                                                          &*cloned_parent_style);
+            damage = Self::ConcreteRestyleDamage::compute(data.style.as_ref(), &*cloned_parent_style);
             data.style = Some(cloned_parent_style);
         } else {
             damage = {
                 let mut data_ref = self.mutate_data().unwrap();
                 let mut data = &mut *data_ref;
-                let (mut damage, final_style) = self.cascade_node_pseudo_element(
-                    context,
-                    parent_style,
-                    &applicable_declarations.normal,
-                    data.style.as_mut(),
-                    applicable_declarations_cache,
-                    new_animations_sender,
-                    applicable_declarations.normal_shareable,
-                    true);
+                let (mut damage, final_style) = self.cascade_node_pseudo_element(context,
+                                                 parent_style,
+                                                 &applicable_declarations.normal,
+                                                 data.style.as_mut(),
+                                                 applicable_declarations_cache,
+                                                 new_animations_sender,
+                                                 applicable_declarations.normal_shareable,
+                                                 true);
 
                 data.style = Some(final_style);
 
@@ -711,8 +689,7 @@ pub trait MatchMethods : TNode {
             // This method needs to borrow the data as mutable, so make sure data_ref goes out of
             // scope first.
             self.set_can_be_fragmented(parent.map_or(false, |p| {
-                p.can_be_fragmented() ||
-                parent_style.as_ref().unwrap().is_multicol()
+                p.can_be_fragmented() || parent_style.as_ref().unwrap().is_multicol()
             }));
         }
 

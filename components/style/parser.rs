@@ -29,7 +29,11 @@ impl ParserContextExtraData {
 
     #[cfg(feature = "gecko")]
     pub fn default() -> ParserContextExtraData {
-        ParserContextExtraData { base: None, referrer: None, principal: None }
+        ParserContextExtraData {
+            base: None,
+            referrer: None,
+            principal: None,
+        }
     }
 }
 
@@ -42,7 +46,8 @@ pub struct ParserContext<'a> {
 }
 
 impl<'a> ParserContext<'a> {
-    pub fn new_with_extra_data(stylesheet_origin: Origin, base_url: &'a Url,
+    pub fn new_with_extra_data(stylesheet_origin: Origin,
+                               base_url: &'a Url,
                                error_reporter: Box<ParseErrorReporter + Send>,
                                extra_data: ParserContextExtraData)
                                -> ParserContext<'a> {
@@ -57,7 +62,9 @@ impl<'a> ParserContext<'a> {
         }
     }
 
-    pub fn new(stylesheet_origin: Origin, base_url: &'a Url, error_reporter: Box<ParseErrorReporter + Send>)
+    pub fn new(stylesheet_origin: Origin,
+               base_url: &'a Url,
+               error_reporter: Box<ParseErrorReporter + Send>)
                -> ParserContext<'a> {
         let extra_data = ParserContextExtraData::default();
         ParserContext::new_with_extra_data(stylesheet_origin, base_url, error_reporter, extra_data)
@@ -67,7 +74,8 @@ impl<'a> ParserContext<'a> {
 
 impl<'a> ParserContext<'a> {
     pub fn parse_url(&self, input: &str) -> Url {
-        self.base_url.join(input)
+        self.base_url
+            .join(input)
             .unwrap_or_else(|_| Url::parse("about:invalid").unwrap())
     }
 }

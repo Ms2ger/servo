@@ -42,13 +42,13 @@ impl OpaqueNode {
     }
 }
 
-pub trait TRestyleDamage : BitOr<Output=Self> + Copy {
+pub trait TRestyleDamage: BitOr<Output = Self> + Copy {
     type ConcreteComputedValues: ComputedValues;
     fn compute(old: Option<&Arc<Self::ConcreteComputedValues>>, new: &Self::ConcreteComputedValues) -> Self;
     fn rebuild_and_reflow() -> Self;
 }
 
-pub trait TNode : Sized + Copy + Clone {
+pub trait TNode: Sized + Copy + Clone {
     type ConcreteElement: TElement<ConcreteNode = Self, ConcreteDocument = Self::ConcreteDocument>;
     type ConcreteDocument: TDocument<ConcreteNode = Self, ConcreteElement = Self::ConcreteElement>;
     type ConcreteRestyleDamage: TRestyleDamage<ConcreteComputedValues = Self::ConcreteComputedValues>;
@@ -130,21 +130,21 @@ pub trait TNode : Sized + Copy + Clone {
 
     /// Borrows the PrivateStyleData without checks.
     #[inline(always)]
-    unsafe fn borrow_data_unchecked(&self)
-        -> Option<*const PrivateStyleData<<Self::ConcreteElement as Element>::Impl,
-                                           Self::ConcreteComputedValues>>;
+    unsafe fn borrow_data_unchecked
+        (&self)
+         -> Option<*const PrivateStyleData<<Self::ConcreteElement as Element>::Impl, Self::ConcreteComputedValues>>;
 
     /// Borrows the PrivateStyleData immutably. Fails on a conflicting borrow.
     #[inline(always)]
-    fn borrow_data(&self)
-        -> Option<Ref<PrivateStyleData<<Self::ConcreteElement as Element>::Impl,
-                                           Self::ConcreteComputedValues>>>;
+    fn borrow_data
+        (&self)
+         -> Option<Ref<PrivateStyleData<<Self::ConcreteElement as Element>::Impl, Self::ConcreteComputedValues>>>;
 
     /// Borrows the PrivateStyleData mutably. Fails on a conflicting borrow.
     #[inline(always)]
-    fn mutate_data(&self)
-        -> Option<RefMut<PrivateStyleData<<Self::ConcreteElement as Element>::Impl,
-                                           Self::ConcreteComputedValues>>>;
+    fn mutate_data
+        (&self)
+         -> Option<RefMut<PrivateStyleData<<Self::ConcreteElement as Element>::Impl, Self::ConcreteComputedValues>>>;
 
     /// Get the description of how to account for recent style changes.
     fn restyle_damage(self) -> Self::ConcreteRestyleDamage;
@@ -169,7 +169,8 @@ pub trait TNode : Sized + Copy + Clone {
              _context: &SharedStyleContext<<Self::ConcreteElement as Element>::Impl>)
         -> Ref<Arc<Self::ConcreteComputedValues>>
         where <Self::ConcreteElement as Element>::Impl: SelectorImplExt<ComputedValues=Self::ConcreteComputedValues> {
-        Ref::map(self.borrow_data().unwrap(), |data| data.style.as_ref().unwrap())
+        Ref::map(self.borrow_data().unwrap(),
+                 |data| data.style.as_ref().unwrap())
     }
 
     /// Removes the style from this node.
@@ -178,7 +179,7 @@ pub trait TNode : Sized + Copy + Clone {
     }
 }
 
-pub trait TDocument : Sized + Copy + Clone {
+pub trait TDocument: Sized + Copy + Clone {
     type ConcreteNode: TNode<ConcreteElement = Self::ConcreteElement, ConcreteDocument = Self>;
     type ConcreteElement: TElement<ConcreteNode = Self::ConcreteNode, ConcreteDocument = Self>;
 
@@ -194,7 +195,8 @@ pub trait PresentationalHintsSynthetizer {
         where V: VecLike<DeclarationBlock<Vec<PropertyDeclaration>>>;
 }
 
-pub trait TElement : Sized + Copy + Clone + ElementExt + PresentationalHintsSynthetizer {
+pub trait TElement
+    : Sized + Copy + Clone + ElementExt + PresentationalHintsSynthetizer {
     type ConcreteNode: TNode<ConcreteElement = Self, ConcreteDocument = Self::ConcreteDocument>;
     type ConcreteDocument: TDocument<ConcreteNode = Self::ConcreteNode, ConcreteElement = Self>;
 
@@ -219,8 +221,12 @@ pub trait TElement : Sized + Copy + Clone + ElementExt + PresentationalHintsSynt
         let node = self.as_node();
         let mut curr = node;
         while let Some(parent) = curr.parent_node() {
-            if parent.has_dirty_descendants() { break }
-            unsafe { parent.set_dirty_descendants(true); }
+            if parent.has_dirty_descendants() {
+                break;
+            }
+            unsafe {
+                parent.set_dirty_descendants(true);
+            }
             curr = parent;
         }
 
@@ -234,7 +240,9 @@ pub trait TElement : Sized + Copy + Clone + ElementExt + PresentationalHintsSynt
             hint.insert(RESTYLE_DESCENDANTS);
         }
         if hint.contains(RESTYLE_DESCENDANTS) {
-            unsafe { node.set_dirty_descendants(true); }
+            unsafe {
+                node.set_dirty_descendants(true);
+            }
             node.dirty_descendants();
         }
         if hint.contains(RESTYLE_LATER_SIBLINGS) {
@@ -249,13 +257,17 @@ pub trait TElement : Sized + Copy + Clone + ElementExt + PresentationalHintsSynt
     }
 }
 
-pub struct TreeIterator<ConcreteNode> where ConcreteNode: TNode {
+pub struct TreeIterator<ConcreteNode>
+    where ConcreteNode: TNode,
+{
     stack: Vec<ConcreteNode>,
 }
 
-impl<ConcreteNode> TreeIterator<ConcreteNode> where ConcreteNode: TNode {
+impl<ConcreteNode> TreeIterator<ConcreteNode>
+    where ConcreteNode: TNode,
+{
     fn new(root: ConcreteNode) -> TreeIterator<ConcreteNode> {
-        let mut stack = vec!();
+        let mut stack = vec![];
         stack.push(root);
         TreeIterator {
             stack: stack,
@@ -264,7 +276,8 @@ impl<ConcreteNode> TreeIterator<ConcreteNode> where ConcreteNode: TNode {
 }
 
 impl<ConcreteNode> Iterator for TreeIterator<ConcreteNode>
-                            where ConcreteNode: TNode {
+    where ConcreteNode: TNode,
+{
     type Item = ConcreteNode;
     fn next(&mut self) -> Option<ConcreteNode> {
         let ret = self.stack.pop();
@@ -273,12 +286,15 @@ impl<ConcreteNode> Iterator for TreeIterator<ConcreteNode>
     }
 }
 
-pub struct ChildrenIterator<ConcreteNode> where ConcreteNode: TNode {
+pub struct ChildrenIterator<ConcreteNode>
+    where ConcreteNode: TNode,
+{
     current: Option<ConcreteNode>,
 }
 
 impl<ConcreteNode> Iterator for ChildrenIterator<ConcreteNode>
-                            where ConcreteNode: TNode {
+    where ConcreteNode: TNode,
+{
     type Item = ConcreteNode;
     fn next(&mut self) -> Option<ConcreteNode> {
         let node = self.current;
@@ -287,12 +303,15 @@ impl<ConcreteNode> Iterator for ChildrenIterator<ConcreteNode>
     }
 }
 
-pub struct ReverseChildrenIterator<ConcreteNode> where ConcreteNode: TNode {
+pub struct ReverseChildrenIterator<ConcreteNode>
+    where ConcreteNode: TNode,
+{
     current: Option<ConcreteNode>,
 }
 
 impl<ConcreteNode> Iterator for ReverseChildrenIterator<ConcreteNode>
-                            where ConcreteNode: TNode {
+    where ConcreteNode: TNode,
+{
     type Item = ConcreteNode;
     fn next(&mut self) -> Option<ConcreteNode> {
         let node = self.current;

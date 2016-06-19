@@ -59,17 +59,17 @@ pub trait ElementExt: Element {
     fn is_link(&self) -> bool;
 }
 
-pub trait SelectorImplExt : SelectorImpl + Sized {
+pub trait SelectorImplExt: SelectorImpl + Sized {
     type ComputedValues: properties::ComputedValues;
 
     fn pseudo_element_cascade_type(pseudo: &Self::PseudoElement) -> PseudoElementCascadeType;
 
-    fn each_pseudo_element<F>(mut fun: F)
-        where F: FnMut(Self::PseudoElement);
+    fn each_pseudo_element<F>(mut fun: F) where F: FnMut(Self::PseudoElement);
 
     #[inline]
     fn each_eagerly_cascaded_pseudo_element<F>(mut fun: F)
-        where F: FnMut(<Self as SelectorImpl>::PseudoElement) {
+        where F: FnMut(<Self as SelectorImpl>::PseudoElement),
+    {
         Self::each_pseudo_element(|pseudo| {
             if Self::pseudo_element_cascade_type(&pseudo).is_eager() {
                 fun(pseudo)
@@ -79,7 +79,8 @@ pub trait SelectorImplExt : SelectorImpl + Sized {
 
     #[inline]
     fn each_precomputed_pseudo_element<F>(mut fun: F)
-        where F: FnMut(<Self as SelectorImpl>::PseudoElement) {
+        where F: FnMut(<Self as SelectorImpl>::PseudoElement),
+    {
         Self::each_pseudo_element(|pseudo| {
             if Self::pseudo_element_cascade_type(&pseudo).is_precomputed() {
                 fun(pseudo)
@@ -108,9 +109,7 @@ impl PseudoElement {
     #[inline]
     pub fn cascade_type(&self) -> PseudoElementCascadeType {
         match *self {
-            PseudoElement::Before |
-            PseudoElement::After |
-            PseudoElement::Selection => PseudoElementCascadeType::Eager,
+            PseudoElement::Before | PseudoElement::After | PseudoElement::Selection => PseudoElementCascadeType::Eager,
             PseudoElement::DetailsSummary => PseudoElementCascadeType::Lazy,
             PseudoElement::DetailsContent => PseudoElementCascadeType::Precomputed,
         }
@@ -150,10 +149,7 @@ impl NonTSPseudoClass {
             ReadOnly | ReadWrite => IN_READ_WRITE_STATE,
             PlaceholderShown => IN_PLACEHOLDER_SHOWN_STATE,
 
-            AnyLink |
-            Link |
-            Visited |
-            ServoNonZeroBorder => ElementState::empty(),
+            AnyLink | Link | Visited | ServoNonZeroBorder => ElementState::empty(),
         }
     }
 }
@@ -165,8 +161,7 @@ impl SelectorImpl for ServoSelectorImpl {
     type PseudoElement = PseudoElement;
     type NonTSPseudoClass = NonTSPseudoClass;
 
-    fn parse_non_ts_pseudo_class(context: &ParserContext,
-                                 name: &str) -> Result<NonTSPseudoClass, ()> {
+    fn parse_non_ts_pseudo_class(context: &ParserContext, name: &str) -> Result<NonTSPseudoClass, ()> {
         use self::NonTSPseudoClass::*;
         let pseudo_class = match_ignore_ascii_case! { name,
             "any-link" => AnyLink,
@@ -194,8 +189,7 @@ impl SelectorImpl for ServoSelectorImpl {
         Ok(pseudo_class)
     }
 
-    fn parse_pseudo_element(context: &ParserContext,
-                            name: &str) -> Result<PseudoElement, ()> {
+    fn parse_pseudo_element(context: &ParserContext, name: &str) -> Result<PseudoElement, ()> {
         use self::PseudoElement::*;
         let pseudo_element = match_ignore_ascii_case! { name,
             "before" => Before,
@@ -230,7 +224,8 @@ impl SelectorImplExt for ServoSelectorImpl {
 
     #[inline]
     fn each_pseudo_element<F>(mut fun: F)
-        where F: FnMut(PseudoElement) {
+        where F: FnMut(PseudoElement),
+    {
         fun(PseudoElement::Before);
         fun(PseudoElement::After);
         fun(PseudoElement::DetailsContent);
@@ -254,7 +249,7 @@ impl SelectorImplExt for ServoSelectorImpl {
     }
 }
 
-impl<E: Element<Impl=ServoSelectorImpl>> ElementExt for E {
+impl<E: Element<Impl = ServoSelectorImpl>> ElementExt for E {
     fn is_link(&self) -> bool {
         self.match_non_ts_pseudo_class(NonTSPseudoClass::AnyLink)
     }

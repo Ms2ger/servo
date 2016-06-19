@@ -43,7 +43,7 @@ pub struct SharedStyleContext<Impl: SelectorImplExt> {
     /// The list of animations that have expired since the last style recalculation.
     pub expired_animations: Arc<RwLock<HashMap<OpaqueNode, Vec<Animation>>>>,
 
-    ///The CSS error reporter for all CSS loaded in this layout thread
+    /// The CSS error reporter for all CSS loaded in this layout thread
     pub error_reporter: Box<ParseErrorReporter + Sync>,
 }
 

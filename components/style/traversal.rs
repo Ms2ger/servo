@@ -47,24 +47,24 @@ fn take_thread_local_bloom_filter<N, Impl: SelectorImplExt>(parent_node: Option<
                                                             root: OpaqueNode,
                                                             context: &SharedStyleContext<Impl>)
                                                             -> Box<BloomFilter>
-                                                            where N: TNode {
+    where N: TNode,
+{
     STYLE_BLOOM.with(|style_bloom| {
         match (parent_node, style_bloom.borrow_mut().take()) {
             // Root node. Needs new bloom filter.
-            (None,     _  ) => {
+            (None, _) => {
                 debug!("[{}] No parent, but new bloom filter!", tid());
                 box BloomFilter::new()
-            }
+            },
             // No bloom filter for this thread yet.
             (Some(parent), None) => {
                 let mut bloom_filter = box BloomFilter::new();
                 insert_ancestors_into_bloom_filter(&mut bloom_filter, parent, root);
                 bloom_filter
-            }
+            },
             // Found cached bloom filter.
             (Some(parent), Some((mut bloom_filter, old_node, old_generation))) => {
-                if old_node == parent.to_unsafe() &&
-                    old_generation == context.generation {
+                if old_node == parent.to_unsafe() && old_generation == context.generation {
                     // Hey, the cached parent is our parent! We can reuse the bloom filter.
                     debug!("[{}] Parent matches (={}). Reusing bloom filter.", tid(), old_node.0);
                 } else {
@@ -90,10 +90,9 @@ pub fn put_thread_local_bloom_filter<Impl: SelectorImplExt>(bf: Box<BloomFilter>
 }
 
 /// "Ancestors" in this context is inclusive of ourselves.
-fn insert_ancestors_into_bloom_filter<N>(bf: &mut Box<BloomFilter>,
-                                         mut n: N,
-                                         root: OpaqueNode)
-                                         where N: TNode {
+fn insert_ancestors_into_bloom_filter<N>(bf: &mut Box<BloomFilter>, mut n: N, root: OpaqueNode)
+    where N: TNode,
+{
     debug!("[{}] Inserting ancestors.", tid());
     let mut ancestors = 0;
     loop {
@@ -108,7 +107,7 @@ fn insert_ancestors_into_bloom_filter<N>(bf: &mut Box<BloomFilter>,
     debug!("[{}] Inserted {} ancestors.", tid(), ancestors);
 }
 
-pub trait DomTraversalContext<N: TNode>  {
+pub trait DomTraversalContext<N: TNode> {
     type SharedContext: Sync + 'static;
     fn new<'a>(&'a Self::SharedContext, OpaqueNode) -> Self;
     fn process_preorder(&self, node: N);
@@ -119,12 +118,11 @@ pub trait DomTraversalContext<N: TNode>  {
 /// layout computation. This computes the styles applied to each node.
 #[inline]
 #[allow(unsafe_code)]
-pub fn recalc_style_at<'a, N, C>(context: &'a C,
-                                 root: OpaqueNode,
-                                 node: N)
+pub fn recalc_style_at<'a, N, C>(context: &'a C, root: OpaqueNode, node: N)
     where N: TNode,
           C: StyleContext<'a, <N::ConcreteElement as Element>::Impl>,
-          <N::ConcreteElement as Element>::Impl: SelectorImplExt<ComputedValues=N::ConcreteComputedValues> + 'a {
+          <N::ConcreteElement as Element>::Impl: SelectorImplExt<ComputedValues = N::ConcreteComputedValues> + 'a,
+{
     // Get the parent node.
     let parent_opt = match node.parent_node() {
         Some(parent) if parent.is_element() => Some(parent),
@@ -143,15 +141,11 @@ pub fn recalc_style_at<'a, N, C>(context: &'a C,
         }
 
         // Check to see whether we can share a style with someone.
-        let style_sharing_candidate_cache =
-            &mut context.local_context().style_sharing_candidate_cache.borrow_mut();
+        let style_sharing_candidate_cache = &mut context.local_context().style_sharing_candidate_cache.borrow_mut();
 
         let sharing_result = match node.as_element() {
-            Some(element) => {
-                unsafe {
-                    element.share_style_if_possible(style_sharing_candidate_cache,
-                                                    parent_opt.clone())
-                }
+            Some(element) => unsafe {
+                element.share_style_if_possible(style_sharing_candidate_cache, parent_opt.clone())
             },
             None => StyleSharingResult::CannotShare,
         };
@@ -166,9 +160,7 @@ pub fn recalc_style_at<'a, N, C>(context: &'a C,
                         // Perform the CSS selector matching.
                         let stylist = &context.shared_context().stylist;
 
-                        if element.match_element(&**stylist,
-                                                 Some(&*bf),
-                                                 &mut applicable_declarations) {
+                        if element.match_element(&**stylist, Some(&*bf), &mut applicable_declarations) {
                             Some(element)
                         } else {
                             None
@@ -193,13 +185,13 @@ pub fn recalc_style_at<'a, N, C>(context: &'a C,
 
                 // Add ourselves to the LRU cache.
                 if let Some(element) = shareable_element {
-                    style_sharing_candidate_cache.insert_if_possible::<'ln, N>(&element);
+                    style_sharing_candidate_cache.insert_if_possible::<N>(&element);
                 }
-            }
+            },
             StyleSharingResult::StyleWasShared(index, damage) => {
                 style_sharing_candidate_cache.touch(index);
                 node.set_restyle_damage(damage);
-            }
+            },
         }
     }
 
@@ -213,4 +205,3 @@ pub fn recalc_style_at<'a, N, C>(context: &'a C,
     // NB: flow construction updates the bloom filter on the way up.
     put_thread_local_bloom_filter(bf, &unsafe_layout_node, context.shared_context());
 }
-

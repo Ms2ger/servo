@@ -121,15 +121,15 @@ pub struct Stylist<Impl: SelectorImplExt> {
     /// The selector maps corresponding to a given pseudo-element
     /// (depending on the implementation)
     pseudos_map: HashMap<Impl::PseudoElement,
-                         PerPseudoElementSelectorMap<Impl>,
-                         BuildHasherDefault<::fnv::FnvHasher>>,
+                             PerPseudoElementSelectorMap<Impl>,
+                             BuildHasherDefault<::fnv::FnvHasher>>,
 
     /// Applicable declarations for a given non-eagerly cascaded pseudo-element.
     /// These are eagerly computed once, and then used to resolve the new
     /// computed values on the fly on layout.
     precomputed_pseudo_element_decls: HashMap<Impl::PseudoElement,
-                                              Vec<DeclarationBlock>,
-                                              BuildHasherDefault<::fnv::FnvHasher>>,
+                                                  Vec<DeclarationBlock>,
+                                                  BuildHasherDefault<::fnv::FnvHasher>>,
 
     rules_source_order: usize,
 
@@ -162,9 +162,9 @@ impl<Impl: SelectorImplExt> Stylist<Impl> {
         stylist
     }
 
-    pub fn update(&mut self, doc_stylesheets: &[Arc<Stylesheet<Impl>>],
-                  stylesheets_changed: bool) -> bool
-                  where Impl: 'static {
+    pub fn update(&mut self, doc_stylesheets: &[Arc<Stylesheet<Impl>>], stylesheets_changed: bool) -> bool
+        where Impl: 'static,
+    {
         if !(self.is_device_dirty || stylesheets_changed) {
             return false;
         }
@@ -265,11 +265,12 @@ impl<Impl: SelectorImplExt> Stylist<Impl> {
                                          -> Option<Arc<Impl::ComputedValues>> {
         debug_assert!(Impl::pseudo_element_cascade_type(pseudo).is_precomputed());
         if let Some(declarations) = self.precomputed_pseudo_element_decls.get(pseudo) {
-            let (computed, _) =
-                properties::cascade(self.device.au_viewport_size(),
-                                    &declarations, false,
-                                    parent.map(|p| &**p), None,
-                                    box StdoutErrorReporter);
+            let (computed, _) = properties::cascade(self.device.au_viewport_size(),
+                                                    &declarations,
+                                                    false,
+                                                    parent.map(|p| &**p),
+                                                    None,
+                                                    box StdoutErrorReporter);
             Some(Arc::new(computed))
         } else {
             parent.map(|p| p.clone())
@@ -281,8 +282,8 @@ impl<Impl: SelectorImplExt> Stylist<Impl> {
                                                   pseudo: &Impl::PseudoElement,
                                                   parent: &Arc<Impl::ComputedValues>)
                                                   -> Option<Arc<Impl::ComputedValues>>
-                                                  where E: Element<Impl=Impl> +
-                                                        PresentationalHintsSynthetizer {
+        where E: Element<Impl = Impl> + PresentationalHintsSynthetizer,
+    {
         debug_assert!(Impl::pseudo_element_cascade_type(pseudo).is_lazy());
         if self.pseudos_map.get(pseudo).is_none() {
             return None;
@@ -292,21 +293,19 @@ impl<Impl: SelectorImplExt> Stylist<Impl> {
 
         // NB: This being cached could be worth it, maybe allow an optional
         // ApplicableDeclarationsCache?.
-        self.push_applicable_declarations(element,
-                                          None,
-                                          None,
-                                          Some(pseudo),
-                                          &mut declarations);
+        self.push_applicable_declarations(element, None, None, Some(pseudo), &mut declarations);
 
-        let (computed, _) =
-            properties::cascade(self.device.au_viewport_size(),
-                                &declarations, false,
-                                Some(&**parent), None,
-                                box StdoutErrorReporter);
+        let (computed, _) = properties::cascade(self.device.au_viewport_size(),
+                                                &declarations,
+                                                false,
+                                                Some(&**parent),
+                                                None,
+                                                box StdoutErrorReporter);
         Some(Arc::new(computed))
     }
 
-    pub fn compute_restyle_hint<E>(&self, element: &E,
+    pub fn compute_restyle_hint<E>(&self,
+                                   element: &E,
                                    snapshot: &ElementSnapshot,
                                    // NB: We need to pass current_state as an argument because
                                    // selectors::Element doesn't provide access to ElementState
@@ -314,7 +313,8 @@ impl<Impl: SelectorImplExt> Stylist<Impl> {
                                    // more expensive than getting it directly from the caller.
                                    current_state: ElementState)
                                    -> RestyleHint
-                                   where E: Element<Impl=Impl> + Clone {
+        where E: Element<Impl = Impl> + Clone,
+    {
         self.state_deps.compute_hint(element, snapshot, current_state)
     }
 
@@ -329,8 +329,9 @@ impl<Impl: SelectorImplExt> Stylist<Impl> {
         }
 
         self.is_device_dirty |= stylesheets.iter().any(|stylesheet| {
-                stylesheet.rules().media().any(|media_rule|
-                    media_rule.evaluate(&self.device) != media_rule.evaluate(&device))
+            stylesheet.rules()
+                .media()
+                .any(|media_rule| media_rule.evaluate(&self.device) != media_rule.evaluate(&device))
         });
 
         self.device = device;
@@ -351,16 +352,16 @@ impl<Impl: SelectorImplExt> Stylist<Impl> {
     /// that is, whether the matched selectors are simple enough to allow the
     /// matching logic to be reduced to the logic in
     /// `css::matching::PrivateMatchMethods::candidate_element_allows_for_style_sharing`.
-    pub fn push_applicable_declarations<E, V>(
-                                        &self,
-                                        element: &E,
-                                        parent_bf: Option<&BloomFilter>,
-                                        style_attribute: Option<&PropertyDeclarationBlock>,
-                                        pseudo_element: Option<&Impl::PseudoElement>,
-                                        applicable_declarations: &mut V)
-                                        -> bool
-                                        where E: Element<Impl=Impl> + PresentationalHintsSynthetizer,
-                                              V: VecLike<DeclarationBlock> {
+    pub fn push_applicable_declarations<E, V>(&self,
+                                              element: &E,
+                                              parent_bf: Option<&BloomFilter>,
+                                              style_attribute: Option<&PropertyDeclarationBlock>,
+                                              pseudo_element: Option<&Impl::PseudoElement>,
+                                              applicable_declarations: &mut V)
+                                              -> bool
+        where E: Element<Impl = Impl> + PresentationalHintsSynthetizer,
+              V: VecLike<DeclarationBlock>,
+    {
         assert!(!self.is_device_dirty);
         assert!(style_attribute.is_none() || pseudo_element.is_none(),
                 "Style attributes do not apply to pseudo-elements");
@@ -375,10 +376,7 @@ impl<Impl: SelectorImplExt> Stylist<Impl> {
         let mut shareable = true;
 
         // Step 1: Normal user-agent rules.
-        map.user_agent.normal.get_all_matching_rules(element,
-                                                     parent_bf,
-                                                     applicable_declarations,
-                                                     &mut shareable);
+        map.user_agent.normal.get_all_matching_rules(element, parent_bf, applicable_declarations, &mut shareable);
 
         // Step 2: Presentational hints.
         let length = applicable_declarations.len();
@@ -389,44 +387,27 @@ impl<Impl: SelectorImplExt> Stylist<Impl> {
         }
 
         // Step 3: User and author normal rules.
-        map.user.normal.get_all_matching_rules(element,
-                                               parent_bf,
-                                               applicable_declarations,
-                                               &mut shareable);
-        map.author.normal.get_all_matching_rules(element,
-                                                 parent_bf,
-                                                 applicable_declarations,
-                                                 &mut shareable);
+        map.user.normal.get_all_matching_rules(element, parent_bf, applicable_declarations, &mut shareable);
+        map.author.normal.get_all_matching_rules(element, parent_bf, applicable_declarations, &mut shareable);
 
         // Step 4: Normal style attributes.
         style_attribute.map(|sa| {
             shareable = false;
-            applicable_declarations.push(
-                GenericDeclarationBlock::from_declarations(sa.normal.clone()))
+            applicable_declarations.push(GenericDeclarationBlock::from_declarations(sa.normal.clone()))
         });
 
         // Step 5: Author-supplied `!important` rules.
-        map.author.important.get_all_matching_rules(element,
-                                                    parent_bf,
-                                                    applicable_declarations,
-                                                    &mut shareable);
+        map.author.important.get_all_matching_rules(element, parent_bf, applicable_declarations, &mut shareable);
 
         // Step 6: `!important` style attributes.
         style_attribute.map(|sa| {
             shareable = false;
-            applicable_declarations.push(
-                GenericDeclarationBlock::from_declarations(sa.important.clone()))
+            applicable_declarations.push(GenericDeclarationBlock::from_declarations(sa.important.clone()))
         });
 
         // Step 7: User and UA `!important` rules.
-        map.user.important.get_all_matching_rules(element,
-                                                  parent_bf,
-                                                  applicable_declarations,
-                                                  &mut shareable);
-        map.user_agent.important.get_all_matching_rules(element,
-                                                        parent_bf,
-                                                        applicable_declarations,
-                                                        &mut shareable);
+        map.user.important.get_all_matching_rules(element, parent_bf, applicable_declarations, &mut shareable);
+        map.user_agent.important.get_all_matching_rules(element, parent_bf, applicable_declarations, &mut shareable);
 
         shareable
     }

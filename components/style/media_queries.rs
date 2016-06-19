@@ -12,14 +12,13 @@ use values::specified;
 
 #[derive(Debug, HeapSizeOf, PartialEq)]
 pub struct MediaQueryList {
-    pub media_queries: Vec<MediaQuery>
+    pub media_queries: Vec<MediaQuery>,
 }
 
 #[derive(PartialEq, Eq, Copy, Clone, Debug, HeapSizeOf)]
 pub enum Range<T> {
     Min(T),
-    Max(T),
-    //Eq(T),    // FIXME: Implement parsing support for equality then re-enable this.
+    Max(T), // Eq(T),    // FIXME: Implement parsing support for equality then re-enable this.
 }
 
 impl Range<specified::Length> {
@@ -32,17 +31,16 @@ impl Range<specified::Length> {
                     // em units are relative to the initial font-size.
                     let initial_font_size = longhands::font_size::get_initial_value();
                     value.to_computed_value(initial_font_size, initial_font_size)
-                }
-                specified::Length::ViewportPercentage(value) =>
-                    value.to_computed_value(viewport_size),
-                _ => unreachable!()
+                },
+                specified::Length::ViewportPercentage(value) => value.to_computed_value(viewport_size),
+                _ => unreachable!(),
             }
         };
 
         match *self {
             Range::Min(ref width) => Range::Min(compute_width(width)),
             Range::Max(ref width) => Range::Max(compute_width(width)),
-            //Range::Eq(ref width) => Range::Eq(compute_width(width))
+            // Range::Eq(ref width) => Range::Eq(compute_width(width))
         }
     }
 }
@@ -50,9 +48,9 @@ impl Range<specified::Length> {
 impl<T: Ord> Range<T> {
     fn evaluate(&self, value: T) -> bool {
         match *self {
-            Range::Min(ref width) => { value >= *width },
-            Range::Max(ref width) => { value <= *width },
-            //Range::Eq(ref width) => { value == *width },
+            Range::Min(ref width) => value >= *width,
+            Range::Max(ref width) => value <= *width,
+            // Range::Eq(ref width) => { value == *width },
         }
     }
 }
@@ -79,8 +77,7 @@ pub struct MediaQuery {
 }
 
 impl MediaQuery {
-    pub fn new(qualifier: Option<Qualifier>, media_type: MediaQueryType,
-               expressions: Vec<Expression>) -> MediaQuery {
+    pub fn new(qualifier: Option<Qualifier>, media_type: MediaQueryType, expressions: Vec<Expression>) -> MediaQuery {
         MediaQuery {
             qualifier: qualifier,
             media_type: media_type,
@@ -92,7 +89,7 @@ impl MediaQuery {
 /// http://dev.w3.org/csswg/mediaqueries-3/#media0
 #[derive(PartialEq, Eq, Copy, Clone, Debug, HeapSizeOf)]
 pub enum MediaQueryType {
-    All,  // Always true
+    All, // Always true
     MediaType(MediaType),
 }
 
@@ -122,7 +119,6 @@ impl Device {
         Size2D::new(Au::from_f32_px(self.viewport_size.width.get()),
                     Au::from_f32_px(self.viewport_size.height.get()))
     }
-
 }
 
 impl Expression {
@@ -168,7 +164,7 @@ impl MediaQuery {
         } else {
             // Media type is only optional if qualifier is not specified.
             if qualifier.is_some() {
-                return Err(())
+                return Err(());
             }
             media_type = MediaQueryType::All;
             // Without a media type, require at least one expression
@@ -178,7 +174,7 @@ impl MediaQuery {
         // Parse any subsequent expressions
         loop {
             if input.try(|input| input.expect_ident_matching("and")).is_err() {
-                return Ok(MediaQuery::new(qualifier, media_type, expressions))
+                return Ok(MediaQuery::new(qualifier, media_type, expressions));
             }
             expressions.push(try!(Expression::parse(input)))
         }
@@ -191,11 +187,8 @@ pub fn parse_media_query_list(input: &mut Parser) -> MediaQueryList {
     } else {
         let mut media_queries = vec![];
         loop {
-            media_queries.push(
-                input.parse_until_before(Delimiter::Comma, MediaQuery::parse)
-                     .unwrap_or(MediaQuery::new(Some(Qualifier::Not),
-                                                MediaQueryType::All,
-                                                vec!())));
+            media_queries.push(input.parse_until_before(Delimiter::Comma, MediaQuery::parse)
+                .unwrap_or(MediaQuery::new(Some(Qualifier::Not), MediaQueryType::All, vec![])));
             match input.next() {
                 Ok(Token::Comma) => continue,
                 Ok(_) => unreachable!(),
@@ -204,7 +197,9 @@ pub fn parse_media_query_list(input: &mut Parser) -> MediaQueryList {
         }
         media_queries
     };
-    MediaQueryList { media_queries: queries }
+    MediaQueryList {
+        media_queries: queries,
+    }
 }
 
 impl MediaQueryList {
@@ -221,10 +216,12 @@ impl MediaQueryList {
             };
 
             // Check if all conditions match (AND condition)
-            let query_match = media_match && mq.expressions.iter().all(|expression| {
+            let query_match = media_match &&
+                              mq.expressions.iter().all(|expression| {
                 match *expression {
-                    Expression::Width(ref value) =>
-                        value.to_computed_range(viewport_size).evaluate(viewport_size.width),
+                    Expression::Width(ref value) => {
+                        value.to_computed_range(viewport_size).evaluate(viewport_size.width)
+                    },
                 }
             });
 

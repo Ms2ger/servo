@@ -80,18 +80,25 @@ pub struct StyleRule<Impl: SelectorImpl> {
 
 
 impl<Impl: SelectorImpl> Stylesheet<Impl> {
-    pub fn from_bytes_iter<I: Iterator<Item=Vec<u8>>>(
-            input: I, base_url: Url, protocol_encoding_label: Option<&str>,
-            environment_encoding: Option<EncodingRef>, origin: Origin,
-            error_reporter: Box<ParseErrorReporter + Send>,
-            extra_data: ParserContextExtraData) -> Stylesheet<Impl> {
+    pub fn from_bytes_iter<I: Iterator<Item = Vec<u8>>>(input: I,
+                                                        base_url: Url,
+                                                        protocol_encoding_label: Option<&str>,
+                                                        environment_encoding: Option<EncodingRef>,
+                                                        origin: Origin,
+                                                        error_reporter: Box<ParseErrorReporter + Send>,
+                                                        extra_data: ParserContextExtraData)
+                                                        -> Stylesheet<Impl> {
         let mut bytes = vec![];
         // TODO: incremental decoding and tokenization/parsing
         for chunk in input {
             bytes.extend_from_slice(&chunk)
         }
-        Stylesheet::from_bytes(&bytes, base_url, protocol_encoding_label,
-                               environment_encoding, origin, error_reporter,
+        Stylesheet::from_bytes(&bytes,
+                               base_url,
+                               protocol_encoding_label,
+                               environment_encoding,
+                               origin,
+                               error_reporter,
                                extra_data)
     }
 
@@ -99,21 +106,23 @@ impl<Impl: SelectorImpl> Stylesheet<Impl> {
                       base_url: Url,
                       protocol_encoding_label: Option<&str>,
                       environment_encoding: Option<EncodingRef>,
-                      origin: Origin, error_reporter: Box<ParseErrorReporter + Send>,
+                      origin: Origin,
+                      error_reporter: Box<ParseErrorReporter + Send>,
                       extra_data: ParserContextExtraData)
                       -> Stylesheet<Impl> {
         // TODO: bytes.as_slice could be bytes.container_as_bytes()
-        let (string, _) = decode_stylesheet_bytes(
-            bytes, protocol_encoding_label, environment_encoding);
+        let (string, _) = decode_stylesheet_bytes(bytes, protocol_encoding_label, environment_encoding);
         Stylesheet::from_str(&string, base_url, origin, error_reporter, extra_data)
     }
 
-    pub fn from_str(css: &str, base_url: Url, origin: Origin,
+    pub fn from_str(css: &str,
+                    base_url: Url,
+                    origin: Origin,
                     error_reporter: Box<ParseErrorReporter + Send>,
-                    extra_data: ParserContextExtraData) -> Stylesheet<Impl> {
+                    extra_data: ParserContextExtraData)
+                    -> Stylesheet<Impl> {
         let rule_parser = TopLevelRuleParser {
-            context: ParserContext::new_with_extra_data(origin, &base_url, error_reporter.clone(),
-                                                        extra_data),
+            context: ParserContext::new_with_extra_data(origin, &base_url, error_reporter.clone(), extra_data),
             state: Cell::new(State::Start),
             _impl: PhantomData,
         };
@@ -128,21 +137,23 @@ impl<Impl: SelectorImpl> Stylesheet<Impl> {
                     Ok(rule) => {
                         if let CSSRule::Namespace(ref prefix, ref namespace) = rule {
                             if let Some(prefix) = prefix.as_ref() {
-                                iter.parser.context.selector_context.namespace_prefixes.insert(
-                                    prefix.clone(), namespace.clone());
+                                iter.parser
+                                    .context
+                                    .selector_context
+                                    .namespace_prefixes
+                                    .insert(prefix.clone(), namespace.clone());
                             } else {
-                                iter.parser.context.selector_context.default_namespace =
-                                    Some(namespace.clone());
+                                iter.parser.context.selector_context.default_namespace = Some(namespace.clone());
                             }
                         }
                         rules.push(rule);
-                    }
+                    },
                     Err(range) => {
                         let pos = range.start;
                         let message = format!("Invalid rule: '{}'", iter.input.slice(range));
                         let context = ParserContext::new(origin, &base_url, error_reporter.clone());
                         log_css_error(iter.input, pos, &*message, &context);
-                    }
+                    },
                 }
             }
         }
@@ -192,7 +203,7 @@ impl<Impl: SelectorImpl> Stylesheet<Impl> {
 pub struct Rules<'a, Impl: SelectorImpl + 'a> {
     // 2 because normal case is likely to be just one level of nesting (@media)
     stack: SmallVec<[slice::Iter<'a, CSSRule<Impl>>; 2]>,
-    device: Option<&'a Device>
+    device: Option<&'a Device>,
 }
 
 impl<'a, Impl: SelectorImpl + 'a> Rules<'a, Impl> {
@@ -200,7 +211,10 @@ impl<'a, Impl: SelectorImpl + 'a> Rules<'a, Impl> {
         let mut stack: SmallVec<[slice::Iter<'a, CSSRule<Impl>>; 2]> = SmallVec::new();
         stack.push(iter);
 
-        Rules { stack: stack, device: device }
+        Rules {
+            stack: stack,
+            device: device,
+        }
     }
 }
 
@@ -217,14 +231,14 @@ impl<'a, Impl: SelectorImpl + 'a> Iterator for Rules<'a, Impl> {
                         if rule.evaluate(device) {
                             self.stack.push(rule.rules.iter());
                         } else {
-                            continue
+                            continue;
                         }
                     } else {
                         self.stack.push(rule.rules.iter());
                     }
                 }
 
-                return Some(rule)
+                return Some(rule);
             }
 
             self.stack.pop();
@@ -296,7 +310,8 @@ pub mod rule_filter {
 }
 
 /// Extension methods for `CSSRule` iterators.
-pub trait CSSRuleIteratorExt<'a, Impl: SelectorImpl + 'a>: Iterator<Item=&'a CSSRule<Impl>> + Sized {
+pub trait CSSRuleIteratorExt<'a, Impl: SelectorImpl + 'a>
+    : Iterator<Item = &'a CSSRule<Impl>> + Sized {
     /// Yield only @font-face rules.
     fn font_face(self) -> rule_filter::FontFace<'a, Self>;
 
@@ -310,7 +325,9 @@ pub trait CSSRuleIteratorExt<'a, Impl: SelectorImpl + 'a>: Iterator<Item=&'a CSS
     fn viewport(self) -> rule_filter::Viewport<'a, Self>;
 }
 
-impl<'a, I, Impl: SelectorImpl + 'a> CSSRuleIteratorExt<'a, Impl> for I where I: Iterator<Item=&'a CSSRule<Impl>> {
+impl<'a, I, Impl: SelectorImpl + 'a> CSSRuleIteratorExt<'a, Impl> for I
+    where I: Iterator<Item = &'a CSSRule<Impl>>,
+{
     #[inline]
     fn font_face(self) -> rule_filter::FontFace<'a, I> {
         rule_filter::FontFace::new(self)
@@ -336,7 +353,7 @@ fn parse_nested_rules<Impl: SelectorImpl>(context: &ParserContext, input: &mut P
     let mut iter = RuleListParser::new_for_nested_rule(input,
                                                        NestedRuleParser {
                                                            context: context,
-                                                           _impl: PhantomData
+                                                           _impl: PhantomData,
                                                        });
     let mut rules = Vec::new();
     while let Some(result) = iter.next() {
@@ -346,7 +363,7 @@ fn parse_nested_rules<Impl: SelectorImpl>(context: &ParserContext, input: &mut P
                 let pos = range.start;
                 let message = format!("Unsupported rule: '{}'", iter.input.slice(range));
                 log_css_error(iter.input, pos, &*message, &context);
-            }
+            },
         }
     }
     rules
@@ -356,7 +373,7 @@ fn parse_nested_rules<Impl: SelectorImpl>(context: &ParserContext, input: &mut P
 struct TopLevelRuleParser<'a, Impl: SelectorImpl> {
     context: ParserContext<'a>,
     state: Cell<State>,
-    _impl: PhantomData<Impl>
+    _impl: PhantomData<Impl>,
 }
 
 #[derive(Eq, PartialEq, Ord, PartialOrd, Copy, Clone)]
@@ -379,8 +396,7 @@ impl<'a, Impl: SelectorImpl> AtRuleParser for TopLevelRuleParser<'a, Impl> {
     type Prelude = AtRulePrelude;
     type AtRule = CSSRule<Impl>;
 
-    fn parse_prelude(&self, name: &str, input: &mut Parser)
-                     -> Result<AtRuleType<AtRulePrelude, CSSRule<Impl>>, ()> {
+    fn parse_prelude(&self, name: &str, input: &mut Parser) -> Result<AtRuleType<AtRulePrelude, CSSRule<Impl>>, ()> {
         match_ignore_ascii_case! { name,
             "charset" => {
                 if self.state.get() <= State::Start {
@@ -416,12 +432,22 @@ impl<'a, Impl: SelectorImpl> AtRuleParser for TopLevelRuleParser<'a, Impl> {
         }
 
         self.state.set(State::Body);
-        AtRuleParser::parse_prelude(&NestedRuleParser { context: &self.context, _impl: PhantomData }, name, input)
+        AtRuleParser::parse_prelude(&NestedRuleParser {
+                                        context: &self.context,
+                                        _impl: PhantomData,
+                                    },
+                                    name,
+                                    input)
     }
 
     #[inline]
     fn parse_block(&self, prelude: AtRulePrelude, input: &mut Parser) -> Result<CSSRule<Impl>, ()> {
-        AtRuleParser::parse_block(&NestedRuleParser { context: &self.context, _impl: PhantomData }, prelude, input)
+        AtRuleParser::parse_block(&NestedRuleParser {
+                                      context: &self.context,
+                                      _impl: PhantomData,
+                                  },
+                                  prelude,
+                                  input)
     }
 }
 
@@ -433,13 +459,21 @@ impl<'a, Impl: SelectorImpl> QualifiedRuleParser for TopLevelRuleParser<'a, Impl
     #[inline]
     fn parse_prelude(&self, input: &mut Parser) -> Result<Vec<Selector<Impl>>, ()> {
         self.state.set(State::Body);
-        QualifiedRuleParser::parse_prelude(&NestedRuleParser { context: &self.context, _impl: PhantomData }, input)
+        QualifiedRuleParser::parse_prelude(&NestedRuleParser {
+                                               context: &self.context,
+                                               _impl: PhantomData,
+                                           },
+                                           input)
     }
 
     #[inline]
     fn parse_block(&self, prelude: Vec<Selector<Impl>>, input: &mut Parser) -> Result<CSSRule<Impl>, ()> {
-        QualifiedRuleParser::parse_block(&NestedRuleParser { context: &self.context, _impl: PhantomData },
-                                         prelude, input)
+        QualifiedRuleParser::parse_block(&NestedRuleParser {
+                                             context: &self.context,
+                                             _impl: PhantomData,
+                                         },
+                                         prelude,
+                                         input)
     }
 }
 
@@ -454,8 +488,7 @@ impl<'a, 'b, Impl: SelectorImpl> AtRuleParser for NestedRuleParser<'a, 'b, Impl>
     type Prelude = AtRulePrelude;
     type AtRule = CSSRule<Impl>;
 
-    fn parse_prelude(&self, name: &str, input: &mut Parser)
-                     -> Result<AtRuleType<AtRulePrelude, CSSRule<Impl>>, ()> {
+    fn parse_prelude(&self, name: &str, input: &mut Parser) -> Result<AtRuleType<AtRulePrelude, CSSRule<Impl>>, ()> {
         match_ignore_ascii_case! { name,
             "media" => {
                 let media_queries = parse_media_query_list(input);
@@ -477,18 +510,14 @@ impl<'a, 'b, Impl: SelectorImpl> AtRuleParser for NestedRuleParser<'a, 'b, Impl>
 
     fn parse_block(&self, prelude: AtRulePrelude, input: &mut Parser) -> Result<CSSRule<Impl>, ()> {
         match prelude {
-            AtRulePrelude::FontFace => {
-                parse_font_face_block(self.context, input).map(CSSRule::FontFace)
-            }
+            AtRulePrelude::FontFace => parse_font_face_block(self.context, input).map(CSSRule::FontFace),
             AtRulePrelude::Media(media_queries) => {
                 Ok(CSSRule::Media(MediaRule {
                     media_queries: media_queries,
                     rules: parse_nested_rules(self.context, input),
                 }))
-            }
-            AtRulePrelude::Viewport => {
-                ViewportRule::parse(input, self.context).map(CSSRule::Viewport)
-            }
+            },
+            AtRulePrelude::Viewport => ViewportRule::parse(input, self.context).map(CSSRule::Viewport),
         }
     }
 }
@@ -505,7 +534,7 @@ impl<'a, 'b, Impl: SelectorImpl> QualifiedRuleParser for NestedRuleParser<'a, 'b
     fn parse_block(&self, prelude: Vec<Selector<Impl>>, input: &mut Parser) -> Result<CSSRule<Impl>, ()> {
         Ok(CSSRule::Style(StyleRule {
             selectors: prelude,
-            declarations: parse_property_declaration_list(self.context, input)
+            declarations: parse_property_declaration_list(self.context, input),
         }))
     }
 }

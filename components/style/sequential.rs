@@ -7,12 +7,14 @@
 use dom::TNode;
 use traversal::DomTraversalContext;
 
-pub fn traverse_dom<N, C>(root: N,
-                          shared: &C::SharedContext)
-                          where N: TNode,
-                                C: DomTraversalContext<N> {
+pub fn traverse_dom<N, C>(root: N, shared: &C::SharedContext)
+    where N: TNode,
+          C: DomTraversalContext<N>,
+{
     fn doit<'a, N, C>(context: &'a C, node: N)
-                      where N: TNode, C: DomTraversalContext<N> {
+        where N: TNode,
+              C: DomTraversalContext<N>,
+    {
         context.process_preorder(node);
 
         for kid in node.children() {
@@ -25,4 +27,3 @@ pub fn traverse_dom<N, C>(root: N,
     let context = C::new(shared, root.opaque());
     doit::<N, C>(&context, root);
 }
-

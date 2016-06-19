@@ -49,7 +49,6 @@ bitflags! {
 /// take the ElementWrapper approach for attribute-dependent style. So we do it the same both ways for
 /// now to reduce complexity, but it's worth measuring the performance impact (if any) of the
 /// mStateMask approach.
-
 #[derive(HeapSizeOf, Clone)]
 pub struct ElementSnapshot {
     pub state: Option<ElementState>,
@@ -63,43 +62,61 @@ impl ElementSnapshot {
 
     // Gets an attribute matching |namespace| and |name|, if any. Panics if |attrs| is None.
     pub fn get_attr(&self, namespace: &Namespace, name: &Atom) -> Option<&AttrValue> {
-        self.attrs.as_ref().unwrap().iter()
-                  .find(|&&(ref ident, _)| ident.local_name == *name && ident.namespace == *namespace)
-                  .map(|&(_, ref v)| v)
+        self.attrs
+            .as_ref()
+            .unwrap()
+            .iter()
+            .find(|&&(ref ident, _)| ident.local_name == *name && ident.namespace == *namespace)
+            .map(|&(_, ref v)| v)
     }
 
     // Gets an attribute matching |name| if any, ignoring namespace. Panics if |attrs| is None.
     pub fn get_attr_ignore_ns(&self, name: &Atom) -> Option<&AttrValue> {
-        self.attrs.as_ref().unwrap().iter()
-                  .find(|&&(ref ident, _)| ident.local_name == *name)
-                  .map(|&(_, ref v)| v)
+        self.attrs
+            .as_ref()
+            .unwrap()
+            .iter()
+            .find(|&&(ref ident, _)| ident.local_name == *name)
+            .map(|&(_, ref v)| v)
     }
 }
 
-static EMPTY_SNAPSHOT: ElementSnapshot = ElementSnapshot { state: None, attrs: None };
+static EMPTY_SNAPSHOT: ElementSnapshot = ElementSnapshot {
+    state: None,
+    attrs: None,
+};
 
 struct ElementWrapper<'a, E>
     where E: Element,
-          E::Impl: SelectorImplExt {
+          E::Impl: SelectorImplExt,
+{
     element: E,
     snapshot: &'a ElementSnapshot,
 }
 
 impl<'a, E> ElementWrapper<'a, E>
     where E: Element,
-          E::Impl: SelectorImplExt {
+          E::Impl: SelectorImplExt,
+{
     pub fn new(el: E) -> ElementWrapper<'a, E> {
-        ElementWrapper { element: el, snapshot: &EMPTY_SNAPSHOT }
+        ElementWrapper {
+            element: el,
+            snapshot: &EMPTY_SNAPSHOT,
+        }
     }
 
     pub fn new_with_snapshot(el: E, snapshot: &'a ElementSnapshot) -> ElementWrapper<'a, E> {
-        ElementWrapper { element: el, snapshot: snapshot }
+        ElementWrapper {
+            element: el,
+            snapshot: snapshot,
+        }
     }
 }
 
 impl<'a, E> Element for ElementWrapper<'a, E>
     where E: Element,
-          E::Impl: SelectorImplExt {
+          E::Impl: SelectorImplExt,
+{
     type Impl = E::Impl;
 
     fn match_non_ts_pseudo_class(&self,
@@ -110,7 +127,7 @@ impl<'a, E> Element for ElementWrapper<'a, E>
         } else {
             match self.snapshot.state {
                 Some(s) => s.contains(flag),
-                None => self.element.match_non_ts_pseudo_class(pseudo_class)
+                None => self.element.match_non_ts_pseudo_class(pseudo_class),
             }
         }
     }
@@ -147,30 +164,36 @@ impl<'a, E> Element for ElementWrapper<'a, E>
     }
     fn has_class(&self, name: &Atom) -> bool {
         match self.snapshot.attrs {
-            Some(_) => self.snapshot.get_attr(&ns!(), &atom!("class"))
-                                    .map_or(false, |v| { v.as_tokens().iter().any(|atom| atom == name) }),
+            Some(_) => {
+                self.snapshot
+                    .get_attr(&ns!(), &atom!("class"))
+                    .map_or(false, |v| v.as_tokens().iter().any(|atom| atom == name))
+            },
             None => self.element.has_class(name),
         }
     }
     #[cfg(feature = "gecko")]
     fn match_attr<F>(&self, _: &AttrSelector, _: F) -> bool
-                    where F: Fn(&str) -> bool {
+        where F: Fn(&str) -> bool,
+    {
         panic!("Gecko can't borrow atoms as UTF-8.");
     }
     #[cfg(not(feature = "gecko"))]
     fn match_attr<F>(&self, attr: &AttrSelector, test: F) -> bool
-                    where F: Fn(&str) -> bool {
+        where F: Fn(&str) -> bool,
+    {
         use selectors::parser::NamespaceConstraint;
         match self.snapshot.attrs {
             Some(_) => {
                 let html = self.is_html_element_in_html_document();
                 let local_name = if html { &attr.lower_name } else { &attr.name };
                 match attr.namespace {
-                    NamespaceConstraint::Specific(ref ns) => self.snapshot.get_attr(ns, local_name),
-                    NamespaceConstraint::Any => self.snapshot.get_attr_ignore_ns(local_name),
-                }.map_or(false, |v| test(v))
+                        NamespaceConstraint::Specific(ref ns) => self.snapshot.get_attr(ns, local_name),
+                        NamespaceConstraint::Any => self.snapshot.get_attr_ignore_ns(local_name),
+                    }
+                    .map_or(false, |v| test(v))
             },
-            None => self.element.match_attr(attr, test)
+            None => self.element.match_attr(attr, test),
         }
     }
     fn is_empty(&self) -> bool {
@@ -179,13 +202,17 @@ impl<'a, E> Element for ElementWrapper<'a, E>
     fn is_root(&self) -> bool {
         self.element.is_root()
     }
-    fn each_class<F>(&self, mut callback: F) where F: FnMut(&Atom) {
+    fn each_class<F>(&self, mut callback: F)
+        where F: FnMut(&Atom),
+    {
         match self.snapshot.attrs {
             Some(_) => {
                 if let Some(v) = self.snapshot.get_attr(&ns!(), &atom!("class")) {
-                    for c in v.as_tokens() { callback(c) }
+                    for c in v.as_tokens() {
+                        callback(c)
+                    }
                 }
-            }
+            },
             None => self.element.each_class(callback),
         }
     }
@@ -216,12 +243,14 @@ fn is_attr_selector<Impl: SelectorImpl>(sel: &SimpleSelector<Impl>) -> bool {
 fn combinator_to_restyle_hint(combinator: Option<Combinator>) -> RestyleHint {
     match combinator {
         None => RESTYLE_SELF,
-        Some(c) => match c {
-            Combinator::Child => RESTYLE_DESCENDANTS,
-            Combinator::Descendant => RESTYLE_DESCENDANTS,
-            Combinator::NextSibling => RESTYLE_LATER_SIBLINGS,
-            Combinator::LaterSibling => RESTYLE_LATER_SIBLINGS,
-        }
+        Some(c) => {
+            match c {
+                Combinator::Child => RESTYLE_DESCENDANTS,
+                Combinator::Descendant => RESTYLE_DESCENDANTS,
+                Combinator::NextSibling => RESTYLE_LATER_SIBLINGS,
+                Combinator::LaterSibling => RESTYLE_LATER_SIBLINGS,
+            }
+        },
     }
 }
 
@@ -276,12 +305,14 @@ pub struct DependencySet<Impl: SelectorImplExt> {
 
 impl<Impl: SelectorImplExt> DependencySet<Impl> {
     pub fn new() -> DependencySet<Impl> {
-        DependencySet { deps: Vec::new() }
+        DependencySet {
+            deps: Vec::new(),
+        }
     }
 
-    pub fn compute_hint<E>(&self, el: &E, snapshot: &ElementSnapshot, current_state: ElementState)
-                          -> RestyleHint
-                          where E: Element<Impl=Impl> + Clone {
+    pub fn compute_hint<E>(&self, el: &E, snapshot: &ElementSnapshot, current_state: ElementState) -> RestyleHint
+        where E: Element<Impl = Impl> + Clone,
+    {
         let state_changes = snapshot.state.map_or(ElementState::empty(), |old_state| current_state ^ old_state);
         let attrs_changed = snapshot.attrs.is_some();
         let mut hint = RestyleHint::empty();
@@ -293,7 +324,7 @@ impl<Impl: SelectorImplExt> DependencySet<Impl> {
                 if matched_then != matches_now {
                     hint.insert(combinator_to_restyle_hint(dep.combinator));
                     if hint.is_all() {
-                        break
+                        break;
                     }
                 }
             }
@@ -324,7 +355,7 @@ impl<Impl: SelectorImplExt> DependencySet<Impl> {
                 Some((ref sel, comb)) => {
                     combinator = Some(comb);
                     sel.clone()
-                }
+                },
                 None => break,
             }
         }
