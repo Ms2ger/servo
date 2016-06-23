@@ -22,7 +22,6 @@ use std::ptr;
 use std::slice;
 use std::str::from_utf8_unchecked;
 use std::sync::{Arc, Mutex};
-use style::context::ReflowGoal;
 use style::dom::{TDocument, TElement, TNode};
 use style::error_reporting::StdoutErrorReporter;
 use style::parallel;
@@ -96,7 +95,6 @@ fn restyle_subtree(node: GeckoNode, raw_data: *mut RawServoStyleSet) {
         viewport_size: Size2D::new(Au(0), Au(0)),
         screen_size_changed: false,
         generation: 0,
-        goal: ReflowGoal::ForScriptQuery,
         stylist: data.stylist.clone(),
         new_animations_sender: Mutex::new(data.new_animations_sender.clone()),
         running_animations: data.running_animations.clone(),

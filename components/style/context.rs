@@ -34,9 +34,6 @@ pub struct SharedStyleContext<Impl: SelectorImplExt> {
     /// sent.
     pub new_animations_sender: Mutex<Sender<Animation>>,
 
-    /// Why is this reflow occurring
-    pub goal: ReflowGoal,
-
     /// The animations that are currently running.
     pub running_animations: Arc<RwLock<HashMap<OpaqueNode, Vec<Animation>>>>,
 

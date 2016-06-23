@@ -486,8 +486,7 @@ impl LayoutThread {
     // Create a layout context for use in building display lists, hit testing, &c.
     fn build_shared_layout_context(&self,
                                    rw_data: &LayoutThreadData,
-                                   screen_size_changed: bool,
-                                   goal: ReflowGoal)
+                                   screen_size_changed: bool)
                                    -> SharedLayoutContext {
         SharedLayoutContext {
             style_context: SharedStyleContext {
@@ -495,7 +494,6 @@ impl LayoutThread {
                 screen_size_changed: screen_size_changed,
                 stylist: rw_data.stylist.clone(),
                 generation: self.generation,
-                goal: goal,
                 new_animations_sender: Mutex::new(self.new_animations_sender.clone()),
                 running_animations: self.running_animations.clone(),
                 expired_animations: self.expired_animations.clone(),
@@ -593,14 +591,13 @@ impl LayoutThread {
             flow.restyle_damage.insert(REPAINT);
         }
 
+        let mut layout_context = self.build_shared_layout_context(&*rw_data,
+                                                                  false);
+
         let reflow_info = Reflow {
             goal: ReflowGoal::ForDisplay,
             page_clip_rect: MAX_RECT,
         };
-        let mut layout_context = self.build_shared_layout_context(&*rw_data,
-                                                                  false,
-                                                                  reflow_info.goal);
-
         self.perform_post_style_recalc_layout_passes(&reflow_info,
                                                      &mut *rw_data,
                                                      &mut layout_context);
@@ -1103,8 +1100,7 @@ impl LayoutThread {
 
         // Create a layout context for use throughout the following passes.
         let mut shared_layout_context = self.build_shared_layout_context(&*rw_data,
-                                                                         viewport_size_changed,
-                                                                         data.reflow_info.goal);
+                                                                         viewport_size_changed);
 
         if node.is_dirty() || node.has_dirty_descendants() {
             // Recalculate CSS styles and rebuild flows and fragments.
@@ -1253,8 +1249,7 @@ impl LayoutThread {
         };
 
         let mut layout_context = self.build_shared_layout_context(&*rw_data,
-                                                                  false,
-                                                                  reflow_info.goal);
+                                                                  false);
 
         self.perform_post_main_layout_passes(&reflow_info, &mut *rw_data, &mut layout_context);
         true
@@ -1291,14 +1286,8 @@ impl LayoutThread {
     }
 
     pub fn tick_animations(&mut self, rw_data: &mut LayoutThreadData) {
-        let reflow_info = Reflow {
-            goal: ReflowGoal::ForDisplay,
-            page_clip_rect: MAX_RECT,
-        };
-
         let mut layout_context = self.build_shared_layout_context(&*rw_data,
-                                                                  false,
-                                                                  reflow_info.goal);
+                                                                  false);
 
         if let Some(mut root_flow) = self.root_flow.clone() {
             // Perform an abbreviated style recalc that operates without access to the DOM.
@@ -1312,6 +1301,11 @@ impl LayoutThread {
                     });
         }
 
+        let reflow_info = Reflow {
+            goal: ReflowGoal::ForDisplay,
+            page_clip_rect: MAX_RECT,
+        };
+
         self.perform_post_style_recalc_layout_passes(&reflow_info,
                                                      &mut *rw_data,
                                                      &mut layout_context);
@@ -1321,19 +1315,19 @@ impl LayoutThread {
         let mut rw_data = possibly_locked_rw_data.lock();
         font_context::invalidate_font_caches();
 
-        let reflow_info = Reflow {
-            goal: ReflowGoal::ForDisplay,
-            page_clip_rect: MAX_RECT,
-        };
-
         let mut layout_context = self.build_shared_layout_context(&*rw_data,
-                                                                  false,
-                                                                  reflow_info.goal);
+                                                                  false);
 
         // No need to do a style recalc here.
         if self.root_flow.is_none() {
             return
         }
+
+        let reflow_info = Reflow {
+            goal: ReflowGoal::ForDisplay,
+            page_clip_rect: MAX_RECT,
+        };
+
         self.perform_post_style_recalc_layout_passes(&reflow_info,
                                                      &mut *rw_data,
                                                      &mut layout_context);
