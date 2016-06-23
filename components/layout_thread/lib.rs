@@ -490,7 +490,6 @@ impl LayoutThread {
         SharedLayoutContext {
             style_context: SharedStyleContext {
                 viewport_size: self.viewport_size.clone(),
-                screen_size_changed: screen_size_changed,
                 stylist: rw_data.stylist.clone(),
                 generation: self.generation,
                 new_animations_sender: Mutex::new(self.new_animations_sender.clone()),
@@ -498,6 +497,7 @@ impl LayoutThread {
                 expired_animations: self.expired_animations.clone(),
                 error_reporter: self.error_reporter.clone(),
             },
+            screen_size_changed: screen_size_changed,
             image_cache_thread: self.image_cache_thread.clone(),
             image_cache_sender: Mutex::new(self.image_cache_sender.clone()),
             font_cache_thread: Mutex::new(self.font_cache_thread.clone()),

@@ -93,7 +93,6 @@ fn restyle_subtree(node: GeckoNode, raw_data: *mut RawServoStyleSet) {
 
     let shared_style_context = SharedStyleContext {
         viewport_size: Size2D::new(Au(0), Au(0)),
-        screen_size_changed: false,
         generation: 0,
         stylist: data.stylist.clone(),
         new_animations_sender: Mutex::new(data.new_animations_sender.clone()),

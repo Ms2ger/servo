@@ -20,9 +20,6 @@ pub struct SharedStyleContext<Impl: SelectorImplExt> {
     /// The current viewport size.
     pub viewport_size: Size2D<Au>,
 
-    /// Screen sized changed?
-    pub screen_size_changed: bool,
-
     /// The CSS selector stylist.
     pub stylist: Arc<Stylist<Impl>>,
 

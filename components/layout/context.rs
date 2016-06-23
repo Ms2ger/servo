@@ -58,7 +58,7 @@ fn create_or_get_local_context(shared_layout_context: &SharedLayoutContext)
     LOCAL_CONTEXT_KEY.with(|r| {
         let mut r = r.borrow_mut();
         if let Some(context) = r.clone() {
-            if shared_layout_context.style_context.screen_size_changed {
+            if shared_layout_context.screen_size_changed {
                 context.style_context.applicable_declarations_cache.borrow_mut().evict_all();
             }
             context
@@ -81,6 +81,9 @@ fn create_or_get_local_context(shared_layout_context: &SharedLayoutContext)
 pub struct SharedLayoutContext {
     /// Bits shared by the layout and style system.
     pub style_context: SharedStyleContext,
+
+    /// Screen sized changed?
+    pub screen_size_changed: bool,
 
     /// The shared image cache thread.
     pub image_cache_thread: ImageCacheThread,
