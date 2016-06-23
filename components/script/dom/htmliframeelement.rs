@@ -40,13 +40,12 @@ use js::jsapi::{JSAutoCompartment, RootedValue, JSContext, MutableHandleValue};
 use js::jsval::{UndefinedValue, NullValue};
 use msg::constellation_msg::{FrameType, LoadData, NavigationDirection, PipelineId, SubpageId};
 use net_traits::response::HttpsState;
-use script_layout_interface::message::ReflowQueryType;
+use script_layout_interface::message::{ReflowGoal, ReflowQueryType};
 use script_traits::IFrameSandboxState::{IFrameSandboxed, IFrameUnsandboxed};
 use script_traits::{IFrameLoadInfo, MozBrowserEvent, ScriptMsg as ConstellationMsg};
 use std::cell::Cell;
 use string_cache::Atom;
 use style::attr::{AttrValue, LengthOrPercentageOrAuto};
-use style::context::ReflowGoal;
 use url::Url;
 use util::prefs::mozbrowser_enabled;
 

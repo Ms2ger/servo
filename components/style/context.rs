@@ -53,12 +53,3 @@ pub trait StyleContext<'a, Impl: SelectorImplExt> {
     fn shared_context(&self) -> &'a SharedStyleContext<Impl>;
     fn local_context(&self) -> &LocalStyleContext<Impl::ComputedValues>;
 }
-
-/// Why we're doing reflow.
-#[derive(PartialEq, Copy, Clone, Debug)]
-pub enum ReflowGoal {
-    /// We're reflowing in order to send a display list to the screen.
-    ForDisplay,
-    /// We're reflowing in order to satisfy a script query. No display list will be created.
-    ForScriptQuery,
-}

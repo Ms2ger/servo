@@ -57,7 +57,7 @@ use profile_traits::time::{ProfilerCategory, TimerMetadata, TimerMetadataFrameTy
 use profile_traits::time::{ProfilerChan, TimerMetadataReflowType, profile};
 use rustc_serialize::base64::{FromBase64, STANDARD, ToBase64};
 use script_layout_interface::TrustedNodeAddress;
-use script_layout_interface::message::{Msg, Reflow, ReflowQueryType, ScriptReflow};
+use script_layout_interface::message::{Msg, Reflow, ReflowGoal, ReflowQueryType, ScriptReflow};
 use script_layout_interface::reporter::CSSErrorReporter;
 use script_layout_interface::rpc::{ContentBoxResponse, ContentBoxesResponse, LayoutRPC};
 use script_layout_interface::rpc::{MarginStyleResponse, ResolvedStyleResponse};
@@ -81,7 +81,6 @@ use std::sync::mpsc::TryRecvError::{Disconnected, Empty};
 use std::sync::mpsc::{Sender, channel};
 use std::sync::{Arc, Mutex};
 use string_cache::Atom;
-use style::context::ReflowGoal;
 use style::error_reporting::ParseErrorReporter;
 use style::properties::longhands::overflow_x;
 use style::selector_impl::PseudoElement;

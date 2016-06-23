@@ -16,7 +16,6 @@ use script_traits::{LayoutMsg as ConstellationMsg, StackingContextScrollState};
 use std::sync::Arc;
 use std::sync::mpsc::{Receiver, Sender};
 use string_cache::Atom;
-use style::context::ReflowGoal;
 use style::selector_impl::PseudoElement;
 use style::servo::Stylesheet;
 use url::Url;
@@ -99,6 +98,15 @@ pub enum ReflowQueryType {
     ResolvedStyleQuery(TrustedNodeAddress, Option<PseudoElement>, Atom),
     OffsetParentQuery(TrustedNodeAddress),
     MarginStyleQuery(TrustedNodeAddress),
+}
+
+/// Why we're doing reflow.
+#[derive(PartialEq, Copy, Clone, Debug)]
+pub enum ReflowGoal {
+    /// We're reflowing in order to send a display list to the screen.
+    ForDisplay,
+    /// We're reflowing in order to satisfy a script query. No display list will be created.
+    ForScriptQuery,
 }
 
 /// Information needed for a reflow.
