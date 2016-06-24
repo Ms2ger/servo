@@ -22,6 +22,10 @@
 //!
 //! [cssparser]: ../cssparser/index.html
 //! [selectors]: ../selectors/index.html
+//!
+//! ## Adding a new property
+//!
+//! See ...
 
 // FIXME: replace discriminant_value with per-enum methods that use `match`?
 #![feature(core_intrinsics)]
