@@ -244,8 +244,13 @@ impl Frame {
     fn load(&mut self,
             pipeline_id: PipelineId,
             pipelines: &HashMap<PipelineId, Pipeline>,
-            direction: Option<NavigationDirection>)
+            through_history: bool)
             -> Vec<HistoryEntry> {
+        if through_history {
+            self.current = pipeline_id;
+            return vec![];
+        }
+
         // TODO(gw): To also allow navigations within subframes
         // to affect the parent navigation history, this should bubble
         // up the navigation change to each parent.
@@ -298,7 +303,7 @@ struct FrameChange {
     old_pipeline_id: Option<PipelineId>,
     new_pipeline_id: PipelineId,
     document_ready: bool,
-    direction: Option<NavigationDirection>,
+    through_history: bool,
 }
 
 /// An iterator over a frame tree, returning nodes in depth-first order.
@@ -516,12 +521,12 @@ impl<Message, LTF, STF> Constellation<Message, LTF, STF>
     // Push a new (loading) pipeline to the list of pending frame changes
     fn push_pending_frame(&mut self, new_pipeline_id: PipelineId,
                           old_pipeline_id: Option<PipelineId>,
-                          direction: Option<NavigationDirection>) {
+                          through_history: bool) {
         self.pending_frames.push(FrameChange {
             old_pipeline_id: old_pipeline_id,
             new_pipeline_id: new_pipeline_id,
             document_ready: false,
-            direction: direction,
+            through_history: through_history,
         });
     }
 
@@ -1022,7 +1027,7 @@ impl<Message, LTF, STF> Constellation<Message, LTF, STF>
             let load_data = LoadData::new(failure_url, None, None);
             self.new_pipeline(new_pipeline_id, parent_info, window_size, None, load_data, false);
 
-            self.push_pending_frame(new_pipeline_id, Some(pipeline_id), None);
+            self.push_pending_frame(new_pipeline_id, Some(pipeline_id), false);
 
         }
 
@@ -1036,7 +1041,7 @@ impl<Message, LTF, STF> Constellation<Message, LTF, STF>
         self.new_pipeline(root_pipeline_id, None, Some(window_size), None,
                           LoadData::new(url.clone(), None, None), false);
         self.handle_load_start_msg(&root_pipeline_id);
-        self.push_pending_frame(root_pipeline_id, None, None);
+        self.push_pending_frame(root_pipeline_id, None, false);
         self.compositor_proxy.send(ToCompositorMsg::ChangePageUrl(root_pipeline_id, url));
     }
 
@@ -1164,7 +1169,7 @@ impl<Message, LTF, STF> Constellation<Message, LTF, STF>
         self.subpage_map.insert((load_info.containing_pipeline_id, load_info.new_subpage_id),
                                 load_info.new_pipeline_id);
 
-        self.push_pending_frame(load_info.new_pipeline_id, old_pipeline_id, None);
+        self.push_pending_frame(load_info.new_pipeline_id, old_pipeline_id, false);
     }
 
     fn handle_set_cursor_msg(&mut self, cursor: Cursor) {
@@ -1291,7 +1296,7 @@ impl<Message, LTF, STF> Constellation<Message, LTF, STF>
                 let window_size = self.pipelines.get(&source_id).and_then(|source| source.size);
                 let new_pipeline_id = PipelineId::new();
                 self.new_pipeline(new_pipeline_id, None, window_size, None, load_data, false);
-                self.push_pending_frame(new_pipeline_id, Some(source_id), None);
+                self.push_pending_frame(new_pipeline_id, Some(source_id), false);
 
                 // Send message to ScriptThread that will suspend all timers
                 match self.pipelines.get(&source_id) {
@@ -1396,15 +1401,9 @@ impl<Message, LTF, STF> Constellation<Message, LTF, STF>
                             }
                         }
                     };
-                    let next = match next {
-                        HistoryEntry::Alive { id } => {
-                            frame.current = id;
-                            Ok(id)
-                        },
-                        HistoryEntry::Dead { url, is_private } => {
-                            Err((url, is_private))
-                        },
-                    };
+                    if let HistoryEntry::Alive { id } = next {
+                        frame.current = id;
+                    }
                     (prev, next)
                 },
                 None => {
@@ -1412,14 +1411,15 @@ impl<Message, LTF, STF> Constellation<Message, LTF, STF>
                     return;
                 },
             };
+
             match next {
-                Ok(next) => (prev, next),
-                Err((url, is_private)) => {
+                HistoryEntry::Alive { id } => (prev, id),
+                HistoryEntry::Dead { url, is_private } => {
                     let window_size = self.window_size.visible_viewport;
                     let pipeline_id = PipelineId::new();
                     self.new_pipeline(pipeline_id, None, Some(window_size), None, LoadData::new(url.clone(), None, None), is_private);
                     self.handle_load_start_msg(&pipeline_id);
-                    self.push_pending_frame(pipeline_id, Some(prev), Some(direction));
+                    self.push_pending_frame(pipeline_id, Some(prev), true);
                     self.compositor_proxy.send(ToCompositorMsg::ChangePageUrl(pipeline_id, url));
                     return;
                 }
@@ -1762,10 +1762,11 @@ impl<Message, LTF, STF> Constellation<Message, LTF, STF>
                 let frames = &mut self.frames;
                 let frame_id = pipelines.get(&old_pipeline_id).and_then(|pipeline| pipeline.frame);
                 frame_id.and_then(|frame_id| {
-                    pipelines.get_mut(&frame_change.new_pipeline_id)
-                             .map(|pipeline| pipeline.frame = Some(frame_id));
+                    if let Some(pipeline) = pipelines.get_mut(&frame_change.new_pipeline_id) {
+                        pipeline.frame = Some(frame_id);
+                    }
                     frames.get_mut(&frame_id).map(|frame| {
-                        frame.load(frame_change.new_pipeline_id, pipelines, frame_change.direction)
+                        frame.load(frame_change.new_pipeline_id, pipelines, frame_change.through_history)
                     })
                 })
             },
