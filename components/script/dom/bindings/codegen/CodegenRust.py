@@ -4539,7 +4539,6 @@ return true;"""
         return CGGeneric(self.getBody())
 
 
-# TODO(Issue 5876)
 class CGDOMJSProxyHandler_defineProperty(CGAbstractExternMethod):
     def __init__(self, descriptor):
         args = [Argument('*mut JSContext', 'cx'), Argument('HandleObject', 'proxy'),
@@ -4562,6 +4561,7 @@ class CGDOMJSProxyHandler_defineProperty(CGAbstractExternMethod):
                     "    return true;\n" +
                     "}\n")
         elif self.descriptor.operations['IndexedGetter']:
+            raise TypeError("Can't handle a named setter")
             set += ("if get_array_index_from_id(cx, id).is_some() {\n" +
                     "    return false;\n" +
                     "    //return ThrowErrorMessage(cx, MSG_NO_PROPERTY_SETTER, \"%s\");\n" +
@@ -4572,6 +4572,7 @@ class CGDOMJSProxyHandler_defineProperty(CGAbstractExternMethod):
             if self.descriptor.hasUnforgeableMembers:
                 raise TypeError("Can't handle a named setter on an interface that has "
                                 "unforgeables. Figure out how that should work!")
+
             set += ("if RUST_JSID_IS_STRING(id) {\n" +
                     CGIndenter(CGProxyNamedSetter(self.descriptor)).define() +
                     "    return (*opresult).succeed();\n" +
@@ -4579,14 +4580,12 @@ class CGDOMJSProxyHandler_defineProperty(CGAbstractExternMethod):
                     "    return false;\n" +
                     "}\n")
         else:
+            raise TypeError("Can't handle a named setter")
+            
             set += ("if RUST_JSID_IS_STRING(id) {\n" +
                     CGIndenter(CGProxyNamedGetter(self.descriptor)).define() +
                     "    if (found) {\n"
-                    # TODO(Issue 5876)
-                    "        //return js::IsInNonStrictPropertySet(cx)\n" +
-                    "        //       ? opresult.succeed()\n" +
-                    "        //       : ThrowErrorMessage(cx, MSG_NO_NAMED_SETTER, \"${name}\");\n" +
-                    "        return (*opresult).succeed();\n" +
+                    "        return (*opresult).failNoNamedSetter();\n" +
                     "    }\n" +
                     "    return (*opresult).succeed();\n"
                     "}\n") % (self.descriptor.name, self.descriptor.name)
