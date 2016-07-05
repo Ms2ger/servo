@@ -47,4 +47,4 @@ util = {path = "../../components/util"}
 uuid = {version = "0.2", optional = true, features = ["v4", "serde"]}
 
 [replace]
-"string_cache:0.2.20" = {path = "string_cache"}
+"string_cache:0.2.21" = {path = "string_cache"}
