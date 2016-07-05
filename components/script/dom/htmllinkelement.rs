@@ -89,36 +89,28 @@ fn get_attr(element: &Element, local_name: &Atom) -> Option<String> {
     })
 }
 
-fn string_is_stylesheet(value: &Option<String>) -> bool {
-    match *value {
-        Some(ref value) => {
-            let mut found_stylesheet = false;
-            for s in value.split(HTML_SPACE_CHARACTERS).into_iter() {
-                if s.eq_ignore_ascii_case("alternate") {
-                    return false;
-                }
+fn string_is_stylesheet(value: &[Atom]) -> bool {
+    let mut found_stylesheet = false;
+    for s in value {
+        if s.eq_ignore_ascii_case(&atom!("alternate")) {
+            return false;
+        }
 
-                if s.eq_ignore_ascii_case("stylesheet") {
-                    found_stylesheet = true;
-                }
-            }
-            found_stylesheet
-        },
-        None => false,
+        if s.eq_ignore_ascii_case(&atom!("stylesheet")) {
+            found_stylesheet = true;
+        }
     }
+    found_stylesheet
 }
 
 /// Favicon spec usage in accordance with CEF implementation:
 /// only url of icon is required/used
 /// https://html.spec.whatwg.org/multipage/#rel-icon
-fn is_favicon(value: &Option<String>) -> bool {
-    match *value {
-        Some(ref value) => {
-            value.split(HTML_SPACE_CHARACTERS)
-                .any(|s| s.eq_ignore_ascii_case("icon") || s.eq_ignore_ascii_case("apple-touch-icon"))
-        },
-        None => false,
-    }
+fn is_favicon(value: &[Atom]) -> bool {
+    value.iter().any(|s| {
+        s.eq_ignore_ascii_case(&atom!("icon")) ||
+        s.eq_ignore_ascii_case(&atom!("apple-touch-icon"))
+    })
 }
 
 impl VirtualMethods for HTMLLinkElement {
@@ -132,20 +124,29 @@ impl VirtualMethods for HTMLLinkElement {
             return;
         }
 
-        let rel = get_attr(self.upcast(), &atom!("rel"));
+        let rel_attr = self.upcast::<Element>().get_attribute(&ns!(), &atom!("rel"));
+        let rel = rel_attr.as_ref().map(|a| a.value());
+        let rel = rel.as_ref().map(|a| a.as_tokens()).unwrap_or_default();
         match attr.local_name() {
             &atom!("href") => {
                 if string_is_stylesheet(&rel) {
                     self.handle_stylesheet_url(&attr.value());
                 } else if is_favicon(&rel) {
-                    let sizes = get_attr(self.upcast(), &atom!("sizes"));
-                    self.handle_favicon_url(rel.as_ref().unwrap(), &attr.value(), &sizes);
+                    let sizes = self.upcast::<Element>()
+                                    .get_attribute(&ns!(), &atom!("sizes"));
+                    self.handle_favicon_url(&rel_attr.as_ref().unwrap().value(),
+                                            &attr.value(),
+                                            sizes.map(|s| &**s.value()));
                 }
             },
             &atom!("sizes") => {
                 if is_favicon(&rel) {
-                    if let Some(ref href) = get_attr(self.upcast(), &atom!("href")) {
-                        self.handle_favicon_url(rel.as_ref().unwrap(), href, &Some(attr.value().to_string()));
+                    let href = self.upcast::<Element>()
+                                   .get_attribute(&ns!(), &atom!("href"));
+                    if let Some(href) = href {
+                        self.handle_favicon_url(&rel_attr.as_ref().unwrap().value(),
+                                                &href.value(),
+                                                Some(&*attr.value()));
                     }
                 }
             },
@@ -172,19 +173,19 @@ impl VirtualMethods for HTMLLinkElement {
 
         if tree_in_doc {
             let element = self.upcast();
-
-            let rel = get_attr(element, &atom!("rel"));
-            let href = get_attr(element, &atom!("href"));
-            let sizes = get_attr(self.upcast(), &atom!("sizes"));
-
-            match href {
-                Some(ref href) if string_is_stylesheet(&rel) => {
-                    self.handle_stylesheet_url(href);
+            if let Some(href) = get_attr(element, &atom!("href")) {
+                let rel_attr = self.upcast::<Element>().get_attribute(&ns!(), &atom!("rel"));
+                let rel = rel_attr.as_ref().map(|a| a.value());
+                let rel = rel.as_ref().map(|a| a.as_tokens()).unwrap_or_default();
+                if string_is_stylesheet(&rel) {
+                    self.handle_stylesheet_url(&href);
+                } else if is_favicon(&rel) {
+                    let sizes = self.upcast::<Element>()
+                                    .get_attribute(&ns!(), &atom!("sizes"));
+                    self.handle_favicon_url(&rel_attr.as_ref().unwrap().value(),
+                                            &href,
+                                            sizes.map(|s| &**s.value()));
                 }
-                Some(ref href) if is_favicon(&rel) => {
-                    self.handle_favicon_url(rel.as_ref().unwrap(), href, &sizes);
-                }
-                _ => {}
             }
         }
     }
@@ -243,17 +244,15 @@ impl HTMLLinkElement {
         }
     }
 
-    fn handle_favicon_url(&self, rel: &str, href: &str, sizes: &Option<String>) {
+    fn handle_favicon_url(&self, rel: &str, href: &str, sizes: Option<&str>) {
         let document = document_from_node(self);
         match document.base_url().join(href) {
             Ok(url) => {
                 let event = ConstellationMsg::NewFavicon(url.clone());
                 document.window().constellation_chan().send(event).unwrap();
 
-                let mozbrowser_event = match *sizes {
-                    Some(ref sizes) => MozBrowserEvent::IconChange(rel.to_owned(), url.to_string(), sizes.to_owned()),
-                    None => MozBrowserEvent::IconChange(rel.to_owned(), url.to_string(), "".to_owned())
-                };
+                let sizes = sizes.unwrap_or_default().to_owned();
+                let mozbrowser_event = MozBrowserEvent::IconChange(rel.to_owned(), url.to_string(), sizes);
                 document.trigger_mozbrowser_event(mozbrowser_event);
             }
             Err(e) => debug!("Parsing url {} failed: {}", href, e)
