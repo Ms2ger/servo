@@ -141,7 +141,7 @@ impl NonCallbackInterfaceObjectClass {
             class: Class {
                 name: b"Function\0" as *const _ as *const libc::c_char,
                 flags: 0,
-                cOps: &ops.0,
+                cOps: &ops as *const _ as *const _,
                 spec: ptr::null(),
                 ext: ptr::null(),
                 oOps: &OBJECT_OPS,
