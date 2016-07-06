@@ -30,7 +30,7 @@ use dom::bindings::xmlname::XMLName::InvalidXMLName;
 use dom::bindings::xmlname::{namespace_from_domstring, validate_and_extract, xml_name_type};
 use dom::characterdata::CharacterData;
 use dom::create::create_element;
-use dom::document::{Document, LayoutDocumentHelpers};
+use dom::document::Document;
 use dom::domrect::DOMRect;
 use dom::domrectlist::DOMRectList;
 use dom::domtokenlist::DOMTokenList;
@@ -242,7 +242,7 @@ pub trait RawLayoutElementHelpers {
 #[inline]
 #[allow(unsafe_code)]
 pub unsafe fn get_attr_for_layout<'a>(elem: &'a Element, namespace: &Namespace, name: &Atom)
-                                      -> Option<LayoutJS<Attr>> {
+                                      -> Option<LayoutJS<'a, Attr>> {
     // cast to point to T in RefCell<T> directly
     let attrs = elem.attrs.borrow_for_layout();
     attrs.iter().find(|attr| {
@@ -306,7 +306,7 @@ pub trait LayoutElementHelpers {
     fn insert_atomic_flags(&self, flags: ElementFlags);
 }
 
-impl LayoutElementHelpers for LayoutJS<Element> {
+impl<'a> LayoutElementHelpers for LayoutJS<'a, Element> {
     #[allow(unsafe_code)]
     #[inline]
     unsafe fn has_class_for_layout(&self, name: &Atom) -> bool {

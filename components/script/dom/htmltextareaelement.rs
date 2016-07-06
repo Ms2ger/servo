@@ -53,7 +53,7 @@ pub trait LayoutHTMLTextAreaElementHelpers {
     fn get_rows(self) -> u32;
 }
 
-impl LayoutHTMLTextAreaElementHelpers for LayoutJS<HTMLTextAreaElement> {
+impl<'a> LayoutHTMLTextAreaElementHelpers for LayoutJS<'a, HTMLTextAreaElement> {
     #[allow(unrooted_must_root)]
     #[allow(unsafe_code)]
     unsafe fn get_value_for_layout(self) -> String {

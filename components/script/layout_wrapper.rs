@@ -34,7 +34,7 @@ use dom::bindings::inheritance::{CharacterDataTypeId, ElementTypeId};
 use dom::bindings::inheritance::{HTMLElementTypeId, NodeTypeId};
 use dom::bindings::js::LayoutJS;
 use dom::characterdata::LayoutCharacterDataHelpers;
-use dom::document::{Document, LayoutDocumentHelpers};
+use dom::document::Document;
 use dom::element::{Element, LayoutElementHelpers, RawLayoutElementHelpers};
 use dom::node::{CAN_BE_FRAGMENTED, HAS_CHANGED, HAS_DIRTY_DESCENDANTS, IS_DIRTY, DIRTY_ON_VIEWPORT_SIZE_CHANGE};
 use dom::node::{Node, LayoutNodeHelpers};
@@ -50,7 +50,6 @@ use script_layout_interface::{OpaqueStyleAndLayoutData, PartialStyleAndLayoutDat
 use selectors::matching::ElementFlags;
 use selectors::parser::{AttrSelector, NamespaceConstraint};
 use std::fmt;
-use std::marker::PhantomData;
 use std::mem::transmute;
 use std::sync::Arc;
 use string_cache::{Atom, Namespace};
@@ -71,36 +70,31 @@ use url::Url;
 #[derive(Copy, Clone)]
 pub struct ServoLayoutNode<'a> {
     /// The wrapped node.
-    node: LayoutJS<Node>,
-
-    /// Being chained to a PhantomData prevents `LayoutNode`s from escaping.
-    chain: PhantomData<&'a ()>,
+    node: LayoutJS<'a, Node>,
 }
 
 impl<'a> PartialEq for ServoLayoutNode<'a> {
     #[inline]
-    fn eq(&self, other: &ServoLayoutNode) -> bool {
+    fn eq(&self, other: &ServoLayoutNode<'a>) -> bool {
         self.node == other.node
     }
 }
 
 impl<'ln> ServoLayoutNode<'ln> {
-    fn from_layout_js(n: LayoutJS<Node>) -> ServoLayoutNode<'ln> {
+    fn from_layout_js(n: LayoutJS<'ln, Node>) -> ServoLayoutNode<'ln> {
         ServoLayoutNode {
             node: n,
-            chain: PhantomData,
         }
     }
 
     pub unsafe fn new(address: &TrustedNodeAddress) -> ServoLayoutNode {
-        ServoLayoutNode::from_layout_js(LayoutJS::from_trusted_node_address(*address))
+        ServoLayoutNode::from_layout_js(LayoutJS::from_trusted_node_address(address))
     }
 
     /// Creates a new layout node with the same lifetime as this layout node.
     pub unsafe fn new_with_this_lifetime(&self, node: &LayoutJS<Node>) -> ServoLayoutNode<'ln> {
         ServoLayoutNode {
-            node: *node,
-            chain: self.chain,
+            node: transmute(*node),
         }
     }
 
@@ -119,7 +113,7 @@ impl<'ln> TNode for ServoLayoutNode<'ln> {
 
     fn to_unsafe(&self) -> UnsafeNode {
         unsafe {
-            (self.node.unsafe_get() as usize, 0)
+            (self.node.unsafe_get() as *const Node as usize, 0)
         }
     }
 
@@ -376,7 +370,7 @@ impl<'ln> ServoLayoutNode<'ln> {
 
     /// Returns the interior of this node as a `LayoutJS`. This is highly unsafe for layout to
     /// call and as such is marked `unsafe`.
-    unsafe fn get_jsmanaged(&self) -> &LayoutJS<Node> {
+    unsafe fn get_jsmanaged(&self) -> &LayoutJS<'ln, Node> {
         &self.node
     }
 }
@@ -384,8 +378,7 @@ impl<'ln> ServoLayoutNode<'ln> {
 // A wrapper around documents that ensures ayout can only ever access safe properties.
 #[derive(Copy, Clone)]
 pub struct ServoLayoutDocument<'ld> {
-    document: LayoutJS<Document>,
-    chain: PhantomData<&'ld ()>,
+    document: LayoutJS<'ld, Document>,
 }
 
 impl<'ld> TDocument for ServoLayoutDocument<'ld> {
@@ -402,7 +395,9 @@ impl<'ld> TDocument for ServoLayoutDocument<'ld> {
 
     fn drain_modified_elements(&self) -> Vec<(ServoLayoutElement<'ld>, ElementSnapshot)> {
         let elements =  unsafe { self.document.drain_modified_elements() };
-        elements.into_iter().map(|(el, snapshot)| (ServoLayoutElement::from_layout_js(el), snapshot)).collect()
+        elements.into_iter().map(|(el, snapshot)| {
+            (ServoLayoutElement::from_layout_js(el), snapshot)
+        }).collect()
     }
 
     fn needs_paint_from_layout(&self) {
@@ -415,10 +410,9 @@ impl<'ld> TDocument for ServoLayoutDocument<'ld> {
 }
 
 impl<'ld> ServoLayoutDocument<'ld> {
-    fn from_layout_js(doc: LayoutJS<Document>) -> ServoLayoutDocument<'ld> {
+    fn from_layout_js(doc: LayoutJS<'ld, Document>) -> ServoLayoutDocument<'ld> {
         ServoLayoutDocument {
             document: doc,
-            chain: PhantomData,
         }
     }
 }
@@ -426,8 +420,7 @@ impl<'ld> ServoLayoutDocument<'ld> {
 /// A wrapper around elements that ensures layout can only ever access safe properties.
 #[derive(Copy, Clone)]
 pub struct ServoLayoutElement<'le> {
-    element: LayoutJS<Element>,
-    chain: PhantomData<&'le ()>,
+    element: LayoutJS<'le, Element>,
 }
 
 impl<'le> fmt::Debug for ServoLayoutElement<'le> {
@@ -486,10 +479,9 @@ impl<'le> PartialEq for ServoLayoutElement<'le> {
 }
 
 impl<'le> ServoLayoutElement<'le> {
-    fn from_layout_js(el: LayoutJS<Element>) -> ServoLayoutElement<'le> {
+    fn from_layout_js(el: LayoutJS<'le, Element>) -> ServoLayoutElement<'le> {
         ServoLayoutElement {
             element: el,
-            chain: PhantomData,
         }
     }
 
@@ -501,7 +493,7 @@ impl<'le> ServoLayoutElement<'le> {
     }
 }
 
-fn as_element<'le>(node: LayoutJS<Node>) -> Option<ServoLayoutElement<'le>> {
+fn as_element<'le>(node: LayoutJS<'le, Node>) -> Option<ServoLayoutElement<'le>> {
     node.downcast().map(ServoLayoutElement::from_layout_js)
 }
 
@@ -722,7 +714,7 @@ impl<'ln> ServoThreadSafeLayoutNode<'ln> {
 
     /// Returns the interior of this node as a `LayoutJS`. This is highly unsafe for layout to
     /// call and as such is marked `unsafe`.
-    unsafe fn get_jsmanaged(&self) -> &LayoutJS<Node> {
+    unsafe fn get_jsmanaged(&self) -> &LayoutJS<'ln, Node> {
         self.node.get_jsmanaged()
     }
 }
@@ -767,13 +759,13 @@ impl<'ln> ThreadSafeLayoutNode for ServoThreadSafeLayoutNode<'ln> {
     fn as_element(&self) -> ServoThreadSafeLayoutElement<'ln> {
         unsafe {
             let element = match self.get_jsmanaged().downcast() {
-                Some(e) => e.unsafe_get(),
+                Some(e) => e,
                 None => panic!("not an element")
             };
             // FIXME(pcwalton): Workaround until Rust gets multiple lifetime parameters on
             // implementations.
             ServoThreadSafeLayoutElement {
-                element: &*element,
+                element: element,
             }
         }
     }
@@ -963,7 +955,7 @@ impl<ConcreteNode> Iterator for ThreadSafeLayoutNodeChildrenIterator<ConcreteNod
 /// ever access safe properties and cannot race on elements.
 #[derive(Copy, Clone, Debug)]
 pub struct ServoThreadSafeLayoutElement<'le> {
-    element: &'le Element,
+    element: LayoutJS<'le, Element>,
 }
 
 impl<'le> ThreadSafeLayoutElement for ServoThreadSafeLayoutElement<'le> {
@@ -971,7 +963,7 @@ impl<'le> ThreadSafeLayoutElement for ServoThreadSafeLayoutElement<'le> {
 
     fn get_attr<'a>(&'a self, namespace: &Namespace, name: &Atom) -> Option<&'a str> {
         unsafe {
-            self.element.get_attr_val_for_layout(namespace, name)
+            self.element.unsafe_get().get_attr_val_for_layout(namespace, name)
         }
     }
 
@@ -1009,7 +1001,7 @@ impl<'le> ::selectors::MatchAttrGeneric for ServoThreadSafeLayoutElement<'le> {
             },
             NamespaceConstraint::Any => {
                 unsafe {
-                    self.element.get_attr_vals_for_layout(&attr.name).iter()
+                    self.element.unsafe_get().get_attr_vals_for_layout(&attr.name).iter()
                         .any(|attr| test(*attr))
                 }
             }

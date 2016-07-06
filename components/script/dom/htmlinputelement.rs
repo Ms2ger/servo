@@ -193,7 +193,7 @@ unsafe fn get_raw_textinput_value(input: LayoutJS<HTMLInputElement>) -> DOMStrin
     (*input.unsafe_get()).textinput.borrow_for_layout().get_content()
 }
 
-impl LayoutHTMLInputElementHelpers for LayoutJS<HTMLInputElement> {
+impl<'a> LayoutHTMLInputElementHelpers for LayoutJS<'a, HTMLInputElement> {
     #[allow(unsafe_code)]
     unsafe fn value_for_layout(self) -> String {
         #[allow(unsafe_code)]

@@ -1608,35 +1608,27 @@ pub enum DocumentSource {
 }
 
 #[allow(unsafe_code)]
-pub trait LayoutDocumentHelpers {
-    unsafe fn is_html_document_for_layout(&self) -> bool;
-    unsafe fn drain_modified_elements(&self) -> Vec<(LayoutJS<Element>, ElementSnapshot)>;
-    unsafe fn needs_paint_from_layout(&self);
-    unsafe fn will_paint(&self);
-}
-
-#[allow(unsafe_code)]
-impl LayoutDocumentHelpers for LayoutJS<Document> {
+impl<'a> LayoutJS<'a, Document> {
     #[inline]
-    unsafe fn is_html_document_for_layout(&self) -> bool {
+    pub unsafe fn is_html_document_for_layout(&self) -> bool {
         (*self.unsafe_get()).is_html_document
     }
 
     #[inline]
     #[allow(unrooted_must_root)]
-    unsafe fn drain_modified_elements(&self) -> Vec<(LayoutJS<Element>, ElementSnapshot)> {
+    pub unsafe fn drain_modified_elements(&self) -> Vec<(LayoutJS<'a, Element>, ElementSnapshot)> {
         let mut elements = (*self.unsafe_get()).modified_elements.borrow_mut_for_layout();
         let result = elements.drain().map(|(k, v)| (k.to_layout(), v)).collect();
         result
     }
 
     #[inline]
-    unsafe fn needs_paint_from_layout(&self) {
+    pub unsafe fn needs_paint_from_layout(&self) {
         (*self.unsafe_get()).needs_paint.set(true)
     }
 
     #[inline]
-    unsafe fn will_paint(&self) {
+    pub unsafe fn will_paint(&self) {
         (*self.unsafe_get()).needs_paint.set(false)
     }
 }
