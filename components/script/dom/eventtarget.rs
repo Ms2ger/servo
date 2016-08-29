@@ -32,6 +32,7 @@ use heapsize::HeapSizeOf;
 use js::jsapi::{CompileFunction, JS_GetFunctionObject, JSAutoCompartment};
 use js::rust::{AutoObjectVectorWrapper, CompileOptionsWrapper};
 use libc::{c_char, size_t};
+use movecell::MoveCell;
 use std::collections::HashMap;
 use std::collections::hash_map::Entry::{Occupied, Vacant};
 use std::default::Default;
@@ -87,29 +88,29 @@ impl InlineEventListener {
     /// Get a compiled representation of this event handler, compiling it from its
     /// raw source if necessary.
     /// https://html.spec.whatwg.org/multipage/#getting-the-current-value-of-the-event-handler
-    fn get_compiled_handler(&mut self, owner: &EventTarget, ty: &Atom)
+    fn get_compiled_handler(this: MoveCell<InlineEventListener>, owner: &EventTarget, ty: &Atom)
                             -> Option<CommonEventHandler> {
-        match mem::replace(self, InlineEventListener::Null) {
+        match this.replace(InlineEventListener::Null) {
             InlineEventListener::Null => None,
             InlineEventListener::Uncompiled(handler) => {
                 let result = owner.get_compiled_event_handler(handler, ty);
                 if let Some(ref compiled) = result {
-                    *self = InlineEventListener::Compiled(compiled.clone());
+                    this.replace(InlineEventListener::Compiled(compiled.clone()));
                 }
                 result
             }
             InlineEventListener::Compiled(handler) => {
-                *self = InlineEventListener::Compiled(handler.clone());
+                this.replace(InlineEventListener::Compiled(handler.clone()));
                 Some(handler)
             }
         }
     }
 }
 
-#[derive(JSTraceable, Clone, PartialEq)]
+#[derive(JSTraceable)]
 enum EventListenerType {
     Additive(Rc<EventListener>),
-    Inline(InlineEventListener),
+    Inline(MoveCell<InlineEventListener>),
 }
 
 impl HeapSizeOf for EventListenerType {
@@ -120,13 +121,13 @@ impl HeapSizeOf for EventListenerType {
 }
 
 impl EventListenerType {
-    fn get_compiled_listener(&mut self, owner: &EventTarget, ty: &Atom)
+    fn get_compiled_listener(&self, owner: &EventTarget, ty: &Atom)
                              -> Option<CompiledEventListener> {
         match self {
-            &mut EventListenerType::Inline(ref mut inline) =>
-                inline.get_compiled_handler(owner, ty)
+            &EventListenerType::Inline(ref inline) =>
+                InlineEventListener::get_compiled_handler(inline, owner, ty)
                       .map(CompiledEventListener::Handler),
-            &mut EventListenerType::Additive(ref listener) =>
+            &EventListenerType::Additive(ref listener) =>
                 Some(CompiledEventListener::Listener(listener.clone())),
         }
     }
@@ -253,7 +254,7 @@ impl EventListeners {
         for entry in &mut self.0 {
             if let EventListenerType::Inline(ref mut inline) = entry.listener {
                 // Step 1.1-1.8 and Step 2
-                return inline.get_compiled_handler(owner, ty);
+                return InlineEventListener::get_compiled_handler(inline, owner, ty);
             }
         }
 
@@ -262,9 +263,9 @@ impl EventListeners {
     }
 
     // https://html.spec.whatwg.org/multipage/#getting-the-current-value-of-the-event-handler
-    fn get_listeners(&mut self, phase: Option<ListenerPhase>, owner: &EventTarget, ty: &Atom)
+    fn get_listeners(&self, phase: Option<ListenerPhase>, owner: &EventTarget, ty: &Atom)
                      -> Vec<CompiledEventListener> {
-        self.0.iter_mut().filter_map(|entry| {
+        self.0.iter().filter_map(|entry| {
             if phase.is_none() || Some(entry.phase) == phase {
                 // Step 1.1-1.8, 2
                 entry.listener.get_compiled_listener(owner, ty)
@@ -293,7 +294,7 @@ impl EventTarget {
                              type_: &Atom,
                              specific_phase: Option<ListenerPhase>)
                              -> Vec<CompiledEventListener> {
-        self.handlers.borrow_mut().get_mut(type_).map_or(vec![], |listeners| {
+        self.handlers.borrow().get(type_).map_or(vec![], |listeners| {
             listeners.get_listeners(specific_phase, self, type_)
         })
     }
