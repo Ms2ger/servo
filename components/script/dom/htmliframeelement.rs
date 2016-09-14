@@ -140,52 +140,57 @@ impl HTMLIFrameElement {
 
         let is_about_blank = load_data.as_ref().map_or(false, |d| d.url.as_str() == "about:blank");
         let (sync_sender, sync_receiver) = if is_about_blank {
-            let (tx, rx) = ipc::channel().unwrap();
-            (Some(tx), Some(rx))
-        } else {
-            (None, None)
-        };
+            let (sender, receiver) = ipc::channel().unwrap();
 
-        let iframe_load = if let Some(sender) = sync_sender {
             // Instruct the constellation that it should return to using this thread's
             // event loop as usual after sending the initial frame creation message
             // to a separate, synchronous event loop.
             let constellation_chan = ScriptThread::get_constellation_sender();
-            IFrameLoadType::Sync((sender.to_opaque(), constellation_chan.to_opaque()))
-        } else {
-            IFrameLoadType::Async(AsyncIFrameLoad {
-                load_data: load_data,
-                sandbox: sandboxed,
-                old_pipeline_id: old_pipeline_id,
-            })
-        };
+            let iframe_load =
+                IFrameLoadType::Sync((sender.to_opaque(), constellation_chan.to_opaque()));
+            let load_info = IFrameLoadInfo {
+                is_private: private_iframe,
+                frame_type: frame_type,
+                load_type: iframe_load,
+            };
+            window.constellation_chan()
+                  .send(ConstellationMsg::ScriptLoadedURLInIFrame(load_info))
+                  .unwrap();
 
-        let global_scope = window.upcast::<GlobalScope>();
-        let load_info = IFrameLoadInfo {
-            parent_pipeline_id: global_scope.pipeline_id(),
-            frame_id: self.frame_id,
-            new_pipeline_id: new_pipeline_id,
-            is_private: private_iframe,
-            frame_type: frame_type,
-            replace: replace,
-            load_type: iframe_load,
-        };
-        global_scope
-              .constellation_chan()
-              .send(ConstellationMsg::ScriptLoadedURLInIFrame(load_info))
-              .unwrap();
-
-        // If this is a synchronous frame creation, we must block until we receive the
-        // notification from the constellation that the new frame is ready and the
-        // network load can begin.
-        if let Some(receiver) = sync_receiver {
+            // If this is a synchronous frame creation, we must block until we receive the
+            // notification from the constellation that the new frame is ready and the
+            // network load can begin.
             let msg = receiver.recv().unwrap();
             let new_layout_info = match msg {
                 ConstellationControlMsg::AttachLayout(new_layout_info) => new_layout_info,
                 _ => panic!("Expected AttachLayout"),
             };
             // Synchronously perform the network load associated with this frame.
-            ScriptThread::process_attach_layout(new_layout_info);
+            ScriptThread::process_attach_layout(
+                new_pipeline_id,
+                window.pipeline_id(),
+                frame_type,
+                );
+        } else {
+            let iframe_load =
+                IFrameLoadType::Async(AsyncIFrameLoad {
+                    load_data: load_data,
+                    sandbox: sandboxed,
+                    old_pipeline_id: old_pipeline_id,
+                });
+            let global_scope = window.upcast::<GlobalScope>();
+            let load_info = IFrameLoadInfo {
+                parent_pipeline_id: global_scope.pipeline_id(),
+                frame_id: self.frame_id,
+                new_pipeline_id: new_pipeline_id,
+                is_private: private_iframe,
+                frame_type: frame_type,
+                load_type: iframe_load,
+            };
+            global_scope
+                  .constellation_chan()
+                  .send(ConstellationMsg::ScriptLoadedURLInIFrame(load_info))
+                  .unwrap();
         }
 
         if PREFS.is_mozbrowser_enabled() {
@@ -226,7 +231,6 @@ impl HTMLIFrameElement {
         }
     }
 
-    /// https://html.spec.whatwg.org/multipage/#creating-a-new-browsing-context
     fn create_nested_browsing_context(&self) {
         assert!(self.nested_browsing_context.get().is_none());
         // Synchronously create a new context and navigate it to about:blank.

@@ -476,7 +476,7 @@ impl ScriptThreadFactory for ScriptThread {
 
             let new_load = InProgressLoad::new(id, parent_info, layout_chan, window_size,
                                                load_data.url.clone());
-            script_thread.start_page_load(new_load, load_data, None);
+            script_thread.start_page_load(new_load, load_data);
 
             let reporter_name = format!("script-reporter-{}", id);
             mem_profiler_chan.run_with_memory_reporting(|| {
@@ -558,7 +558,7 @@ impl ScriptThread {
             if let Some(script_thread) = root.get() {
                 let script_thread = unsafe { &*script_thread };
                 script_thread.profile_event(ScriptThreadEventCategory::AttachLayout, || {
-                    script_thread.handle_new_layout(new_layout_info);
+                    script_thread.handle_new_layout_about_blank(new_layout_info);
                 })
             }
         });
@@ -1171,7 +1171,6 @@ impl ScriptThread {
             layout_to_constellation_chan,
             content_process_shutdown_chan,
             layout_threads,
-            is_sync,
         } = new_layout_info;
 
         let layout_pair = channel();
@@ -1205,12 +1204,53 @@ impl ScriptThread {
         let new_load = InProgressLoad::new(new_pipeline_id, Some((parent_pipeline_id, frame_type)),
                                            layout_chan, parent_window.window_size(),
                                            load_data.url.clone());
-        let script_pair = if is_sync {
-            Some(parent_window.new_script_pair())
-        } else {
-            None
+        self.start_page_load(new_load, load_data);
+    }
+
+    fn handle_new_layout_about_blank(&self,
+                                     new_pipeline_id: PipelineId,
+                                     parent_pipeline_id: PipelineId,
+                                     frame_type: FrameType) {
+        let load_data = LoadData::new(Url::parse("about:blank").expect("infallible"), None, None);
+
+        let paint_chan = layout_to_paint_chan.clone().to_opaque();
+        let (pipeline_chan, pipeline_port) = ipc::channel().expect("Pipeline main chan");
+        let layout_to_constellation_chan = self.layout_sender.clone();
+
+        let layout_pair = channel();
+        let layout_chan = layout_pair.0.clone();
+
+        let layout_creation_info = NewLayoutThreadInfo {
+            id: new_pipeline_id,
+            url: load_data.url.clone(),
+            is_parent: false,
+            layout_pair: layout_pair,
+            pipeline_port: pipeline_port,
+            constellation_chan: layout_to_constellation_chan,
+            paint_chan: paint_chan,
+            script_chan: self.control_chan.clone(),
+            image_cache_thread: self.image_cache_thread.clone(),
+            content_process_shutdown_chan: None,
+            layout_threads: PREFS.get("layout.threads").as_u64().expect("count") as usize,
         };
-        self.start_page_load(new_load, load_data, script_pair);
+
+        let context = self.root_browsing_context();
+        let parent_context = context.find(parent_pipeline_id).expect("ScriptThread: received a layout
+            whose parent has a PipelineId which does not correspond to a pipeline in the script
+            thread's browsing context tree. This is a bug.");
+        let parent_window = parent_context.active_window();
+
+        // Tell layout to actually spawn the thread.
+        parent_window.layout_chan()
+                     .send(message::Msg::CreateLayoutThread(layout_creation_info))
+                     .unwrap();
+
+        // Kick off the fetch for the new resource.
+        let new_load = InProgressLoad::new(new_pipeline_id, Some((parent_pipeline_id, frame_type)),
+                                           layout_chan, parent_window.window_size(),
+                                           load_data.url.clone());
+        let script_pair = parent_window.new_script_pair();
+        self.start_page_load_about_blank(new_load, load_data, script_pair);
     }
 
     fn handle_loads_complete(&self, pipeline: PipelineId) {
@@ -2137,22 +2177,59 @@ impl ScriptThread {
     /// argument until a notification is received that the fetch is complete.
     fn start_page_load(&self,
                        incomplete: InProgressLoad,
-                       mut load_data: LoadData,
-                       script_pair: Option<(Box<ScriptChan + Send>, Box<ScriptPort + Send>)>) {
+                       mut load_data: LoadData) {
         let id = incomplete.pipeline_id.clone();
 
         let context = Arc::new(Mutex::new(ParserContext::new(id, load_data.url.clone())));
 
-        let (script_chan, script_port) = if let Some((chan, port)) = script_pair {
-            (Some(chan), Some(port))
-        } else {
-            (None, None)
+        let (action_sender, action_receiver) = ipc::channel().unwrap();
+        let listener = NetworkListener {
+            context: context,
+            script_chan: self.chan.clone(),
+            wrapper: None,
         };
+        ROUTER.add_route(action_receiver.to_opaque(), box move |message| {
+            listener.notify_action(message.to().unwrap());
+        });
+        let response_target = AsyncResponseTarget {
+            sender: action_sender,
+        };
+
+        if load_data.url.scheme() == "javascript" {
+            load_data.url = Url::parse("about:blank").unwrap();
+        }
+
+        self.resource_threads.send(CoreResourceMsg::Load(NetLoadData {
+            context: LoadContext::Browsing,
+            url: load_data.url,
+            method: load_data.method,
+            headers: Headers::new(),
+            preserved_headers: load_data.headers,
+            data: load_data.data,
+            cors: None,
+            pipeline_id: Some(id),
+            credentials_flag: true,
+            referrer_policy: load_data.referrer_policy,
+            referrer_url: load_data.referrer_url
+        }, LoadConsumer::Listener(response_target), None)).unwrap();
+
+        self.incomplete_loads.borrow_mut().push(incomplete);
+    }
+
+    /// Initiate a non-blocking fetch for a specified resource. Stores the InProgressLoad
+    /// argument until a notification is received that the fetch is complete.
+    fn start_page_load_about_blank(&self,
+                       incomplete: InProgressLoad,
+                       mut load_data: LoadData,
+                       (chan, port): (Box<ScriptChan + Send>, Box<ScriptPort + Send>)) {
+        let id = incomplete.pipeline_id.clone();
+
+        let context = Arc::new(Mutex::new(ParserContext::new(id, load_data.url.clone())));
 
         let (action_sender, action_receiver) = ipc::channel().unwrap();
         let listener = NetworkListener {
             context: context,
-            script_chan: script_chan.unwrap_or_else(|| self.chan.clone()),
+            script_chan: chan,
             wrapper: None,
         };
         ROUTER.add_route(action_receiver.to_opaque(), box move |message| {
@@ -2182,10 +2259,8 @@ impl ScriptThread {
 
         self.incomplete_loads.borrow_mut().push(incomplete);
 
-        if let Some(script_port) = script_port {
-            while let Ok(event) = script_port.recv() {
-                self.handle_msg_from_script(MainThreadScriptMsg::Common(event));
-            }
+        while let Ok(event) = port.recv() {
+            self.handle_msg_from_script(MainThreadScriptMsg::Common(event));
         }
     }
 
