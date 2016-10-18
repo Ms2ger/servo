@@ -339,6 +339,8 @@ impl FetchResponseListener for ParserContext {
 
     fn process_response(&mut self,
                         meta_result: Result<FetchMetadata, NetworkError>) {
+        println!("PAR process_response");
+        println!("  PAR process_response meta ok?{:?}", meta_result.is_ok());
         let mut ssl_error = None;
         let metadata = match meta_result {
             Ok(meta) => {
@@ -354,8 +356,13 @@ impl FetchResponseListener for ParserContext {
                 meta.set_content_type(mime.as_ref());
                 Some(meta)
             },
-            Err(_) => None,
+            Err(e) => {
+                println!("Got error {:?}", e);
+                None
+            }
+            ,
         };
+        println!("  PAR process_response meta some?{:?}", metadata.is_some());
         let content_type =
             metadata.clone().and_then(|meta| meta.content_type).map(Serde::into_inner);
         let parser = match ScriptThread::page_headers_available(&self.id,
@@ -419,6 +426,7 @@ impl FetchResponseListener for ParserContext {
     }
 
     fn process_response_chunk(&mut self, payload: Vec<u8>) {
+        println!("PAR process_response_ch");
         if !self.is_synthesized_document {
             // FIXME: use Vec<u8> (html5ever #34)
             let data = UTF_8.decode(&payload, DecoderTrap::Replace).unwrap();
@@ -431,12 +439,14 @@ impl FetchResponseListener for ParserContext {
     }
 
     fn process_response_eof(&mut self, status: Result<(), NetworkError>) {
+        println!("PAR process_response_eof self.parser.is_some()={}", self.parser.is_some());
         let parser = match self.parser.as_ref() {
             Some(parser) => parser.root(),
             None => return,
         };
 
         if let Err(NetworkError::Internal(ref reason)) = status {
+            println!("Network error");
             // Show an error page for network errors,
             // certificate errors are handled earlier.
             self.is_synthesized_document = true;

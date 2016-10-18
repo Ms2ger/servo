@@ -30,6 +30,8 @@ function appendIframeToBody(url, attributes) {
   }
   document.body.appendChild(iframe);
 
+  console.log("appendIframeToBody(" + url + ", " + attributes)
+
   return iframe;
 }
 
@@ -100,6 +102,7 @@ function wrapResult(url, server_data) {
 }
 
 function queryIframe(url, callback, referrer_policy) {
+  console.log("queryIframe")
   var x = document.createElement('script');
   x.src = '/common/utils.js';
   x.onerror = function() { console.log('whoops') };
@@ -107,12 +110,20 @@ function queryIframe(url, callback, referrer_policy) {
   document.getElementsByTagName("head")[0].appendChild(x);
 
   function doQuery() {
+    console.log("doQueryIframe")
     var id = token();
     var iframe = appendIframeToBody(url + "&id=" + id, referrer_policy);
+    iframe.addEventListener("error",  function listener() {
+      console.log("ERROR")
+    });
     iframe.addEventListener("load", function listener() {
+      console.log("LOAD")
       var xhr = new XMLHttpRequest();
       xhr.open('GET', '/_mozilla/mozilla/referrer-policy/generic/subresource/stash.py?id=' + id, false);
       xhr.onload = function(e) {
+        console.log("=== responseText ===")
+        console.log(this.responseText)
+        console.log("^^^ responseText ^^^")
         var server_data = JSON.parse(this.responseText);
         callback(server_data);
       };

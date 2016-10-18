@@ -1200,6 +1200,7 @@ impl<Message, LTF, STF> Constellation<Message, LTF, STF>
     }
 
     fn handle_subframe_loaded(&mut self, pipeline_id: PipelineId) {
+        println!("handle_subframe_loaded");
         let parent_info = match self.pipelines.get(&pipeline_id) {
             Some(pipeline) => pipeline.parent_info,
             None => return warn!("Pipeline {:?} loaded after closure.", pipeline_id),
@@ -1208,6 +1209,7 @@ impl<Message, LTF, STF> Constellation<Message, LTF, STF>
             Some(ref parent) => parent.0,
             None => return warn!("Pipeline {:?} has no parent.", pipeline_id),
         };
+        println!("DISSPATCHING ConstellationControlMsg::DispatchFrameLoadEvent");
         let msg = ConstellationControlMsg::DispatchFrameLoadEvent {
             target: pipeline_id,
             parent: subframe_parent_id,
@@ -1454,6 +1456,7 @@ impl<Message, LTF, STF> Constellation<Message, LTF, STF>
     }
 
     fn handle_load_complete_msg(&mut self, pipeline_id: PipelineId) {
+        println!("handle_load_complete_msg");
         let mut webdriver_reset = false;
         if let Some((expected_pipeline_id, ref reply_chan)) = self.webdriver.load_channel {
             debug!("Sending load to WebDriver");

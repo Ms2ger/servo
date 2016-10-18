@@ -237,6 +237,8 @@ impl HTMLIFrameElement {
         // TODO Step 2 - check child document `mute iframe load` flag
         // TODO Step 3 - set child document  `mut iframe load` flag
 
+        println!("IFRAME LOAD EVENT");
+
         // Step 4
         self.upcast::<EventTarget>().fire_simple_event("load");
 

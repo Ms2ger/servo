@@ -1184,6 +1184,7 @@ impl ScriptThread {
     }
 
     fn handle_loads_complete(&self, pipeline: PipelineId) {
+        println!("handle_loads_complete");
         let doc = match self.root_browsing_context().find(pipeline) {
             Some(browsing_context) => browsing_context.active_document(),
             None => return warn!("Message sent to closed pipeline {}.", pipeline),
@@ -1421,9 +1422,10 @@ impl ScriptThread {
     fn handle_page_headers_available(&self, id: &PipelineId,
                                      metadata: Option<Metadata>) -> Option<Root<ServoParser>> {
         let idx = self.incomplete_loads.borrow().iter().position(|load| { load.pipeline_id == *id });
+        println!("page_headers_available {:?} {:?} {:?}", id, metadata.is_some(), idx);
         // The matching in progress load structure may not exist if
         // the pipeline exited before the page load completed.
-        match idx {
+        let x = match idx {
             Some(idx) => {
                 let load = self.incomplete_loads.borrow_mut().remove(idx);
                 metadata.map(|meta| self.load(meta, load))
@@ -1432,7 +1434,9 @@ impl ScriptThread {
                 assert!(self.closed_pipelines.borrow().contains(id));
                 None
             }
-        }
+        };
+        println!("  page_headers_available {:?}", x.is_some());
+        x
     }
 
     fn handle_serviceworker_registration(&self,
@@ -1567,6 +1571,7 @@ impl ScriptThread {
 
     /// Notify the containing document of a child frame that has completed loading.
     fn handle_frame_load_event(&self, parent_pipeline_id: PipelineId, id: PipelineId) {
+        debug!("handle_frame_load_event {:?} {:?}", parent_pipeline_id, id);
         let document = match self.root_browsing_context().find(parent_pipeline_id) {
             Some(browsing_context) => browsing_context.active_document(),
             None => return warn!("Message sent to closed pipeline {}.", parent_pipeline_id),

@@ -1613,7 +1613,8 @@ impl Document {
         update_with_current_time_ms(&self.dom_content_loaded_event_end);
     }
 
-    pub fn notify_constellation_load(&self) {
+    fn notify_constellation_load(&self) {
+        println!("notify_constellation_load");
         let global_scope = self.window.upcast::<GlobalScope>();
         let pipeline_id = global_scope.pipeline_id();
         let load_event = ConstellationMsg::LoadComplete(pipeline_id);
@@ -3064,6 +3065,7 @@ impl Runnable for DocumentProgressHandler {
     fn name(&self) -> &'static str { "DocumentProgressHandler" }
 
     fn handler(self: Box<DocumentProgressHandler>) {
+        println!("DocumentProgressHandler");
         let document = self.addr.root();
         let window = document.window();
         if window.is_alive() {
