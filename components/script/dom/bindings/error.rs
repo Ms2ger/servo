@@ -219,8 +219,19 @@ pub unsafe fn report_pending_exception(cx: *mut JSContext, dispatch_event: bool)
         match error_info {
             Some(error_info) => error_info,
             None => {
-                error!("Uncaught exception: failed to extract information");
-                return;
+                match USVString::from_jsval(cx, value.handle(), ()) {
+                    Ok(ConversionResult::Success(USVString(string))) => {
+                        ErrorInfo {
+                            message: format!("uncaught exception: {}", string),
+                            filename: String::new(),
+                            lineno: 0,
+                            column: 0,
+                        }
+                    },
+                    _ => {
+                        panic!("Uncaught exception: failed to stringify primitive");
+                    },
+                }
             }
         }
     } else {

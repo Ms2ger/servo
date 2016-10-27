@@ -1262,6 +1262,7 @@ impl Window {
         if !self.reflow(ReflowGoal::ForScriptQuery,
                         ReflowQueryType::OffsetParentQuery(node),
                         ReflowReason::Query) {
+            println!("Reflow didn't reflow");
             return (None, Rect::zero());
         }
 
@@ -1272,6 +1273,7 @@ impl Window {
             let node = from_untrusted_node_address(js_runtime.rt(), parent_node_address);
             Root::downcast(node)
         });
+        println!("Reflow did reflow {:?}", response.rect);
         (element, response.rect)
     }
 
