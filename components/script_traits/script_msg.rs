@@ -4,8 +4,11 @@
 
 use AnimationState;
 use CompositorEvent;
+use ConstellationControlMsg;
 use DocumentState;
 use IFrameLoadInfo;
+use IFrameLoadInfo2;
+use LayoutControlMsg;
 use LoadData;
 use MozBrowserEvent;
 use WorkerGlobalScopeInit;
@@ -103,6 +106,8 @@ pub enum ScriptMsg {
     VisibilityChangeComplete(PipelineId, bool),
     /// A load has been requested in an IFrame.
     ScriptLoadedURLInIFrame(IFrameLoadInfo),
+    /// A load has been requested in an IFrame.
+    ScriptDidLoadURLInIFrame(IFrameLoadInfo2, IpcSender<ConstellationControlMsg>, IpcSender<LayoutControlMsg>),
     /// Requests that the constellation set the contents of the clipboard
     SetClipboardContents(String),
     /// Mark a new document as active

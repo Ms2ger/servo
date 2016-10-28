@@ -66,6 +66,7 @@ use util::prefs::PREFS;
 use util::remutex::ReentrantMutex;
 use util::thread::spawn_named;
 use webrender_traits;
+use script_traits::IFrameLoadInfo2;
 
 #[derive(Debug, PartialEq)]
 enum ReadyToSave {
@@ -820,6 +821,12 @@ impl<Message, LTF, STF> Constellation<Message, LTF, STF>
                        load_info.new_pipeline_id);
                 self.handle_script_loaded_url_in_iframe_msg(load_info);
             }
+            FromScriptMsg::ScriptDidLoadURLInIFrame(load_info, sc, lc) => {
+                debug!("constellation got did load iframe URL message {:?} {:?}",
+                       load_info.parent_pipeline_id,
+                       load_info.new_pipeline_id);
+                self.handle_script_did_load_url_in_iframe_msg(load_info, sc, lc);
+            }
             FromScriptMsg::ChangeRunningAnimationsState(pipeline_id, animation_state) => {
                 self.handle_change_running_animations_state(pipeline_id, animation_state)
             }
@@ -1331,6 +1338,57 @@ impl<Message, LTF, STF> Constellation<Message, LTF, STF>
         self.pending_frames.push(FrameChange {
             frame_id: frame_id,
             old_pipeline_id: old_pipeline_id,
+            new_pipeline_id: new_pipeline_id,
+            document_ready: false,
+            replace: replace,
+        });
+    }
+
+    fn handle_script_did_load_url_in_iframe_msg(&mut self,
+                                                load_info: IFrameLoadInfo2,
+           script_chan: IpcSender<ConstellationControlMsg>,
+                                                layout_chan: IpcSender<LayoutControlMsg>) {
+        let IFrameLoadInfo2 {
+            parent_pipeline_id,
+            new_pipeline_id,
+            frame_type,
+            replace,
+            frame_id,
+            is_private,
+        } = load_info;
+
+        let load_data = LoadData::new(Url::parse("about:blank").expect("infallible"), None, None);
+        let is_private = {
+            let source_pipeline =  match self.pipelines.get(&parent_pipeline_id) {
+                Some(source_pipeline) => source_pipeline,
+                None => return warn!("Script loaded url in closed iframe {}.", parent_pipeline_id),
+            };
+
+            is_private || source_pipeline.is_private
+        };
+
+
+        let prev_visibility = self.pipelines
+                                  .get(&parent_pipeline_id)
+                                  .map(|pipeline| pipeline.visible);
+
+        let pipeline = Pipeline::spawned(new_pipeline_id,
+                                         frame_id,
+                                         Some((parent_pipeline_id, frame_type)),
+                                         script_chan,
+                                         layout_chan,
+                                         self.compositor_proxy.clone_compositor_proxy(),
+                                         is_private,
+                                         load_data.url,
+                                         None,
+                                         prev_visibility.unwrap_or(true));
+
+        assert!(!self.pipelines.contains_key(&new_pipeline_id));
+        self.pipelines.insert(new_pipeline_id, pipeline);
+
+        self.pending_frames.push(FrameChange {
+            frame_id: frame_id,
+            old_pipeline_id: None,
             new_pipeline_id: new_pipeline_id,
             document_ready: false,
             replace: replace,

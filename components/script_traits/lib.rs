@@ -173,9 +173,9 @@ pub struct NewLayoutInfo {
     /// A port on which layout can receive messages from the pipeline.
     pub pipeline_port: IpcReceiver<LayoutControlMsg>,
     /// A sender for the layout thread to communicate to the constellation.
-    pub layout_to_constellation_chan: IpcSender<LayoutMsg>,
+    pub layout_to_constellation_chan: Option<IpcSender<LayoutMsg>>,
     /// A shutdown channel so that layout can tell the content process to shut down when it's done.
-    pub content_process_shutdown_chan: IpcSender<()>,
+    pub content_process_shutdown_chan: Option<IpcSender<()>>,
     /// Number of threads to use for layout.
     pub layout_threads: usize,
     /// True if this new pipeline load should occur synchronously.
@@ -518,6 +518,24 @@ pub struct IFrameLoadInfo {
     pub replace: bool,
     /// The type of load the is being requested.
     pub load_type: IFrameLoadType,
+}
+
+/// Specifies the information required to load a URL in an iframe.
+#[derive(Deserialize, Serialize)]
+pub struct IFrameLoadInfo2 {
+    /// Pipeline ID of the parent of this iframe
+    pub parent_pipeline_id: PipelineId,
+    /// The ID for this iframe.
+    pub frame_id: FrameId,
+    /// The new pipeline ID that the iframe has generated.
+    pub new_pipeline_id: PipelineId,
+    ///  Whether this iframe should be considered private
+    pub is_private: bool,
+    /// Whether this iframe is a mozbrowser iframe
+    pub frame_type: FrameType,
+    /// Wether this load should replace the current entry (reload). If true, the current
+    /// entry will be replaced instead of a new entry being added.
+    pub replace: bool,
 }
 
 // https://developer.mozilla.org/en-US/docs/Web/API/Using_the_Browser_API#Events

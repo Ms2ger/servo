@@ -114,6 +114,7 @@ use url::{Position, Url};
 use util::opts;
 use util::thread;
 use webdriver_handlers;
+use script_traits::LayoutMsg;
 
 thread_local!(pub static STACK_ROOTS: Cell<Option<RootCollectionPtr>> = Cell::new(None));
 thread_local!(static SCRIPT_THREAD_ROOT: Cell<Option<*const ScriptThread>> = Cell::new(None));
@@ -402,6 +403,8 @@ pub struct ScriptThread {
     content_process_shutdown_chan: IpcSender<()>,
 
     promise_job_queue: PromiseJobQueue,
+
+    layout_to_constellation_chan: DOMRefCell<Option<IpcSender<LayoutMsg>>>,
 }
 
 /// In the event of thread panic, all data on the stack runs its destructor. However, there
@@ -558,7 +561,7 @@ impl ScriptThread {
             if let Some(script_thread) = root.get() {
                 let script_thread = unsafe { &*script_thread };
                 script_thread.profile_event(ScriptThreadEventCategory::AttachLayout, || {
-                    script_thread.handle_new_layout_about_blank(new_layout_info);
+                    script_thread.handle_new_layout(new_layout_info);
                 })
             }
         });
@@ -635,6 +638,8 @@ impl ScriptThread {
             content_process_shutdown_chan: state.content_process_shutdown_chan,
 
             promise_job_queue: PromiseJobQueue::new(),
+
+            layout_to_constellation_chan: DOMRefCell::new(None),
         }
     }
 
@@ -1171,7 +1176,16 @@ impl ScriptThread {
             layout_to_constellation_chan,
             content_process_shutdown_chan,
             layout_threads,
+            ..
         } = new_layout_info;
+
+        let ltcc = {
+            let mut stored_ltcc = self.layout_to_constellation_chan.borrow_mut();
+            if stored_ltcc.is_none() {
+                *stored_ltcc = layout_to_constellation_chan;
+            }
+            stored_ltcc.clone().unwrap()
+        };
 
         let layout_pair = channel();
         let layout_chan = layout_pair.0.clone();
@@ -1182,7 +1196,7 @@ impl ScriptThread {
             is_parent: false,
             layout_pair: layout_pair,
             pipeline_port: pipeline_port,
-            constellation_chan: layout_to_constellation_chan,
+            constellation_chan: ltcc,
             script_chan: self.control_chan.clone(),
             image_cache_thread: self.image_cache_thread.clone(),
             content_process_shutdown_chan: content_process_shutdown_chan,
@@ -1204,53 +1218,11 @@ impl ScriptThread {
         let new_load = InProgressLoad::new(new_pipeline_id, Some((parent_pipeline_id, frame_type)),
                                            layout_chan, parent_window.window_size(),
                                            load_data.url.clone());
-        self.start_page_load(new_load, load_data);
-    }
-
-    fn handle_new_layout_about_blank(&self,
-                                     new_pipeline_id: PipelineId,
-                                     parent_pipeline_id: PipelineId,
-                                     frame_type: FrameType) {
-        let load_data = LoadData::new(Url::parse("about:blank").expect("infallible"), None, None);
-
-        let paint_chan = layout_to_paint_chan.clone().to_opaque();
-        let (pipeline_chan, pipeline_port) = ipc::channel().expect("Pipeline main chan");
-        let layout_to_constellation_chan = self.layout_sender.clone();
-
-        let layout_pair = channel();
-        let layout_chan = layout_pair.0.clone();
-
-        let layout_creation_info = NewLayoutThreadInfo {
-            id: new_pipeline_id,
-            url: load_data.url.clone(),
-            is_parent: false,
-            layout_pair: layout_pair,
-            pipeline_port: pipeline_port,
-            constellation_chan: layout_to_constellation_chan,
-            paint_chan: paint_chan,
-            script_chan: self.control_chan.clone(),
-            image_cache_thread: self.image_cache_thread.clone(),
-            content_process_shutdown_chan: None,
-            layout_threads: PREFS.get("layout.threads").as_u64().expect("count") as usize,
-        };
-
-        let context = self.root_browsing_context();
-        let parent_context = context.find(parent_pipeline_id).expect("ScriptThread: received a layout
-            whose parent has a PipelineId which does not correspond to a pipeline in the script
-            thread's browsing context tree. This is a bug.");
-        let parent_window = parent_context.active_window();
-
-        // Tell layout to actually spawn the thread.
-        parent_window.layout_chan()
-                     .send(message::Msg::CreateLayoutThread(layout_creation_info))
-                     .unwrap();
-
-        // Kick off the fetch for the new resource.
-        let new_load = InProgressLoad::new(new_pipeline_id, Some((parent_pipeline_id, frame_type)),
-                                           layout_chan, parent_window.window_size(),
-                                           load_data.url.clone());
-        let script_pair = parent_window.new_script_pair();
-        self.start_page_load_about_blank(new_load, load_data, script_pair);
+        if load_data.url.as_str() == "about:blank" {
+            self.start_page_load_about_blank(new_load);
+        } else {
+            self.start_page_load(new_load, load_data);
+        }
     }
 
     fn handle_loads_complete(&self, pipeline: PipelineId) {
@@ -2218,50 +2190,20 @@ impl ScriptThread {
 
     /// Initiate a non-blocking fetch for a specified resource. Stores the InProgressLoad
     /// argument until a notification is received that the fetch is complete.
-    fn start_page_load_about_blank(&self,
-                       incomplete: InProgressLoad,
-                       mut load_data: LoadData,
-                       (chan, port): (Box<ScriptChan + Send>, Box<ScriptPort + Send>)) {
+    fn start_page_load_about_blank(&self, incomplete: InProgressLoad) {
+        use net_traits::AsyncResponseListener;
         let id = incomplete.pipeline_id.clone();
-
-        let context = Arc::new(Mutex::new(ParserContext::new(id, load_data.url.clone())));
-
-        let (action_sender, action_receiver) = ipc::channel().unwrap();
-        let listener = NetworkListener {
-            context: context,
-            script_chan: chan,
-            wrapper: None,
-        };
-        ROUTER.add_route(action_receiver.to_opaque(), box move |message| {
-            listener.notify_action(message.to().unwrap());
-        });
-        let response_target = AsyncResponseTarget {
-            sender: action_sender,
-        };
-
-        if load_data.url.scheme() == "javascript" {
-            load_data.url = Url::parse("about:blank").unwrap();
-        }
-
-        self.resource_threads.send(CoreResourceMsg::Load(NetLoadData {
-            context: LoadContext::Browsing,
-            url: load_data.url,
-            method: load_data.method,
-            headers: Headers::new(),
-            preserved_headers: load_data.headers,
-            data: load_data.data,
-            cors: None,
-            pipeline_id: Some(id),
-            credentials_flag: true,
-            referrer_policy: load_data.referrer_policy,
-            referrer_url: load_data.referrer_url
-        }, LoadConsumer::Listener(response_target), None)).unwrap();
 
         self.incomplete_loads.borrow_mut().push(incomplete);
 
-        while let Ok(event) = port.recv() {
-            self.handle_msg_from_script(MainThreadScriptMsg::Common(event));
-        }
+        let url = Url::parse("about:blank").unwrap();
+        let mut context = ParserContext::new(id, url.clone());
+
+        let mut meta = Metadata::default(url);
+        meta.set_content_type(Some(&mime!(Text/Html)));
+        context.headers_available(Ok(meta));
+        context.data_available(vec![]);
+        context.response_complete(Ok(()));
     }
 
     fn handle_parsing_complete(&self, id: PipelineId) {

@@ -159,7 +159,7 @@ impl Pipeline {
                     frame_type: frame_type,
                     load_data: state.load_data.clone(),
                     pipeline_port: pipeline_port,
-                    layout_to_constellation_chan: state.layout_to_constellation_chan.clone(),
+                    layout_to_constellation_chan: Some(state.layout_to_constellation_chan.clone()),
                     content_process_shutdown_chan: Some(layout_content_process_shutdown_chan.clone()),
                     layout_threads: PREFS.get("layout.threads").as_u64().expect("count") as usize,
                     is_sync: state.replacement_script_chan.is_some(),
@@ -261,69 +261,33 @@ impl Pipeline {
         Ok((pipeline, child_process))
     }
 
-    /// Starts a paint thread, layout thread, and possibly a script thread, in
-    /// a new process if requested.
-    pub fn spawned<Message, LTF, STF>(state: InitialPipelineState)
-                                    -> Result<Pipeline, IOError>
-        where LTF: LayoutThreadFactory<Message=Message>,
-              STF: ScriptThreadFactory<Message=Message>
-    {
-        // Note: we allow channel creation to panic, since recovering from this
-        // probably requires a general low-memory strategy.
-        let (layout_to_paint_chan, layout_to_paint_port) = util::ipc::optional_ipc_channel();
-        let (chrome_to_paint_chan, chrome_to_paint_port) = channel();
-        let (pipeline_chan, pipeline_port) = ipc::channel()
-            .expect("Pipeline main chan");;
-
-        let (layout_content_process_shutdown_chan, _) =
-            ipc::channel().expect("Pipeline layout content shutdown chan");
-
-        let script_chan = state.script_chan.unwrap();
-        let (parent_pipeline_id, frame_type) =
-            state.parent_info.expect("script_pipeline != None but parent_info == None");
-        let new_layout_info = NewLayoutInfo {
-            parent_pipeline_id: parent_pipeline_id,
-            new_pipeline_id: state.id,
-            frame_type: frame_type,
-            load_data: state.load_data.clone(),
-            paint_chan: layout_to_paint_chan.clone().to_opaque(),
-            pipeline_port: pipeline_port,
-            layout_to_constellation_chan: state.layout_to_constellation_chan.clone(),
-            content_process_shutdown_chan: None,
-            layout_threads: PREFS.get("layout.threads").as_u64().expect("count") as usize,
-            is_sync: state.replacement_script_chan.is_some(),
-        };
-
-        if let Err(e) = script_chan.send(ConstellationControlMsg::AttachLayout(new_layout_info)) {
-            warn!("Sending to script during pipeline creation failed ({})", e);
-        }
-        let script_chan = state.replacement_script_chan.unwrap_or(script_chan);
-
-        let failure_url = Url::parse("about:blank").expect("infallible");
-        PaintThread::create(state.id,
-                            state.load_data.url.clone(),
-                            chrome_to_paint_chan.clone(),
-                            layout_to_paint_port,
-                            chrome_to_paint_port,
-                            state.compositor_proxy.clone_compositor_proxy(),
-                            state.font_cache_thread.clone(),
-                            state.time_profiler_chan.clone(),
-                            state.mem_profiler_chan.clone());
-
-        let pipeline = Pipeline::new(state.id,
-                                     state.parent_info,
+    /// Creates a `Pipeline` for a layout thread that was spawned from an
+    /// existing script thread.
+    pub fn spawned(id: PipelineId,
+           frame_id: FrameId,
+           parent_info: Option<(PipelineId, FrameType)>,
+           script_chan: IpcSender<ConstellationControlMsg>,
+           layout_chan: IpcSender<LayoutControlMsg>,
+           compositor_proxy: Box<CompositorProxy + 'static + Send>,
+           is_private: bool,
+           url: Url,
+           size: Option<TypedSize2D<f32, PagePx>>,
+           visible: bool,
+) -> Pipeline {
+        let pipeline = Pipeline::new(id,
+                                     frame_id,
+                                     parent_info,
                                      script_chan,
-                                     pipeline_chan,
-                                     state.compositor_proxy,
-                                     chrome_to_paint_chan,
-                                     state.is_private,
-                                     state.load_data.url,
-                                     state.window_size,
-                                     state.parent_visibility.unwrap_or(true));
+                                     layout_chan,
+                                     compositor_proxy,
+                                     is_private,
+                                     url,
+                                     size,
+                                     visible);
 
         pipeline.notify_visibility();
 
-        Ok(pipeline)
+        pipeline
     }
 
     fn new(id: PipelineId,
@@ -511,7 +475,7 @@ impl UnprivilegedPipelineContent {
                     self.font_cache_thread,
                     self.time_profiler_chan,
                     self.mem_profiler_chan,
-                    self.layout_content_process_shutdown_chan,
+                    Some(self.layout_content_process_shutdown_chan),
                     self.webrender_api_sender,
                     self.prefs.get("layout.threads").expect("exists").value()
                         .as_u64().expect("count") as usize);

@@ -43,8 +43,9 @@ use msg::constellation_msg::{FrameType, FrameId, PipelineId, TraversalDirection}
 use net_traits::response::HttpsState;
 use script_layout_interface::message::ReflowQueryType;
 use script_thread::{ScriptThread, Runnable};
-use script_traits::{ConstellationControlMsg, AsyncIFrameLoad, IFrameLoadInfo, LoadData};
+use script_traits::{ConstellationControlMsg, AsyncIFrameLoad, IFrameLoadInfo, IFrameLoadInfo2, LoadData};
 use script_traits::{IFrameLoadType, MozBrowserEvent, ScriptMsg as ConstellationMsg};
+use script_traits::{NewLayoutInfo};
 use script_traits::IFrameSandboxState::{IFrameSandboxed, IFrameUnsandboxed};
 use std::cell::Cell;
 use string_cache::Atom;
@@ -139,38 +140,39 @@ impl HTMLIFrameElement {
         let frame_type = if self.Mozbrowser() { FrameType::MozBrowserIFrame } else { FrameType::IFrame };
 
         let is_about_blank = load_data.as_ref().map_or(false, |d| d.url.as_str() == "about:blank");
-        let (sync_sender, sync_receiver) = if is_about_blank {
-            let (sender, receiver) = ipc::channel().unwrap();
+        if is_about_blank {
+            let (pipeline_chan, pipeline_port) = ipc::channel()
+                .expect("Pipeline main chan");
+            let (pipeline_chan2, pipeline_port2) = ipc::channel()
+                .expect("Pipeline main chan");
 
-            // Instruct the constellation that it should return to using this thread's
-            // event loop as usual after sending the initial frame creation message
-            // to a separate, synchronous event loop.
-            let constellation_chan = ScriptThread::get_constellation_sender();
-            let iframe_load =
-                IFrameLoadType::Sync((sender.to_opaque(), constellation_chan.to_opaque()));
-            let load_info = IFrameLoadInfo {
+            let global_scope = window.upcast::<GlobalScope>();
+            let new_layout_info = NewLayoutInfo {
+                parent_pipeline_id: global_scope.pipeline_id(),
+                new_pipeline_id: new_pipeline_id,
+                frame_type: frame_type,
+                load_data: load_data.unwrap(),
+                pipeline_port: pipeline_port,
+                layout_to_constellation_chan: None,
+                content_process_shutdown_chan: None,
+                layout_threads: PREFS.get("layout.threads").as_u64().expect("count") as usize,
+                is_sync: false
+            };
+
+            let load_info = IFrameLoadInfo2 {
+                parent_pipeline_id: global_scope.pipeline_id(),
+                frame_id: self.frame_id,
+                new_pipeline_id: new_pipeline_id,
                 is_private: private_iframe,
                 frame_type: frame_type,
-                load_type: iframe_load,
+                replace: replace,
             };
-            window.constellation_chan()
-                  .send(ConstellationMsg::ScriptLoadedURLInIFrame(load_info))
+            global_scope
+                  .constellation_chan()
+                  .send(ConstellationMsg::ScriptDidLoadURLInIFrame(load_info, pipeline_chan2, pipeline_chan))
                   .unwrap();
 
-            // If this is a synchronous frame creation, we must block until we receive the
-            // notification from the constellation that the new frame is ready and the
-            // network load can begin.
-            let msg = receiver.recv().unwrap();
-            let new_layout_info = match msg {
-                ConstellationControlMsg::AttachLayout(new_layout_info) => new_layout_info,
-                _ => panic!("Expected AttachLayout"),
-            };
-            // Synchronously perform the network load associated with this frame.
-            ScriptThread::process_attach_layout(
-                new_pipeline_id,
-                window.pipeline_id(),
-                frame_type,
-                );
+            ScriptThread::process_attach_layout(new_layout_info);
         } else {
             let iframe_load =
                 IFrameLoadType::Async(AsyncIFrameLoad {
@@ -186,6 +188,7 @@ impl HTMLIFrameElement {
                 is_private: private_iframe,
                 frame_type: frame_type,
                 load_type: iframe_load,
+                replace: replace,
             };
             global_scope
                   .constellation_chan()
