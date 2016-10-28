@@ -60,7 +60,7 @@ use style_traits::PagePx;
 use style_traits::cursor::Cursor;
 use style_traits::viewport::ViewportConstraints;
 use timer_scheduler::TimerScheduler;
-use url::Url;
+use url::{Url, Host};
 use util::opts;
 use util::prefs::PREFS;
 use util::remutex::ReentrantMutex;
@@ -1252,10 +1252,15 @@ impl<Message, LTF, STF> Constellation<Message, LTF, STF>
 
             // FIXME(#10968): this should probably match the origin check in
             //                HTMLIFrameElement::contentDocument.
-            let same_script = source_url.host() == load_data.url.host() &&
+            let gdocs = match source_url.host() {
+                Some(Host::Domain(s)) if s.ends_with("docs.google.com") => true,
+                _ => false,
+            };
+            let same_script = gdocs ||
+                             (source_url.host() == load_data.url.host() &&
                               source_url.port() == load_data.url.port() &&
                               load_info.sandbox == IFrameSandboxState::IFrameUnsandboxed &&
-                              source_pipeline.is_private == is_private;
+                              source_pipeline.is_private == is_private);
 
             // Reuse the script thread if the URL is same-origin
             let script_chan = if same_script {
