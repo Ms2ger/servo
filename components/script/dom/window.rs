@@ -541,8 +541,10 @@ impl WindowMethods for Window {
 
     // https://html.spec.whatwg.org/multipage/#dom-top
     fn Top(&self) -> Root<BrowsingContext> {
+        println!("Getting window.top on {}", self.get_url().as_str());
         let mut window = Root::from_ref(self);
         while let Some(parent) = window.parent() {
+            println!("  Found parent: {}", parent.get_url().as_str());
             window = parent;
         }
         window.browsing_context()
