@@ -247,7 +247,6 @@ fn create_constellation(opts: opts::Opts,
     let (public_resource_threads, private_resource_threads) =
         new_resource_threads(opts.user_agent,
                              devtools_chan.clone(),
-                             time_profiler_chan.clone(),
                              opts.config_dir.map(Into::into));
     let image_cache_thread = new_image_cache_thread(public_resource_threads.sender(),
                                                     webrender_api_sender.create_api());

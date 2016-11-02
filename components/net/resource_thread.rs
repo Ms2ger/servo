@@ -3,21 +3,16 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 //! A thread that takes a URL and streams back the binary data.
-use about_loader;
-use blob_loader;
-use chrome_loader;
 use connector::{Connector, create_http_connector};
 use content_blocker::BLOCKED_CONTENT_RULES;
 use cookie;
 use cookie_rs;
 use cookie_storage::CookieStorage;
-use data_loader;
 use devtools_traits::DevtoolsControlMsg;
 use fetch::methods::{FetchContext, fetch};
-use file_loader;
 use filemanager_thread::{FileManager, TFDProvider};
 use hsts::HstsList;
-use http_loader::{self, HttpState};
+use http_loader::HttpState;
 use hyper::client::pool::Pool;
 use hyper::header::{ContentType, Header, SetCookie};
 use hyper::mime::{Mime, SubLevel, TopLevel};
@@ -26,17 +21,15 @@ use ipc_channel::ipc::{self, IpcReceiver, IpcReceiverSet, IpcSender};
 use mime_classifier::{ApacheBugFlag, MimeClassifier, NoSniffFlag};
 use net_traits::{CookieSource, CoreResourceThread, Metadata, ProgressMsg};
 use net_traits::{CoreResourceMsg, FetchResponseMsg, FetchTaskTarget, LoadConsumer};
-use net_traits::{CustomResponseMediator, LoadData, LoadResponse, NetworkError, ResourceId};
+use net_traits::{CustomResponseMediator, LoadResponse, NetworkError, ResourceId};
 use net_traits::{ResourceThreads, WebSocketCommunicate, WebSocketConnectData};
 use net_traits::LoadContext;
 use net_traits::ProgressMsg::Done;
 use net_traits::request::{Request, RequestInit};
 use net_traits::storage_thread::StorageThreadMsg;
-use profile_traits::time::ProfilerChan;
 use rustc_serialize::{Decodable, Encodable};
 use rustc_serialize::json;
 use std::borrow::{Cow, ToOwned};
-use std::boxed::FnBox;
 use std::cell::Cell;
 use std::collections::HashMap;
 use std::error::Error;
@@ -46,7 +39,7 @@ use std::ops::Deref;
 use std::path::{Path, PathBuf};
 use std::rc::Rc;
 use std::sync::{Arc, RwLock};
-use std::sync::mpsc::{Receiver, Sender, channel};
+use std::sync::mpsc::{Receiver, Sender};
 use storage_thread::StorageThreadFactory;
 use url::Url;
 use util::prefs::PREFS;
@@ -146,13 +139,11 @@ fn start_sending_opt(start_chan: LoadConsumer, metadata: Metadata) -> Result<Pro
 /// Returns a tuple of (public, private) senders to the new threads.
 pub fn new_resource_threads(user_agent: Cow<'static, str>,
                             devtools_chan: Option<Sender<DevtoolsControlMsg>>,
-                            profiler_chan: ProfilerChan,
                             config_dir: Option<PathBuf>)
                             -> (ResourceThreads, ResourceThreads) {
     let (public_core, private_core) = new_core_resource_thread(
         user_agent,
         devtools_chan,
-        profiler_chan,
         config_dir.clone());
     let storage: IpcSender<StorageThreadMsg> = StorageThreadFactory::new(config_dir);
     (ResourceThreads::new(public_core, storage.clone()),
@@ -163,25 +154,20 @@ pub fn new_resource_threads(user_agent: Cow<'static, str>,
 /// Create a CoreResourceThread
 pub fn new_core_resource_thread(user_agent: Cow<'static, str>,
                                 devtools_chan: Option<Sender<DevtoolsControlMsg>>,
-                                profiler_chan: ProfilerChan,
                                 config_dir: Option<PathBuf>)
                                 -> (CoreResourceThread, CoreResourceThread) {
     let (public_setup_chan, public_setup_port) = ipc::channel().unwrap();
     let (private_setup_chan, private_setup_port) = ipc::channel().unwrap();
-    let public_setup_chan_clone = public_setup_chan.clone();
-    let private_setup_chan_clone = private_setup_chan.clone();
     spawn_named("ResourceManager".to_owned(), move || {
         let resource_manager = CoreResourceManager::new(
-            user_agent, devtools_chan, profiler_chan
+            user_agent, devtools_chan
         );
 
         let mut channel_manager = ResourceChannelManager {
             resource_manager: resource_manager,
             config_dir: config_dir,
         };
-        channel_manager.start(public_setup_chan_clone,
-                              private_setup_chan_clone,
-                              public_setup_port,
+        channel_manager.start(public_setup_port,
                               private_setup_port);
     });
     (public_setup_chan, private_setup_chan)
@@ -220,8 +206,6 @@ fn create_resource_groups(config_dir: Option<&Path>)
 impl ResourceChannelManager {
     #[allow(unsafe_code)]
     fn start(&mut self,
-             public_control_sender: CoreResourceThread,
-             private_control_sender: CoreResourceThread,
              public_receiver: IpcReceiver<CoreResourceMsg>,
              private_receiver: IpcReceiver<CoreResourceMsg>) {
         let (public_resource_group, private_resource_group) =
@@ -233,14 +217,14 @@ impl ResourceChannelManager {
 
         loop {
             for (id, data) in rx_set.select().unwrap().into_iter().map(|m| m.unwrap()) {
-                let (group, sender) = if id == private_id {
-                    (&private_resource_group, &private_control_sender)
+                let group = if id == private_id {
+                    &private_resource_group
                 } else {
                     assert_eq!(id, public_id);
-                    (&public_resource_group, &public_control_sender)
+                    &public_resource_group
                 };
                 if let Ok(msg) = data.to() {
-                    if !self.process_msg(msg, group, &sender) {
+                    if !self.process_msg(msg, group) {
                         break;
                     }
                 }
@@ -251,8 +235,7 @@ impl ResourceChannelManager {
     /// Returns false if the thread should exit.
     fn process_msg(&mut self,
                    msg: CoreResourceMsg,
-                   group: &ResourceGroup,
-                   control_sender: &CoreResourceThread) -> bool {
+                   group: &ResourceGroup) -> bool {
         match msg {
             CoreResourceMsg::Fetch(init, sender) =>
                 self.resource_manager.fetch(init, sender, group),
@@ -449,28 +432,22 @@ pub struct AuthCache {
 
 pub struct CoreResourceManager {
     user_agent: Cow<'static, str>,
-    mime_classifier: Arc<MimeClassifier>,
     devtools_chan: Option<Sender<DevtoolsControlMsg>>,
     swmanager_chan: Option<IpcSender<CustomResponseMediator>>,
-    profiler_chan: ProfilerChan,
     filemanager: FileManager<TFDProvider>,
     cancel_load_map: HashMap<ResourceId, Sender<()>>,
-    next_resource_id: ResourceId,
 }
 
 impl CoreResourceManager {
     pub fn new(user_agent: Cow<'static, str>,
-               devtools_channel: Option<Sender<DevtoolsControlMsg>>,
-               profiler_chan: ProfilerChan) -> CoreResourceManager {
+               devtools_channel: Option<Sender<DevtoolsControlMsg>>)
+               -> CoreResourceManager {
         CoreResourceManager {
             user_agent: user_agent,
-            mime_classifier: Arc::new(MimeClassifier::new()),
             devtools_chan: devtools_channel,
             swmanager_chan: None,
-            profiler_chan: profiler_chan,
             filemanager: FileManager::new(TFD_PROVIDER),
             cancel_load_map: HashMap::new(),
-            next_resource_id: ResourceId(0),
         }
     }
 
@@ -496,66 +473,6 @@ impl CoreResourceManager {
             let mut cookie_jar = resource_group.cookie_jar.write().unwrap();
             cookie_jar.push(cookie, source)
         }
-    }
-
-    fn load(&mut self,
-            load_data: LoadData,
-            consumer: LoadConsumer,
-            id_sender: Option<IpcSender<ResourceId>>,
-            resource_thread: CoreResourceThread,
-            resource_grp: &ResourceGroup) {
-        fn from_factory(factory: fn(LoadData, LoadConsumer, Arc<MimeClassifier>, CancellationListener))
-                        -> Box<FnBox(LoadData,
-                                     LoadConsumer,
-                                     Arc<MimeClassifier>,
-                                     CancellationListener) + Send> {
-            box move |load_data, senders, classifier, cancel_listener| {
-                factory(load_data, senders, classifier, cancel_listener)
-            }
-        }
-
-        let cancel_resource = id_sender.map(|sender| {
-            let current_res_id = self.next_resource_id;
-            let _ = sender.send(current_res_id);
-            let (cancel_sender, cancel_receiver) = channel();
-            self.cancel_load_map.insert(current_res_id, cancel_sender);
-            self.next_resource_id.0 += 1;
-            CancellableResource::new(cancel_receiver, current_res_id, resource_thread)
-        });
-
-        let cancel_listener = CancellationListener::new(cancel_resource);
-        let loader = match load_data.url.scheme() {
-            "chrome" => from_factory(chrome_loader::factory),
-            "file" => from_factory(file_loader::factory),
-            "http" | "https" | "view-source" => {
-                let http_state = HttpState {
-                    blocked_content: BLOCKED_CONTENT_RULES.clone(),
-                    hsts_list: resource_grp.hsts_list.clone(),
-                    cookie_jar: resource_grp.cookie_jar.clone(),
-                    auth_cache: resource_grp.auth_cache.clone()
-                };
-                http_loader::factory(self.user_agent.clone(),
-                                     http_state,
-                                     self.devtools_chan.clone(),
-                                     self.profiler_chan.clone(),
-                                     self.swmanager_chan.clone(),
-                                     resource_grp.connector.clone())
-            },
-            "data" => from_factory(data_loader::factory),
-            "about" => from_factory(about_loader::factory),
-            "blob" => blob_loader::factory(self.filemanager.clone()),
-            _ => {
-                debug!("resource_thread: no loader for scheme {}", load_data.url.scheme());
-                send_error(load_data.url, NetworkError::Internal("no loader for scheme".to_owned()), consumer);
-                return
-            }
-        };
-        debug!("loading url: {}", load_data.url);
-
-        loader.call_box((load_data,
-                         consumer,
-                         self.mime_classifier.clone(),
-                         cancel_listener));
     }
 
     fn fetch(&self,
