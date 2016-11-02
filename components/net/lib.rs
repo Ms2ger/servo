@@ -3,7 +3,6 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 #![feature(box_syntax)]
-#![feature(fnbox)]
 #![feature(mpsc_select)]
 #![feature(plugin)]
 #![feature(proc_macro)]
@@ -47,7 +46,6 @@ extern crate uuid;
 extern crate webrender_traits;
 extern crate websocket;
 
-mod about_loader;
 mod blob_loader;
 mod chrome_loader;
 mod connector;
@@ -55,7 +53,6 @@ mod content_blocker;
 pub mod cookie;
 pub mod cookie_storage;
 mod data_loader;
-mod file_loader;
 pub mod filemanager_thread;
 pub mod hsts;
 mod http_loader;

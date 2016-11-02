@@ -27,20 +27,15 @@ use hyper::status::{StatusClass, StatusCode};
 use hyper_serde::Serde;
 use ipc_channel::ipc::{self, IpcSender};
 use log;
-use mime_classifier::MimeClassifier;
 use msg::constellation_msg::PipelineId;
-use net_traits::{CookieSource, IncludeSubdomains, LoadConsumer, LoadContext, LoadData};
-use net_traits::{CustomResponse, CustomResponseMediator, Metadata, NetworkError, ReferrerPolicy};
-use net_traits::ProgressMsg::{Done, Payload};
+use net_traits::{CookieSource, IncludeSubdomains, LoadContext, LoadData};
+use net_traits::{CustomResponse, CustomResponseMediator, Metadata, ReferrerPolicy};
 use net_traits::hosts::replace_hosts;
 use net_traits::response::HttpsState;
 use openssl;
 use openssl::ssl::error::{OpensslError, SslError};
-use profile_traits::time::{ProfilerCategory, ProfilerChan, TimerMetadata, profile};
-use profile_traits::time::{TimerMetadataFrameType, TimerMetadataReflowType};
-use resource_thread::{AuthCache, AuthCacheEntry, CancellationListener, send_error, start_sending_sniffed_opt};
+use resource_thread::{AuthCache, AuthCacheEntry, CancellationListener};
 use std::borrow::{Cow, ToOwned};
-use std::boxed::FnBox;
 use std::collections::HashSet;
 use std::error::Error;
 use std::fmt;
@@ -50,44 +45,9 @@ use std::sync::{Arc, RwLock};
 use std::sync::mpsc::Sender;
 use time;
 use time::Tm;
-#[cfg(any(target_os = "macos", target_os = "linux", target_os = "windows"))]
-use tinyfiledialogs;
 use url::{Position, Url, Origin};
 use util::prefs::PREFS;
-use util::thread::spawn_named;
 use uuid;
-
-pub fn factory(user_agent: Cow<'static, str>,
-               http_state: HttpState,
-               devtools_chan: Option<Sender<DevtoolsControlMsg>>,
-               profiler_chan: ProfilerChan,
-               swmanager_chan: Option<IpcSender<CustomResponseMediator>>,
-               connector: Arc<Pool<Connector>>)
-               -> Box<FnBox(LoadData,
-                            LoadConsumer,
-                            Arc<MimeClassifier>,
-                            CancellationListener) + Send> {
-    box move |load_data: LoadData, senders, classifier, cancel_listener| {
-        spawn_named(format!("http_loader for {}", load_data.url), move || {
-            let metadata = TimerMetadata {
-                url: load_data.url.as_str().into(),
-                iframe: TimerMetadataFrameType::RootWindow,
-                incremental: TimerMetadataReflowType::FirstReflow,
-            };
-            profile(ProfilerCategory::NetHTTPRequestResponse, Some(metadata), profiler_chan, || {
-                load_for_consumer(load_data,
-                                  senders,
-                                  classifier,
-                                  connector,
-                                  http_state,
-                                  devtools_chan,
-                                  swmanager_chan,
-                                  cancel_listener,
-                                  user_agent)
-            })
-        })
-    }
-}
 
 pub enum ReadResult {
     Payload(Vec<u8>),
@@ -127,40 +87,6 @@ impl HttpState {
 
 fn precise_time_ms() -> u64 {
     time::precise_time_ns() / (1000 * 1000)
-}
-
-fn load_for_consumer(load_data: LoadData,
-                     start_chan: LoadConsumer,
-                     classifier: Arc<MimeClassifier>,
-                     connector: Arc<Pool<Connector>>,
-                     http_state: HttpState,
-                     devtools_chan: Option<Sender<DevtoolsControlMsg>>,
-                     swmanager_chan: Option<IpcSender<CustomResponseMediator>>,
-                     cancel_listener: CancellationListener,
-                     user_agent: Cow<'static, str>) {
-    let factory = NetworkHttpRequestFactory {
-        connector: connector,
-    };
-
-    let ui_provider = TFDProvider;
-    match load(&load_data, &ui_provider, &http_state,
-               devtools_chan, &factory,
-               user_agent, &cancel_listener, swmanager_chan) {
-        Err(error) => {
-            match error.error {
-                LoadErrorType::ConnectionAborted { .. } => unreachable!(),
-                LoadErrorType::Ssl { reason } => send_error(error.url.clone(),
-                                                        NetworkError::SslValidation(error.url, reason),
-                                                        start_chan),
-                LoadErrorType::Cancelled => send_error(error.url, NetworkError::LoadCancelled, start_chan),
-                _ => send_error(error.url, NetworkError::Internal(error.error.description().to_owned()), start_chan)
-            }
-        }
-        Ok(mut load_response) => {
-            let metadata = load_response.metadata.clone();
-            send_data(load_data.context, &mut load_response, start_chan, metadata, classifier, &cancel_listener)
-        }
-    }
 }
 
 pub struct WrappedHttpResponse {
@@ -845,21 +771,6 @@ pub trait UIProvider {
     fn input_username_and_password(&self, prompt: &str) -> (Option<String>, Option<String>);
 }
 
-impl UIProvider for TFDProvider {
-    #[cfg(any(target_os = "macos", target_os = "linux", target_os = "windows"))]
-    fn input_username_and_password(&self, prompt: &str) -> (Option<String>, Option<String>) {
-        (tinyfiledialogs::input_box(prompt, "Username:", ""),
-        tinyfiledialogs::input_box(prompt, "Password:", ""))
-    }
-
-    #[cfg(not(any(target_os = "macos", target_os = "linux", target_os = "windows")))]
-    fn input_username_and_password(&self, _prompt: &str) -> (Option<String>, Option<String>) {
-        (None, None)
-    }
-}
-
-struct TFDProvider;
-
 pub fn load<A, B>(load_data: &LoadData,
                   ui_provider: &B,
                   http_state: &HttpState,
@@ -1110,46 +1021,6 @@ pub fn load<A, B>(load_data: &LoadData,
             return StreamedResponse::from_http_response(box response, metadata);
         }
     }
-}
-
-fn send_data<R: Read>(context: LoadContext,
-                      reader: &mut R,
-                      start_chan: LoadConsumer,
-                      metadata: Metadata,
-                      classifier: Arc<MimeClassifier>,
-                      cancel_listener: &CancellationListener) {
-    let (progress_chan, mut chunk) = {
-        let buf = match read_block(reader) {
-            Ok(ReadResult::Payload(buf)) => buf,
-            _ => vec!(),
-        };
-        let p = match start_sending_sniffed_opt(start_chan, metadata, classifier, &buf, context) {
-            Ok(p) => p,
-            _ => return
-        };
-        (p, buf)
-    };
-
-    loop {
-        if cancel_listener.is_cancelled() {
-            let _ = progress_chan.send(Done(Err(NetworkError::LoadCancelled)));
-            return;
-        }
-
-        if progress_chan.send(Payload(chunk)).is_err() {
-            // The send errors when the receiver is out of scope,
-            // which will happen if the fetch has timed out (or has been aborted)
-            // so we don't need to continue with the loading of the file here.
-            return;
-        }
-
-        chunk = match read_block(reader) {
-            Ok(ReadResult::Payload(buf)) => buf,
-            Ok(ReadResult::EOF) | Err(_) => break,
-        };
-    }
-
-    let _ = progress_chan.send(Done(Ok(())));
 }
 
 // FIXME: This incredibly hacky. Make it more robust, and at least test it.
