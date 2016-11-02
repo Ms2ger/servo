@@ -1364,48 +1364,6 @@ fn test_load_errors_when_viewing_source_and_inner_url_scheme_is_not_http_or_http
 }
 
 #[test]
-fn test_load_errors_when_cancelled() {
-    use ipc_channel::ipc;
-    use net::resource_thread::CancellableResource;
-    use net_traits::ResourceId;
-
-    struct Factory;
-
-    impl HttpRequestFactory for Factory {
-        type R = MockRequest;
-
-        fn create(&self, _: Url, _: Method, _: Headers) -> Result<MockRequest, LoadError> {
-            let mut headers = Headers::new();
-            headers.set(Host { hostname: "Kaboom!".to_owned(), port: None });
-            Ok(MockRequest::new(
-                   ResponseType::WithHeaders(<[_]>::to_vec("BOOM!".as_bytes()), headers))
-            )
-        }
-    }
-
-    let (id_sender, _id_receiver) = ipc::channel().unwrap();
-    let (cancel_sender, cancel_receiver) = mpsc::channel();
-    let cancel_resource = CancellableResource::new(cancel_receiver, ResourceId(0), id_sender);
-    let cancel_listener = CancellationListener::new(Some(cancel_resource));
-    cancel_sender.send(()).unwrap();
-
-    let url = Url::parse("https://mozilla.com").unwrap();
-    let load_data = LoadData::new(LoadContext::Browsing, url.clone(), &HttpTest);
-    let http_state = HttpState::new();
-    let ui_provider = TestProvider::new();
-
-    match load(&load_data,
-               &ui_provider, &http_state,
-               None,
-               &Factory,
-               DEFAULT_USER_AGENT.into(),
-               &cancel_listener, None) {
-        Err(ref load_err) if load_err.error == LoadErrorType::Cancelled => (),
-        _ => panic!("expected load cancelled error!")
-    }
-}
-
-#[test]
 fn  test_redirect_from_x_to_y_provides_y_cookies_from_y() {
     let url_x = Url::parse("http://mozilla.com").unwrap();
     let url_y = Url::parse("http://mozilla.org").unwrap();
