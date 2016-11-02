@@ -48,27 +48,31 @@ extern crate uuid;
 extern crate webrender_traits;
 extern crate websocket;
 
-pub mod about_loader;
-pub mod blob_loader;
-pub mod bluetooth_thread;
-pub mod chrome_loader;
-pub mod connector;
-pub mod content_blocker;
-pub mod cookie;
-pub mod cookie_storage;
-pub mod data_loader;
-pub mod file_loader;
-pub mod filemanager_thread;
-pub mod hsts;
-pub mod http_loader;
-pub mod image_cache_thread;
-pub mod mime_classifier;
-pub mod resource_thread;
-pub mod storage_thread;
-pub mod websocket_loader;
+mod about_loader;
+mod blob_loader;
+mod bluetooth_thread;
+mod chrome_loader;
+mod connector;
+mod content_blocker;
+mod cookie;
+mod cookie_storage;
+mod data_loader;
+mod file_loader;
+mod filemanager_thread;
+mod hsts;
+mod http_loader;
+mod image_cache_thread;
+mod mime_classifier;
+mod resource_thread;
+mod storage_thread;
+mod websocket_loader;
 
 /// An implementation of the [Fetch specification](https://fetch.spec.whatwg.org/)
-pub mod fetch {
+mod fetch {
     pub mod cors_cache;
     pub mod methods;
 }
+
+pub use bluetooth_thread::BluetoothThreadFactory;
+pub use image_cache_thread::new_image_cache_thread;
+pub use resource_thread::new_resource_threads;
