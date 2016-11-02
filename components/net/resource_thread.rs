@@ -254,8 +254,6 @@ impl ResourceChannelManager {
                    group: &ResourceGroup,
                    control_sender: &CoreResourceThread) -> bool {
         match msg {
-            CoreResourceMsg::Load(load_data, consumer, id_sender) =>
-                self.resource_manager.load(load_data, consumer, id_sender, control_sender.clone(), group),
             CoreResourceMsg::Fetch(init, sender) =>
                 self.resource_manager.fetch(init, sender, group),
             CoreResourceMsg::WebsocketConnect(connect, connect_data) =>
