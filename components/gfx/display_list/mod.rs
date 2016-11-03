@@ -15,7 +15,6 @@
 //! low-level drawing primitives.
 
 use app_units::Au;
-use azure::azure_hl::Color;
 use euclid::{Matrix4D, Point2D, Rect, Size2D};
 use euclid::num::{One, Zero};
 use euclid::rect::TypedRect;
@@ -36,7 +35,7 @@ use style_traits::cursor::Cursor;
 use text::TextRun;
 use text::glyph::ByteIndex;
 use util::geometry::{self, max_rect};
-use webrender_traits::{self, WebGLContextId};
+use webrender_traits::{self, ColorF as Color, WebGLContextId};
 
 pub use style::dom::OpaqueNode;
 
