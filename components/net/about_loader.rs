@@ -16,12 +16,11 @@ use std::sync::Arc;
 use url::Url;
 use util::resource_files::resources_dir_path;
 
-fn url_from_non_relative_scheme(load_data: &mut LoadData, filename: &str) -> io::Result<()> {
+fn url_from_non_relative_scheme(filename: &str) -> io::Result<Url> {
     let mut path = try!(resources_dir_path());
     path.push(filename);
     assert!(path.exists());
-    load_data.url = Url::from_file_path(&*path).unwrap();
-    Ok(())
+    Ok(Url::from_file_path(&*path).unwrap())
 }
 
 pub fn factory(mut load_data: LoadData,
@@ -29,7 +28,7 @@ pub fn factory(mut load_data: LoadData,
                classifier: Arc<MimeClassifier>,
                cancel_listener: CancellationListener) {
     let url = load_data.url.clone();
-    let res = match url.path() {
+    let file_url = match url.path() {
         "blank" => {
             let metadata = Metadata {
                 final_url: load_data.url,
@@ -51,16 +50,22 @@ pub fn factory(mut load_data: LoadData,
             return
         }
         "crash" => panic!("Loading the about:crash URL."),
-        "failure" | "not-found" =>
-            url_from_non_relative_scheme(&mut load_data, &(url.path().to_owned() + ".html")),
+        "failure" => "failure.html",
+        "not-found" => "not-found.html",
         "sslfail" => url_from_non_relative_scheme(&mut load_data, "badcert.html"),
         _ => {
             send_error(load_data.url, NetworkError::Internal("Unknown about: URL.".to_owned()), start_chan);
             return
         }
     };
+    let 
+    match file_url {
+        Ok(file_url) => {
+            load_data.url = file_url;
+            file_loader::factory(load_data, start_chan, classifier, cancel_listener);
+        },
+        Err(
     if res.is_ok() {
-        file_loader::factory(load_data, start_chan, classifier, cancel_listener)
     } else {
         send_error(load_data.url, NetworkError::Internal("Could not access resource folder".to_owned()), start_chan);
     }
