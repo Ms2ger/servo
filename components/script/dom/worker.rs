@@ -21,7 +21,7 @@ use dom::event::{Event, EventBubbles, EventCancelable};
 use dom::eventdispatcher::EventStatus;
 use dom::eventtarget::EventTarget;
 use dom::globalscope::GlobalScope;
-use dom::messageevent::MessageEvent;
+use dom::messageevent::{debug_data, MessageEvent};
 use dom::workerglobalscope::prepare_workerscope_init;
 use ipc_channel::ipc;
 use js::jsapi::{HandleValue, JSAutoCompartment, JSContext, NullHandleValue};
@@ -133,6 +133,7 @@ impl Worker {
         let _ac = JSAutoCompartment::new(global.get_cx(), target.reflector().get_jsobject().get());
         rooted!(in(global.get_cx()) let mut message = UndefinedValue());
         data.read(&global, message.handle_mut());
+        debug_data(&message, "Just read this!");
         MessageEvent::dispatch_jsval(target, &global, message.handle());
     }
 

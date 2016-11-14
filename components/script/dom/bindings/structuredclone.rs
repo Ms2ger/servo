@@ -25,6 +25,8 @@ pub enum StructuredCloneData {
 impl StructuredCloneData {
     /// Writes a structured clone. Returns a `DataClone` error if that fails.
     pub fn write(cx: *mut JSContext, message: HandleValue) -> Fallible<StructuredCloneData> {
+        use dom::messageevent::{debug_data};
+        debug_data(&message, "writing");
         let mut data = ptr::null_mut();
         let mut nbytes = 0;
         let result = unsafe {

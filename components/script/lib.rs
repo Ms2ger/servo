@@ -26,6 +26,8 @@
 #![plugin(phf_macros)]
 #![plugin(plugins)]
 
+extern crate backtrace;
+
 extern crate angle;
 extern crate app_units;
 extern crate audio_video_metadata;

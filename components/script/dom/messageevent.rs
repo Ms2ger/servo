@@ -18,6 +18,25 @@ use js::jsval::JSVal;
 use servo_atoms::Atom;
 use std::default::Default;
 
+use backtrace::Backtrace;
+
+#[allow(unsafe_code)]
+pub fn debug_data(v: &JSVal, source: &str) {
+unsafe {
+    if !v.is_object() {
+        println!("Not an object");
+    }
+    let object = v.to_object();
+    println!("Found object {:p}", object);
+    let object = object as *mut usize;
+    println!("  .. with data {:x}", *object);
+    println!("  .. in {}", source);
+    if *object == 0xfffe2b2b2b2b2b2b {
+        println!("{:?}", Backtrace::new());
+    }
+}
+}
+
 #[dom_struct]
 pub struct MessageEvent {
     event: Event,
@@ -45,6 +64,7 @@ impl MessageEvent {
             lastEventId: lastEventId,
         };
         ev.data.set(data.get());
+        debug_data(&data.get(), "new_initialized");
         reflect_dom_object(ev, global, MessageEventBinding::Wrap)
     }
 
@@ -97,6 +117,7 @@ impl MessageEvent {
 impl MessageEventMethods for MessageEvent {
     // https://html.spec.whatwg.org/multipage/#dom-messageevent-data
     fn Data(&self, _cx: *mut JSContext) -> JSVal {
+        debug_data(&self.data.get(), "Data");
         self.data.get()
     }
 
