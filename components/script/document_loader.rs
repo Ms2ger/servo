@@ -39,7 +39,7 @@ impl LoadType {
 /// Canary value ensuring that manually added blocking loads (ie. ones that weren't
 /// created via DocumentLoader::fetch_async) are always removed by the time
 /// that the owner is destroyed.
-#[derive(JSTraceable, HeapSizeOf)]
+#[derive(Debug, JSTraceable, HeapSizeOf)]
 #[must_root]
 pub struct LoadBlocker {
     /// The document whose load event is blocked by this object existing.

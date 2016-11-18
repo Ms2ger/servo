@@ -3091,6 +3091,8 @@ impl Runnable for DocumentProgressHandler {
     fn handler(self: Box<DocumentProgressHandler>) {
         let document = self.addr.root();
         let window = document.window();
+        debug!("Setting ready state complete for {} {:p} if {}",
+               document.url().as_str(), &*document, window.is_alive());
         if window.is_alive() {
             self.set_ready_state_complete();
             self.dispatch_load();

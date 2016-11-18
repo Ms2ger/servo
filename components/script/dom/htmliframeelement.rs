@@ -122,6 +122,7 @@ impl HTMLIFrameElement {
         let document = document_from_node(self);
 
         let mut load_blocker = self.load_blocker.borrow_mut();
+        debug!("navigate_or_reload_child_browsing_context {:?}", load_blocker);
         // Any oustanding load is finished from the point of view of the blocked
         // document; the new navigation will continue blocking it.
         LoadBlocker::terminate(&mut load_blocker);
@@ -236,6 +237,7 @@ impl HTMLIFrameElement {
         self.pipeline_id.set(Some(new_pipeline_id));
 
         let mut blocker = self.load_blocker.borrow_mut();
+        debug!("update_pipeline_id {:?}", blocker);
         LoadBlocker::terminate(&mut blocker);
 
         self.upcast::<Node>().dirty(NodeDamage::OtherNodeDamage);
@@ -309,6 +311,7 @@ impl HTMLIFrameElement {
         self.upcast::<EventTarget>().fire_event(atom!("load"));
 
         let mut blocker = self.load_blocker.borrow_mut();
+        debug!("iframe_load_event_steps {:?}", blocker);
         LoadBlocker::terminate(&mut blocker);
 
         // TODO Step 5 - unset child document `mut iframe load` flag
@@ -710,6 +713,7 @@ impl VirtualMethods for HTMLIFrameElement {
         self.super_type().unwrap().unbind_from_tree(context);
 
         let mut blocker = self.load_blocker.borrow_mut();
+        debug!("Unbind from tree {:?} {:?}", blocker, self.pipeline_id.get());
         LoadBlocker::terminate(&mut blocker);
 
         // https://html.spec.whatwg.org/multipage/#a-browsing-context-is-discarded

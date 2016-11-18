@@ -37,6 +37,7 @@ use script_layout_interface::TrustedNodeAddress;
 use script_thread::STACK_ROOTS;
 use std::cell::UnsafeCell;
 use std::default::Default;
+use std::fmt::{Debug, Formatter, Result as FmtResult};
 use std::hash::{Hash, Hasher};
 #[cfg(debug_assertions)]
 use std::intrinsics::type_name;
@@ -56,6 +57,13 @@ use style::thread_state;
 #[must_root]
 pub struct JS<T> {
     ptr: NonZero<*const T>,
+}
+
+impl<T> Debug for JS<T> {
+    fn fmt(&self, f: &mut Formatter) -> FmtResult{
+        let ptr: *const T = *self.ptr;
+        write!(f, "JS {{ {:p} }}", ptr)
+    }
 }
 
 // JS<T> is similar to Rc<T>, in that it's not always clear how to avoid double-counting.

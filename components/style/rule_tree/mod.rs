@@ -15,7 +15,6 @@ use std::ptr;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicPtr, AtomicUsize, Ordering};
 use stylesheets::StyleRule;
-use thread_state;
 
 #[derive(Debug)]
 #[cfg_attr(feature = "servo", derive(HeapSizeOf))]
@@ -385,10 +384,6 @@ impl StrongRuleNode {
     }
 
     fn get(&self) -> &RuleNode {
-        if cfg!(debug_assertions) {
-            let node = unsafe { &*self.ptr };
-            assert!(node.refcount.load(Ordering::SeqCst) > 0);
-        }
         unsafe { &*self.ptr }
     }
 
@@ -407,11 +402,7 @@ impl StrongRuleNode {
     }
 
     unsafe fn pop_from_free_list(&self) -> Option<WeakRuleNode> {
-        debug_assert!(thread_state::get().is_layout() &&
-                      !thread_state::get().is_worker());
-
         let me = &*self.ptr;
-        debug_assert!(me.is_root());
 
         let current = self.get().next_free.load(Ordering::SeqCst);
         if current == FREE_LIST_SENTINEL {

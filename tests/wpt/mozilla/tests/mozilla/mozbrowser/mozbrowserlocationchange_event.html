@@ -46,6 +46,7 @@ async_test(function(t) {
     received_events.push(e.detail.canGoForward);
 
     if (action_idx < actions.length) {
+      console.log(received_events);
       actions[action_idx++]();
     } else {
        assert_array_equals(received_events, expected_events);
