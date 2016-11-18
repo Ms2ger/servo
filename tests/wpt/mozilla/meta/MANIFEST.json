@@ -8195,6 +8195,7 @@
         "mozilla/mozbrowser/mozbrowserlocationchange_event.html": [
           {
             "path": "mozilla/mozbrowser/mozbrowserlocationchange_event.html",
+            "timeout": "long",
             "url": "/_mozilla/mozilla/mozbrowser/mozbrowserlocationchange_event.html"
           }
         ],
