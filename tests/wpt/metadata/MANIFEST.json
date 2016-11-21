@@ -39677,6 +39677,18 @@
     "deleted_reftests": {},
     "items": {
       "testharness": {
+        "cookies/redirect/redirect.html": [
+          {
+            "path": "cookies/redirect/redirect.html",
+            "url": "/cookies/redirect/redirect.html"
+          }
+        ],
+        "cookies/redirect/redirect.sub.html": [
+          {
+            "path": "cookies/redirect/redirect.sub.html",
+            "url": "/cookies/redirect/redirect.sub.html"
+          }
+        ],
         "html/semantics/forms/form-submission-0/submit-entity-body.html": [
           {
             "path": "html/semantics/forms/form-submission-0/submit-entity-body.html",

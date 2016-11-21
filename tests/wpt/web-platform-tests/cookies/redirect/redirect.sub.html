@@ -1,0 +1,45 @@
+<!doctype html>
+<meta charset=utf-8>
+<title>tests for matching cookie paths</title>
+<script src="/resources/testharness.js"></script>
+<script src="/resources/testharnessreport.js"></script>
+<div id=log></div>
+<script>
+promise_test(() => {
+  var server_a = "http://{{domains[www1]}}:{{ports[http][1]}}/";
+  var server_b = "http://{{domains[www2]}}:{{ports[http][1]}}/";
+  var server_a_url = server_a + "cookies/redirect/set-cookie.py";
+  var server_b_url = server_b + "cookies/redirect/set-cookie.py";
+  return fetch(server_a_url, { credentials: "include" }).then(response => {
+    console.log("A")
+    assert_true(response.ok);
+    assert_equals(response.status, 200);
+    return response.text();
+  }).then(text => {
+    console.log("B")
+    assert_equals(text, "no cookie");
+  }).then(() => {
+    console.log("C")
+    return fetch(server_a_url, { credentials: "include" });
+  }).then(response => {
+    console.log("D")
+    assert_true(response.ok);
+    assert_equals(response.status, 200);
+    return response.text();
+  }).then(text => {
+    console.log("E")
+    assert_equals(text, "[test=true]");
+  }).then(() => {
+    console.log("F")
+    return fetch(server_b + "common/redirect.py?location=" + server_a_url, { credentials: "include" });
+  }).then(response => {
+    console.log("G")
+    assert_true(response.ok);
+    assert_equals(response.status, 200);
+    return response.text();
+  }).then(text => {
+    console.log("H")
+    assert_equals(text, "[test=true]=");
+  });
+})
+</script>

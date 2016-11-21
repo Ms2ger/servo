@@ -130,7 +130,8 @@ impl FetchResponseListener for FetchContext {
         let _ac = JSAutoCompartment::new(promise_cx, promise.reflector().get_jsobject().get());
         match fetch_metadata {
             // Step 4.1
-            Err(_) => {
+            Err(e) => {
+                debug!("fetch() failed: {:?}", e);
                 promise.reject_error(
                     promise.global().get_cx(),
                     Error::Type("Network error occurred".to_string()));
