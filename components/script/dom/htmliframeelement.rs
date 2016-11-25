@@ -149,38 +149,16 @@ impl HTMLIFrameElement {
             replace: replace,
         };
 
-        if load_data.as_ref().map_or(false, |d| d.url.as_str() == "about:blank") {
-            let (pipeline_sender, pipeline_receiver) = ipc::channel().unwrap();
-
-            global_scope
-                  .constellation_chan()
-                  .send(ConstellationMsg::ScriptLoadedAboutBlankInIFrame(load_info, pipeline_sender))
-                  .unwrap();
-
-            let new_layout_info = NewLayoutInfo {
-                parent_info: Some((global_scope.pipeline_id(), frame_type)),
-                new_pipeline_id: new_pipeline_id,
-                frame_id: self.frame_id,
-                load_data: load_data.unwrap(),
-                pipeline_port: pipeline_receiver,
-                content_process_shutdown_chan: None,
-                window_size: None,
-                layout_threads: PREFS.get("layout.threads").as_u64().expect("count") as usize,
-            };
-
-            ScriptThread::process_attach_layout(new_layout_info);
-        } else {
-            let load_info = IFrameLoadInfoWithData {
-                info: load_info,
-                load_data: load_data,
-                old_pipeline_id: old_pipeline_id,
-                sandbox: sandboxed,
-            };
-            global_scope
-                  .constellation_chan()
-                  .send(ConstellationMsg::ScriptLoadedURLInIFrame(load_info))
-                  .unwrap();
-        }
+        let load_info = IFrameLoadInfoWithData {
+            info: load_info,
+            load_data: load_data,
+            old_pipeline_id: old_pipeline_id,
+            sandbox: sandboxed,
+        };
+        global_scope
+              .constellation_chan()
+              .send(ConstellationMsg::ScriptLoadedURLInIFrame(load_info))
+              .unwrap();
 
         if PREFS.is_mozbrowser_enabled() {
             // https://developer.mozilla.org/en-US/docs/Web/Events/mozbrowserloadstart
@@ -228,7 +206,54 @@ impl HTMLIFrameElement {
         let load_data = LoadData::new(url,
                                       document.get_referrer_policy(),
                                       Some(document.url().clone()));
-        self.navigate_or_reload_child_browsing_context(Some(load_data), false);
+
+        let mut load_blocker = self.load_blocker.borrow_mut();
+        // Any oustanding load is finished from the point of view of the blocked
+        // document; the new navigation will continue blocking it.
+        LoadBlocker::terminate(&mut load_blocker);
+
+        *load_blocker = Some(LoadBlocker::new(&*document, LoadType::Subframe(load_data.url.clone())));
+
+        let window = window_from_node(self);
+        let (_, new_pipeline_id) = self.generate_new_pipeline_id();
+        let private_iframe = self.privatebrowsing();
+        let frame_type = if self.Mozbrowser() { FrameType::MozBrowserIFrame } else { FrameType::IFrame };
+
+        let global_scope = window.upcast::<GlobalScope>();
+        let load_info = IFrameLoadInfo {
+            parent_pipeline_id: global_scope.pipeline_id(),
+            frame_id: self.frame_id,
+            new_pipeline_id: new_pipeline_id,
+            is_private: private_iframe,
+            frame_type: frame_type,
+            replace: false,
+        };
+
+        let (pipeline_sender, pipeline_receiver) = ipc::channel().unwrap();
+
+        global_scope
+              .constellation_chan()
+              .send(ConstellationMsg::ScriptLoadedAboutBlankInIFrame(load_info, pipeline_sender))
+              .unwrap();
+
+        let new_layout_info = NewLayoutInfo {
+            parent_info: Some((global_scope.pipeline_id(), frame_type)),
+            new_pipeline_id: new_pipeline_id,
+            frame_id: self.frame_id,
+            load_data: load_data,
+            pipeline_port: pipeline_receiver,
+            content_process_shutdown_chan: None,
+            window_size: None,
+            layout_threads: PREFS.get("layout.threads").as_u64().expect("count") as usize,
+        };
+
+        ScriptThread::process_attach_layout(new_layout_info);
+
+        if PREFS.is_mozbrowser_enabled() {
+            // https://developer.mozilla.org/en-US/docs/Web/Events/mozbrowserloadstart
+            self.dispatch_mozbrowser_event(MozBrowserEvent::LoadStart);
+        }
+
     }
 
     pub fn update_pipeline_id(&self, new_pipeline_id: PipelineId) {
