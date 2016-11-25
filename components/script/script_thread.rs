@@ -611,7 +611,7 @@ impl ScriptThread {
             if let Some(script_thread) = root.get() {
                 let script_thread = unsafe { &*script_thread };
                 script_thread.profile_event(ScriptThreadEventCategory::AttachLayout, || {
-                    script_thread.handle_new_layout(new_layout_info);
+                    script_thread.handle_new_layout_about_blank(new_layout_info);
                 })
             }
         });
@@ -1231,11 +1231,63 @@ impl ScriptThread {
         let new_load = InProgressLoad::new(new_pipeline_id, frame_id, parent_info,
                                            layout_chan, window_size,
                                            load_data.url.clone());
-        if load_data.url.as_str() == "about:blank" {
-            self.start_page_load_about_blank(new_load);
-        } else {
-            self.start_page_load(new_load, load_data);
-        }
+        self.start_page_load(new_load, load_data);
+    }
+
+    fn handle_new_layout_about_blank(&self, new_layout_info: NewLayoutInfo) {
+        let NewLayoutInfo {
+            parent_info,
+            new_pipeline_id,
+            frame_id,
+            load_data,
+            window_size,
+            pipeline_port,
+            content_process_shutdown_chan,
+            layout_threads,
+        } = new_layout_info;
+
+        let layout_pair = channel();
+        let layout_chan = layout_pair.0.clone();
+
+        let msg = message::Msg::CreateLayoutThread(NewLayoutThreadInfo {
+            id: new_pipeline_id,
+            url: load_data.url.clone(),
+            is_parent: false,
+            layout_pair: layout_pair,
+            pipeline_port: pipeline_port,
+            constellation_chan: self.layout_to_constellation_chan.clone(),
+            script_chan: self.control_chan.clone(),
+            image_cache_thread: self.image_cache_thread.clone(),
+            content_process_shutdown_chan: content_process_shutdown_chan,
+            layout_threads: layout_threads,
+        });
+
+        // Pick a layout thread, any layout thread
+        let current_layout_chan = self.documents.borrow().iter().next()
+            .map(|(_, document)| document.window().layout_chan().clone())
+            .or_else(|| self.incomplete_loads.borrow().first().map(|load| load.layout_chan.clone()));
+
+        match current_layout_chan {
+            None => panic!("Layout attached to empty script thread."),
+            // Tell the layout thread factory to actually spawn the thread.
+            Some(layout_chan) => layout_chan.send(msg).unwrap(),
+        };
+
+        let incomplete = InProgressLoad::new(new_pipeline_id, frame_id, parent_info,
+                                             layout_chan, window_size,
+                                             load_data.url.clone());
+        let id = incomplete.pipeline_id.clone();
+
+        self.incomplete_loads.borrow_mut().push(incomplete);
+
+        let url = ServoUrl::parse("about:blank").unwrap();
+        let mut context = ParserContext::new(id, url.clone());
+
+        let mut meta = Metadata::default(url);
+        meta.set_content_type(Some(&mime!(Text / Html)));
+        context.process_response(Ok(FetchMetadata::Unfiltered(meta)));
+        context.process_response_chunk(vec![]);
+        context.process_response_eof(Ok(()));
     }
 
     fn handle_loads_complete(&self, pipeline: PipelineId) {
@@ -2112,23 +2164,6 @@ impl ScriptThread {
 
         self.resource_threads.send(CoreResourceMsg::Fetch(request, action_sender)).unwrap();
         self.incomplete_loads.borrow_mut().push(incomplete);
-    }
-
-    /// Synchronously fetch `about:blank`. Stores the `InProgressLoad`
-    /// argument until a notification is received that the fetch is complete.
-    fn start_page_load_about_blank(&self, incomplete: InProgressLoad) {
-        let id = incomplete.pipeline_id.clone();
-
-        self.incomplete_loads.borrow_mut().push(incomplete);
-
-        let url = ServoUrl::parse("about:blank").unwrap();
-        let mut context = ParserContext::new(id, url.clone());
-
-        let mut meta = Metadata::default(url);
-        meta.set_content_type(Some(&mime!(Text / Html)));
-        context.process_response(Ok(FetchMetadata::Unfiltered(meta)));
-        context.process_response_chunk(vec![]);
-        context.process_response_eof(Ok(()));
     }
 
     fn handle_parsing_complete(&self, id: PipelineId) {
