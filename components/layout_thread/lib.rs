@@ -724,21 +724,33 @@ impl LayoutThread {
     }
 
     fn create_layout_thread(&self, info: NewLayoutThreadInfo) {
-        LayoutThread::create(info.id,
+        let NewLayoutThreadInfo {
+            id,
+            url,
+            is_parent,
+            layout_pair,
+            pipeline_port,
+            constellation_chan,
+            script_chan,
+            content_process_shutdown_chan,
+            layout_threads,
+            image_cache_thread,
+        } = info;
+        LayoutThread::create(id,
                              FrameId::installed(),
-                             info.url,
-                             info.is_parent,
-                             info.layout_pair,
-                             info.pipeline_port,
-                             info.constellation_chan,
-                             info.script_chan,
-                             self.image_cache_thread.clone(),
+                             url,
+                             is_parent,
+                             layout_pair,
+                             pipeline_port,
+                             constellation_chan,
+                             script_chan,
+                             image_cache_thread,
                              self.font_cache_thread.clone(),
                              self.time_profiler_chan.clone(),
                              self.mem_profiler_chan.clone(),
-                             info.content_process_shutdown_chan,
+                             content_process_shutdown_chan,
                              self.webrender_api.clone_sender(),
-                             info.layout_threads);
+                             layout_threads);
     }
 
     /// Enters a quiescent state in which no new messages will be processed until an `ExitNow` is
