@@ -77,6 +77,7 @@ use net_traits::image_cache_thread::{ImageCacheChan, ImageCacheResult, ImageCach
 use net_traits::request::{CredentialsMode, Destination, RequestInit};
 use net_traits::storage_thread::StorageType;
 use network_listener::NetworkListener;
+use origin::Origin;
 use profile_traits::mem::{self, OpaqueSender, Report, ReportKind, ReportsChan};
 use profile_traits::time::{self, ProfilerCategory, profile};
 use script_layout_interface::message::{self, NewLayoutThreadInfo, ReflowQueryType};
@@ -152,6 +153,7 @@ struct InProgressLoad {
     is_visible: bool,
     /// The requested URL of the load.
     url: ServoUrl,
+    origin: Origin,
 }
 
 impl InProgressLoad {
@@ -161,7 +163,8 @@ impl InProgressLoad {
            parent_info: Option<(PipelineId, FrameType)>,
            layout_chan: Sender<message::Msg>,
            window_size: Option<WindowSizeData>,
-           url: ServoUrl) -> InProgressLoad {
+           url: ServoUrl,
+           origin: Origin) -> InProgressLoad {
         InProgressLoad {
             pipeline_id: id,
             frame_id: frame_id,
@@ -172,6 +175,7 @@ impl InProgressLoad {
             is_frozen: false,
             is_visible: true,
             url: url,
+            origin: origin,
         }
     }
 }
@@ -541,8 +545,9 @@ impl ScriptThreadFactory for ScriptThread {
 
             let mut failsafe = ScriptMemoryFailsafe::new(&script_thread);
 
+            let origin = Origin::new(&load_data.url);
             let new_load = InProgressLoad::new(id, frame_id, parent_info, layout_chan, window_size,
-                                               load_data.url.clone());
+                                               load_data.url.clone(), origin);
             script_thread.start_page_load(new_load, load_data);
 
             let reporter_name = format!("script-reporter-{}", id);
@@ -606,12 +611,12 @@ impl ScriptThread {
         });
     }
 
-    pub fn process_attach_layout(new_layout_info: NewLayoutInfo) {
+    pub fn process_attach_layout(new_layout_info: NewLayoutInfo, origin: Origin) {
         SCRIPT_THREAD_ROOT.with(|root| {
             if let Some(script_thread) = root.get() {
                 let script_thread = unsafe { &*script_thread };
                 script_thread.profile_event(ScriptThreadEventCategory::AttachLayout, || {
-                    script_thread.handle_new_layout_about_blank(new_layout_info);
+                    script_thread.handle_new_layout_about_blank(new_layout_info, origin);
                 })
             }
         });
@@ -1228,13 +1233,14 @@ impl ScriptThread {
         };
 
         // Kick off the fetch for the new resource.
+        let origin = Origin::new(&load_data.url);
         let new_load = InProgressLoad::new(new_pipeline_id, frame_id, parent_info,
                                            layout_chan, window_size,
-                                           load_data.url.clone());
+                                           load_data.url.clone(), origin);
         self.start_page_load(new_load, load_data);
     }
 
-    fn handle_new_layout_about_blank(&self, new_layout_info: NewLayoutInfo) {
+    fn handle_new_layout_about_blank(&self, new_layout_info: NewLayoutInfo, origin: Origin) {
         let NewLayoutInfo {
             parent_info,
             new_pipeline_id,
@@ -1275,8 +1281,8 @@ impl ScriptThread {
 
         let incomplete = InProgressLoad::new(new_pipeline_id, frame_id, parent_info,
                                              layout_chan, window_size,
-                                             load_data.url.clone());
-        let id = incomplete.pipeline_id.clone();
+                                             load_data.url.clone(), origin);
+        let id = incomplete.pipeline_id;
 
         self.incomplete_loads.borrow_mut().push(incomplete);
 
@@ -1840,6 +1846,7 @@ impl ScriptThread {
         let document = Document::new(&window,
                                      Some(&browsing_context),
                                      Some(final_url.clone()),
+                                     Some(incomplete.origin),
                                      is_html_document,
                                      content_type,
                                      last_modified,

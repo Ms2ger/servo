@@ -252,7 +252,7 @@ impl HTMLIFrameElement {
             layout_threads: PREFS.get("layout.threads").as_u64().expect("count") as usize,
         };
 
-        ScriptThread::process_attach_layout(new_layout_info);
+        ScriptThread::process_attach_layout(new_layout_info, document.origin().alias());
 
         if PREFS.is_mozbrowser_enabled() {
             // https://developer.mozilla.org/en-US/docs/Web/Events/mozbrowserloadstart

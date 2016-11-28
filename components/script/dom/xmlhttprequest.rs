@@ -1222,6 +1222,7 @@ impl XMLHttpRequest {
         Document::new(win,
                       None,
                       parsed_url,
+                      Some(doc.origin().alias()),
                       is_html_document,
                       content_type,
                       None,
