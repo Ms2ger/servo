@@ -36,7 +36,8 @@ extern crate util;
 
 use devtools_traits::DevtoolsControlMsg;
 use hyper::server::{Handler, Listening, Server};
-use net::fetch::methods::{FetchContext, fetch};
+use net::fetch::cors_cache::CorsCache;
+use net::fetch::methods::{FetchContext, fetch, fetch_with_cors_cache};
 use net::filemanager_thread::FileManager;
 use net::test::HttpState;
 use net_traits::FetchTaskTarget;
@@ -88,6 +89,10 @@ fn fetch_sync(request: Request, dc: Option<Sender<DevtoolsControlMsg>>) -> Respo
 
 fn fetch_sync_with_context(request: Request, context: &FetchContext) -> Response {
     fetch(Rc::new(request), &mut None, context)
+}
+
+fn fetch_sync_with_cors_cache(request: Rc<Request>, cache: &mut CorsCache) -> Response {
+    fetch_with_cors_cache(request, cache, &mut None, &new_fetch_context(None))
 }
 
 fn make_server<H: Handler + 'static>(handler: H) -> (Listening, ServoUrl) {

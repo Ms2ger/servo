@@ -2,7 +2,8 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-use {DEFAULT_USER_AGENT, new_fetch_context, fetch_async, fetch_sync, fetch_sync_with_context, make_server};
+use {DEFAULT_USER_AGENT, new_fetch_context, fetch_async, fetch_sync};
+use {fetch_sync_with_context, fetch_sync_with_cors_cache, make_server};
 use devtools_traits::DevtoolsControlMsg;
 use devtools_traits::HttpRequest as DevtoolsHttpRequest;
 use devtools_traits::HttpResponse as DevtoolsHttpResponse;
@@ -21,7 +22,6 @@ use hyper::status::StatusCode;
 use hyper::uri::RequestUri;
 use msg::constellation_msg::TEST_PIPELINE_ID;
 use net::fetch::cors_cache::CorsCache;
-use net::fetch::methods::fetch_with_cors_cache;
 use net_traits::ReferrerPolicy;
 use net_traits::request::{Origin, RedirectMode, Referrer, Request, RequestMode};
 use net_traits::response::{CacheState, Response, ResponseBody, ResponseType};
@@ -249,10 +249,8 @@ fn test_cors_preflight_cache_fetch() {
     let wrapped_request0 = Rc::new(request.clone());
     let wrapped_request1 = Rc::new(request);
 
-    let fetch_response0 = fetch_with_cors_cache(wrapped_request0.clone(), &mut cache,
-                                                &mut None, &new_fetch_context(None));
-    let fetch_response1 = fetch_with_cors_cache(wrapped_request1.clone(), &mut cache,
-                                                &mut None, &new_fetch_context(None));
+    let fetch_response0 = fetch_sync_with_cors_cache(wrapped_request0.clone(), &mut cache);
+    let fetch_response1 = fetch_sync_with_cors_cache(wrapped_request1.clone(), &mut cache);
     let _ = server.close();
 
     assert!(!fetch_response0.is_network_error() && !fetch_response1.is_network_error());
