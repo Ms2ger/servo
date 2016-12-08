@@ -16,7 +16,7 @@ use hyper::status::StatusCode;
 use mime_guess::guess_mime_type;
 use net_traits::{FetchTaskTarget, NetworkError, ReferrerPolicy};
 use net_traits::request::{RedirectMode, Referrer, Request, RequestMode, ResponseTainting};
-use net_traits::request::{Type, Origin, Window};
+use net_traits::request::{Type, Window};
 use net_traits::response::{Response, ResponseBody, ResponseType};
 use std::borrow::Cow;
 use std::fs::File;
@@ -60,11 +60,7 @@ pub fn fetch_with_cors_cache(request: Rc<Request>,
         request.window.set(Window::NoWindow);
     }
 
-    // Step 2
-    if *request.origin.borrow() == Origin::Client {
-        // TODO: set request's origin to request's client's origin
-        unimplemented!()
-    }
+    // Step 2: origin is always passed explicitly.
 
     // Step 3
     if !request.headers.borrow().has::<Accept>() {
@@ -177,11 +173,7 @@ pub fn main_fetch(request: Rc<Request>,
         Some(response) => response,
         None => {
             let current_url = request.current_url();
-            let same_origin = if let Origin::Origin(ref origin) = *request.origin.borrow() {
-                *origin == current_url.origin()
-            } else {
-                false
-            };
+            let same_origin = *request.origin.borrow() == current_url.origin();
 
             if (same_origin && !cors_flag ) ||
                 current_url.scheme() == "data" ||

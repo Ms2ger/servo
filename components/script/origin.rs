@@ -58,4 +58,8 @@ impl Origin {
             inner: self.inner.clone(),
         }
     }
+
+    pub fn url_origin(&self) -> &UrlOrigin {
+        &self.inner
+    }
 }

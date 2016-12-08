@@ -10,7 +10,7 @@ use servo_url::ServoUrl;
 use std::cell::{Cell, RefCell};
 use std::default::Default;
 use std::mem::swap;
-use url::{Origin as UrlOrigin};
+use url::Origin;
 
 /// An [initiator](https://fetch.spec.whatwg.org/#concept-request-initiator)
 #[derive(Copy, Clone, PartialEq, HeapSizeOf)]
@@ -35,13 +35,6 @@ pub enum Destination {
     None, Document, Embed, Font, Image, Manifest,
     Media, Object, Report, Script, ServiceWorker,
     SharedWorker, Style, Worker, XSLT
-}
-
-/// A request [origin](https://fetch.spec.whatwg.org/#concept-request-origin)
-#[derive(Clone, PartialEq, Debug, HeapSizeOf)]
-pub enum Origin {
-    Client,
-    Origin(UrlOrigin)
 }
 
 /// A [referer](https://fetch.spec.whatwg.org/#concept-request-referrer)
@@ -214,7 +207,7 @@ pub struct Request {
 
 impl Request {
     pub fn new(url: ServoUrl,
-               origin: Option<Origin>,
+               origin: Origin,
                is_service_worker_global_scope: bool,
                pipeline_id: Option<PipelineId>) -> Request {
         Request {
@@ -231,7 +224,7 @@ impl Request {
             initiator: Initiator::None,
             type_: Type::None,
             destination: Destination::None,
-            origin: RefCell::new(origin.unwrap_or(Origin::Client)),
+            origin: RefCell::new(origin),
             omit_origin_header: Cell::new(false),
             referrer: RefCell::new(Referrer::Client),
             referrer_policy: Cell::new(None),
@@ -253,7 +246,7 @@ impl Request {
 
     pub fn from_init(init: RequestInit) -> Request {
         let mut req = Request::new(init.url,
-                                   Some(Origin::Origin(init.origin.origin())),
+                                   init.origin.origin(),
                                    false, init.pipeline_id);
         *req.method.borrow_mut() = init.method;
         *req.headers.borrow_mut() = init.headers;

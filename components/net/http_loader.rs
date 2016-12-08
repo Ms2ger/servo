@@ -31,7 +31,7 @@ use log;
 use msg::constellation_msg::PipelineId;
 use net_traits::{CookieSource, FetchMetadata, NetworkError, ReferrerPolicy};
 use net_traits::hosts::replace_hosts;
-use net_traits::request::{CacheMode, CredentialsMode, Destination, Origin};
+use net_traits::request::{CacheMode, CredentialsMode, Destination};
 use net_traits::request::{RedirectMode, Referrer, Request, RequestMode, ResponseTainting};
 use net_traits::response::{HttpsState, Response, ResponseBody, ResponseType};
 use openssl;
@@ -51,7 +51,7 @@ use std::sync::mpsc::{channel, Sender};
 use time;
 use time::Tm;
 use unicase::UniCase;
-use url::Origin as UrlOrigin;
+use url::Origin;
 use util::thread::spawn_named;
 use uuid;
 
@@ -424,7 +424,7 @@ fn send_response_to_devtools(devtools_chan: &Sender<DevtoolsControlMsg>,
     let _ = devtools_chan.send(DevtoolsControlMsg::FromChrome(msg));
 }
 
-fn auth_from_cache(auth_cache: &Arc<RwLock<AuthCache>>, origin: &UrlOrigin) -> Option<Basic> {
+fn auth_from_cache(auth_cache: &Arc<RwLock<AuthCache>>, origin: &Origin) -> Option<Basic> {
     if let Some(ref auth_entry) = auth_cache.read().unwrap().entries.get(&origin.ascii_serialization()) {
         let user_name = auth_entry.user_name.clone();
         let password  = Some(auth_entry.password.clone());
@@ -786,11 +786,7 @@ fn http_redirect_fetch(request: Rc<Request>,
     request.redirect_count.set(request.redirect_count.get() + 1);
 
     // Step 7
-    let same_origin = if let Origin::Origin(ref origin) = *request.origin.borrow() {
-        *origin == request.current_url().origin()
-    } else {
-        false
-    };
+    let same_origin = *request.origin.borrow() == request.current_url().origin();
     let has_credentials = has_credentials(&location_url);
 
     if request.mode == RequestMode::CorsMode && !same_origin && has_credentials {
@@ -804,7 +800,7 @@ fn http_redirect_fetch(request: Rc<Request>,
 
     // Step 9
     if cors_flag && !same_origin {
-        *request.origin.borrow_mut() = Origin::Origin(UrlOrigin::new_opaque());
+        *request.origin.borrow_mut() = Origin::new_opaque();
     }
 
     // Step 10
@@ -1233,7 +1229,7 @@ fn cors_preflight_fetch(request: Rc<Request>,
                         context: &FetchContext)
                         -> Response {
     // Step 1
-    let mut preflight = Request::new(request.current_url(), Some(request.origin.borrow().clone()),
+    let mut preflight = Request::new(request.current_url(), request.origin.borrow().clone(),
                                      request.is_service_worker_global_scope, request.pipeline_id.get());
     *preflight.method.borrow_mut() = Method::Options;
     preflight.initiator = request.initiator.clone();
@@ -1354,9 +1350,8 @@ fn cors_check(request: Rc<Request>, response: &Response) -> Result<(), ()> {
         _ => return Err(())
     };
 
-    match *request.origin.borrow() {
-        Origin::Origin(ref o) if o.ascii_serialization() == origin => {},
-        _ => return Err(())
+    if request.origin.borrow().ascii_serialization() != origin {
+        return Err(());
     }
 
     // Step 5

@@ -31,6 +31,7 @@ use js::rust::{CompileOptionsWrapper, get_object_class};
 use libc;
 use msg::constellation_msg::PipelineId;
 use net_traits::{CoreResourceThread, ResourceThreads, IpcSend};
+use origin::Origin;
 use profile_traits::{mem, time};
 use script_runtime::{CommonScriptMsg, EnqueuedPromiseCallback, ScriptChan, ScriptPort};
 use script_thread::{MainThreadScriptChan, RunnableWrapper, ScriptThread};
@@ -164,6 +165,19 @@ impl GlobalScope {
             assert!(!context.is_null());
             context
         }
+    }
+
+    // https://html.spec.whatwg.org/multipage/#environment-settings-object
+
+    /// https://html.spec.whatwg.org/multipage/#concept-settings-object-origin
+    pub fn origin(&self) -> Origin {
+        if let Some(window) = self.downcast::<Window>() {
+            return window.Document().origin().alias();
+        }
+        if let Some(_worker) = self.downcast::<WorkerGlobalScope>() {
+            panic!();
+        }
+        unreachable!();
     }
 
     pub fn crypto(&self) -> Root<Crypto> {

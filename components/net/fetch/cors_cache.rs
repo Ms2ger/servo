@@ -10,10 +10,11 @@
 //! with CORSRequest being expanded into FetchRequest (etc)
 
 use hyper::method::Method;
-use net_traits::request::{CredentialsMode, Origin, Request};
+use net_traits::request::{CredentialsMode, Request};
 use servo_url::ServoUrl;
 use std::ascii::AsciiExt;
 use time::{self, Timespec};
+use url::Origin;
 
 /// Union type for CORS cache entries
 ///

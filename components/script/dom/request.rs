@@ -26,7 +26,6 @@ use dom::promise::Promise;
 use dom::xmlhttprequest::Extractable;
 use hyper::method::Method as HttpMethod;
 use net_traits::ReferrerPolicy as MsgReferrerPolicy;
-use net_traits::request::{Origin, Window};
 use net_traits::request::CacheMode as NetTraitsRequestCache;
 use net_traits::request::CredentialsMode as NetTraitsRequestCredentials;
 use net_traits::request::Destination as NetTraitsRequestDestination;
@@ -35,6 +34,7 @@ use net_traits::request::Referrer as NetTraitsRequestReferrer;
 use net_traits::request::Request as NetTraitsRequest;
 use net_traits::request::RequestMode as NetTraitsRequestMode;
 use net_traits::request::Type as NetTraitsRequestType;
+use net_traits::request::Window;
 use servo_url::ServoUrl;
 use std::ascii::AsciiExt;
 use std::cell::{Cell, Ref};
@@ -158,8 +158,7 @@ impl Request {
         request.headers = temporary_request.headers.clone();
         request.unsafe_request = true;
         request.window.set(window);
-        // TODO: `entry settings object` is not implemented in Servo yet.
-        *request.origin.borrow_mut() = Origin::Client;
+        *request.origin.borrow_mut() = global.origin().url_origin().clone();
         request.omit_origin_header = temporary_request.omit_origin_header;
         request.referrer = temporary_request.referrer;
         request.referrer_policy = temporary_request.referrer_policy;
@@ -470,10 +469,10 @@ impl Request {
 fn net_request_from_global(global: &GlobalScope,
                            url: ServoUrl,
                            is_service_worker_global_scope: bool) -> NetTraitsRequest {
-    let origin = Origin::Origin(global.get_url().origin());
+    let origin = global.get_url().origin();
     let pipeline_id = global.pipeline_id();
     NetTraitsRequest::new(url,
-                          Some(origin),
+                          origin,
                           is_service_worker_global_scope,
                           Some(pipeline_id))
 }
