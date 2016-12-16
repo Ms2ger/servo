@@ -93,7 +93,7 @@ use script_traits::webdriver_msg::WebDriverScriptCommand;
 use serviceworkerjob::{Job, JobQueue, AsyncJobHandler, FinishJobHandler, InvokeType, SettleType};
 use servo_config::opts;
 use servo_url::ServoUrl;
-use std::cell::Cell;
+use std::cell::{Cell, Ref};
 use std::collections::{hash_map, HashMap, HashSet};
 use std::option::Option;
 use std::ptr;
@@ -330,30 +330,30 @@ impl OpaqueSender<CommonScriptMsg> for Sender<MainThreadScriptMsg> {
 #[derive(JSTraceable)]
 #[must_root]
 pub struct Documents {
-    map: HashMap<PipelineId, JS<Document>>,
+    map: DOMRefCell<HashMap<PipelineId, JS<Document>>>,
 }
 
 impl Documents {
     pub fn new() -> Documents {
         Documents {
-            map: HashMap::new(),
+            map: DOMRefCell::new(HashMap::new()),
         }
     }
 
-    pub fn insert(&mut self, pipeline_id: PipelineId, doc: &Document) {
-        self.map.insert(pipeline_id, JS::from_ref(doc));
+    pub fn insert(&self, pipeline_id: PipelineId, doc: &Document) {
+        self.map.borrow_mut().insert(pipeline_id, JS::from_ref(doc));
     }
 
-    pub fn remove(&mut self, pipeline_id: PipelineId) -> Option<Root<Document>> {
-        self.map.remove(&pipeline_id).map(|ref doc| Root::from_ref(&**doc))
+    pub fn remove(&self, pipeline_id: PipelineId) -> Option<Root<Document>> {
+        self.map.borrow_mut().remove(&pipeline_id).map(|ref doc| Root::from_ref(&**doc))
     }
 
     pub fn is_empty(&self) -> bool {
-        self.map.is_empty()
+        self.map.borrow().is_empty()
     }
 
     pub fn find_document(&self, pipeline_id: PipelineId) -> Option<Root<Document>> {
-        self.map.get(&pipeline_id).map(|doc| Root::from_ref(&**doc))
+        self.map.borrow().get(&pipeline_id).map(|doc| Root::from_ref(&**doc))
     }
 
     pub fn find_window(&self, pipeline_id: PipelineId) -> Option<Root<Window>> {
@@ -370,14 +370,14 @@ impl Documents {
 
     pub fn iter<'a>(&'a self) -> DocumentsIter<'a> {
         DocumentsIter {
-            iter: self.map.iter(),
+            iter: Ref::map(self.map.borrow(), |map| map.iter()),
         }
     }
 }
 
 #[allow(unrooted_must_root)]
 pub struct DocumentsIter<'a> {
-    iter: hash_map::Iter<'a, PipelineId, JS<Document>>,
+    iter: Ref<'a, hash_map::Iter<'a, PipelineId, JS<Document>>>,
 }
 
 impl<'a> Iterator for DocumentsIter<'a> {
