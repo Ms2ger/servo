@@ -1191,7 +1191,7 @@ impl ScriptThread {
         window.set_scroll_offsets(scroll_offsets)
     }
 
-    fn handle_new_layout(&self, new_layout_info: NewLayoutInfo) {
+    fn prepare_new_layout(&self, new_layout_info: NewLayoutInfo) -> (InProgressLoad, LoadData) {
         let NewLayoutInfo {
             parent_info,
             new_pipeline_id,
@@ -1234,6 +1234,11 @@ impl ScriptThread {
         let new_load = InProgressLoad::new(new_pipeline_id, frame_id, parent_info,
                                            layout_chan, window_size,
                                            load_data.url.clone());
+        (new_load, load_data)
+    }
+
+    fn handle_new_layout(&self, new_layout_info: NewLayoutInfo) {
+        let (new_load, load_data) = self.prepare_new_layout(new_layout_info);
         if load_data.url.as_str() == "about:blank" {
             self.start_page_load_about_blank(new_load);
         } else {
