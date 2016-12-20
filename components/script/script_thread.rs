@@ -610,7 +610,7 @@ impl ScriptThread {
             if let Some(script_thread) = root.get() {
                 let script_thread = unsafe { &*script_thread };
                 script_thread.profile_event(ScriptThreadEventCategory::AttachLayout, || {
-                    script_thread.handle_new_layout(new_layout_info);
+                    script_thread.handle_new_layout_about_blank(new_layout_info);
                 })
             }
         });
@@ -1237,13 +1237,15 @@ impl ScriptThread {
         (new_load, load_data)
     }
 
+    fn handle_new_layout_about_blank(&self, new_layout_info: NewLayoutInfo) {
+        let (new_load, load_data) = self.prepare_new_layout(new_layout_info);
+        assert_eq!(load_data.url.as_str(), "about:blank");
+        self.start_page_load_about_blank(new_load);
+    }
+
     fn handle_new_layout(&self, new_layout_info: NewLayoutInfo) {
         let (new_load, load_data) = self.prepare_new_layout(new_layout_info);
-        if load_data.url.as_str() == "about:blank" {
-            self.start_page_load_about_blank(new_load);
-        } else {
-            self.start_page_load(new_load, load_data);
-        }
+        self.start_page_load(new_load, load_data);
     }
 
     fn handle_loads_complete(&self, pipeline: PipelineId) {
