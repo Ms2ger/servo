@@ -5,26 +5,47 @@
 // XXX
 #![allow(missing_docs)]
 
-use core::nonzero::NonZero;
-use dom::bindings::js::Root;
+use dom::bindings::js::{JS, Root};
 use dom::globalscope::GlobalScope;
-use std::cell::Cell;
+use std::cell::RefCell;
+use js::jsapi::JSTracer;
+use dom::bindings::trace::JSTraceable;
 
-thread_local!(static ENTRY: Cell<Option<NonZero<*const GlobalScope>>> = Cell::new(None));
+thread_local!(static STACK: RefCell<Vec<StackEntry>> = RefCell::new(Vec::new()));
 
-/// A str
+#[derive(PartialEq, Eq)]
+#[derive(JSTraceable)]
+enum StackEntryKind {
+    Incumbent,
+    Entry,
+}
+
+#[allow(unrooted_must_root)]
+#[derive(JSTraceable)]
+struct StackEntry {
+    global: JS<GlobalScope>,
+    kind: StackEntryKind,
+}
+
+pub unsafe fn trace(tracer: *mut JSTracer) {
+    STACK.with(|stack| {
+        stack.borrow().trace(tracer);
+    })
+}
+
 pub struct AutoEntryScript {
-    previous: Option<Root<GlobalScope>>,
 }
 
 impl AutoEntryScript {
     /// https://html.spec.whatwg.org/multipage/#prepare-to-run-script
     pub fn new(global: &GlobalScope) -> Self {
-        ENTRY.with(|entry| {
-            let previous = entry.get();
-            entry.set(Some(unsafe { NonZero::new(global as *const _) }));
+        STACK.with(|stack| {
+            let mut stack = stack.borrow_mut();
+            stack.push(StackEntry {
+                global: JS::from_ref(global),
+                kind: StackEntryKind::Entry,
+            });
             AutoEntryScript {
-                previous: previous.map(Root::new),
             }
         })
     }
@@ -33,12 +54,27 @@ impl AutoEntryScript {
 impl Drop for AutoEntryScript {
     /// https://html.spec.whatwg.org/multipage/#clean-up-after-running-script
     fn drop(&mut self) {
-        ENTRY.with(|entry| {
-            entry.set(self.previous.as_mut().map(|previous| unsafe { NonZero::new(&**previous as *const _) }));
+        STACK.with(|stack| {
+            let mut stack = stack.borrow_mut();
+            stack.pop().unwrap();
         })
     }
 }
 
-pub fn get_entry_global() -> NonZero<*const GlobalScope> {
-    ENTRY.with(|entry| entry.get()).unwrap()
+fn get(kind: StackEntryKind) -> Root<GlobalScope> {
+    STACK.with(|stack| {
+        stack.borrow()
+             .iter()
+             .rev()
+             .find(|entry| entry.kind == kind)
+             .map(|entry| Root::from_ref(&*entry.global))
+    }).unwrap()
+}
+
+pub fn entry_global() -> Root<GlobalScope> {
+    get(StackEntryKind::Entry)
+}
+
+pub fn incumbent_global() -> Root<GlobalScope> {
+    get(StackEntryKind::Incumbent)
 }
