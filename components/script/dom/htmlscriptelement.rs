@@ -15,6 +15,7 @@ use dom::bindings::js::{JS, Root};
 use dom::bindings::js::RootedReference;
 use dom::bindings::refcounted::Trusted;
 use dom::bindings::reflector::DomObject;
+use dom::bindings::settings_stack::AutoEntryScript;
 use dom::bindings::str::DOMString;
 use dom::document::Document;
 use dom::element::{AttributeMutation, Element, ElementCreator};
@@ -493,9 +494,13 @@ impl HTMLScriptElement {
 
         // Step 5.a.2.
         let window = window_from_node(self);
-        rooted!(in(window.get_cx()) let mut rval = UndefinedValue());
-        window.upcast::<GlobalScope>().evaluate_script_on_global_with_result(
-            &script.text, script.url.as_str(), rval.handle_mut());
+        {
+            // TODO: use "the settings object of s"
+            let _aes = AutoEntryScript::new(window.upcast());
+            rooted!(in(window.get_cx()) let mut rval = UndefinedValue());
+            window.upcast::<GlobalScope>().evaluate_script_on_global_with_result(
+                &script.text, script.url.as_str(), rval.handle_mut());
+        }
 
         // Step 6.
         document.set_current_script(old_script.r());
