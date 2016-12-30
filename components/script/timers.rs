@@ -6,6 +6,7 @@ use dom::bindings::callback::ExceptionHandling::Report;
 use dom::bindings::cell::DOMRefCell;
 use dom::bindings::codegen::Bindings::FunctionBinding::Function;
 use dom::bindings::reflector::DomObject;
+use dom::bindings::settings_stack::AutoEntryScript;
 use dom::bindings::str::DOMString;
 use dom::eventsource::EventSourceTimeoutCallback;
 use dom::globalscope::GlobalScope;
@@ -493,9 +494,9 @@ impl JsTimerTask {
         match *&self.callback {
             InternalTimerCallback::StringTimerCallback(ref code_str) => {
                 let global = this.global();
+                let _aes = AutoEntryScript::new(&global);
                 let cx = global.get_cx();
                 rooted!(in(cx) let mut rval = UndefinedValue());
-
                 global.evaluate_js_on_global_with_result(
                     code_str, rval.handle_mut());
             },

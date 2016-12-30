@@ -37,6 +37,7 @@ use dom::bindings::js::{RootCollectionPtr, RootedReference};
 use dom::bindings::num::Finite;
 use dom::bindings::refcounted::Trusted;
 use dom::bindings::reflector::DomObject;
+use dom::bindings::settings_stack::AutoEntryScript;
 use dom::bindings::str::DOMString;
 use dom::bindings::trace::JSTraceable;
 use dom::bindings::utils::WRAP_CALLBACKS;
@@ -1848,6 +1849,7 @@ impl ScriptThread {
 
             // Script source is ready to be evaluated (11.)
             unsafe {
+                let _aes = AutoEntryScript::new(window.upcast());
                 let _ac = JSAutoCompartment::new(self.get_cx(), window.reflector().get_jsobject().get());
                 rooted!(in(self.get_cx()) let mut jsval = UndefinedValue());
                 window.upcast::<GlobalScope>().evaluate_js_on_global_with_result(
