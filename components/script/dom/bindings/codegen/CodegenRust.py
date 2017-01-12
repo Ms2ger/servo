@@ -665,7 +665,7 @@ def getJSToNativeConversionInfo(type, descriptorProvider, failureCode=None,
     else:
         failOrPropagate = failureCode
 
-    needsRooting = typeNeedsRooting(type, descriptorProvider)
+    needsRooting = False
 
     def handleOptional(template, declType, default):
         assert (defaultValue is None) == (default is None)
@@ -873,12 +873,30 @@ def getJSToNativeConversionInfo(type, descriptorProvider, failureCode=None,
         assert not isClamp
         assert not defaultValue
         assert type.isArrayBuffer()
-        template = fill(
+        templateBody = fill(
             """
-            typedarray!(in(cx) let array: ArrayBuffer = rval.get());
-            assert_eq!(array.unwrap().as_slice(), &[1, 3, 5, 0, 0][..]);
-            """)
-        return JSToNativeConversionInfo(template, default, declType)
+            {
+                let mut __root = ::js::jsapi::Rooted::new_unrooted($${val}.get().to_object());
+                let mut x = ::js::typedarray::ArrayBuffer::from(cx, &mut __root);
+                match x {
+                    Ok(x) => x,
+                    Err(()) => {
+                        let error = "Object was not a typed array";
+                        ${failure}
+                    }
+                }
+            }
+            """,
+            failure=failOrPropagate)
+
+        declType = CGGeneric("::js::typedarray::ArrayBuffer")
+        if type.nullable():
+            templateBody = "Some(%s)" % templateBody
+            declType = CGWrapper(declType, pre="Option<", post=">")
+        templateBody = wrapObjectTemplate(templateBody, "None",
+                                          isDefinitelyObject, type, failureCode)
+        default = None
+        return JSToNativeConversionInfo(templateBody, default, declType, needsRooting=True)
 
     if type.isDOMString():
         nullBehavior = getConversionConfigForType(type, isEnforceRange, isClamp, treatNullAs)

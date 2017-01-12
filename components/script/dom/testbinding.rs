@@ -440,6 +440,7 @@ impl TestBindingMethods for TestBinding {
     unsafe fn PassAny(&self, _: *mut JSContext, _: HandleValue) {}
     #[allow(unsafe_code)]
     unsafe fn PassObject(&self, _: *mut JSContext, _: *mut JSObject) {}
+    fn PassArrayBuffer(&self, arg: ::js::typedarray::ArrayBuffer) {}
     fn PassCallbackFunction(&self, _: Rc<Function>) {}
     fn PassCallbackInterface(&self, _: Rc<EventListener>) {}
     fn PassSequence(&self, _: Vec<i32>) {}
