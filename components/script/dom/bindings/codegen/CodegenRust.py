@@ -869,7 +869,16 @@ def getJSToNativeConversionInfo(type, descriptorProvider, failureCode=None,
         return handleOptional(templateBody, declType, handleDefaultNull("None"))
 
     if type.isSpiderMonkeyInterface():
-        raise TypeError("Can't handle SpiderMonkey interface arguments yet")
+        assert not isEnforceRange
+        assert not isClamp
+        assert not defaultValue
+        assert type.isArrayBuffer()
+        template = fill(
+            """
+            typedarray!(in(cx) let array: ArrayBuffer = rval.get());
+            assert_eq!(array.unwrap().as_slice(), &[1, 3, 5, 0, 0][..]);
+            """)
+        return JSToNativeConversionInfo(template, default, declType)
 
     if type.isDOMString():
         nullBehavior = getConversionConfigForType(type, isEnforceRange, isClamp, treatNullAs)

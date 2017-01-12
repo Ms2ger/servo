@@ -246,6 +246,7 @@ interface TestBinding {
   void passUnionWithTypedef2((sequence<long> or TestTypedef) arg);
   void passAny(any arg);
   void passObject(object arg);
+  void passArrayBuffer(ArrayBuffer arg);
   void passCallbackFunction(Function fun);
   void passCallbackInterface(EventListener listener);
   void passSequence(sequence<long> seq);
