@@ -26,7 +26,8 @@ use js::rust::Runtime;
 use net_traits::{load_whole_resource, IpcSend, CustomResponseMediator};
 use net_traits::request::{CredentialsMode, Destination, RequestInit, Type as RequestType};
 use script_runtime::{CommonScriptMsg, StackRootTLS, get_reports, new_rt_and_cx, ScriptChan};
-use script_traits::{TimerEvent, WorkerGlobalScopeInit, ScopeThings, ServiceWorkerMsg, WorkerScriptLoadOrigin};
+use script_traits::{TimerEvent, WorkerGlobalScopeInit, ScopeThings, WorkerScriptLoadOrigin};
+use serviceworker_manager::TimeoutMessage;
 use servo_config::prefs::PREFS;
 use servo_rand::random;
 use servo_url::ServoUrl;
@@ -78,7 +79,7 @@ pub struct ServiceWorkerGlobalScope {
     #[ignore_heap_size_of = "Defined in std"]
     timer_event_port: Receiver<()>,
     #[ignore_heap_size_of = "Defined in std"]
-    swmanager_sender: IpcSender<ServiceWorkerMsg>,
+    swmanager_sender: Sender<TimeoutMessage>,
     scope_url: ServoUrl,
 }
 
@@ -91,7 +92,7 @@ impl ServiceWorkerGlobalScope {
                      receiver: Receiver<ServiceWorkerScriptMsg>,
                      timer_event_chan: IpcSender<TimerEvent>,
                      timer_event_port: Receiver<()>,
-                     swmanager_sender: IpcSender<ServiceWorkerMsg>,
+                     swmanager_sender: Sender<TimeoutMessage>,
                      scope_url: ServoUrl)
                      -> ServiceWorkerGlobalScope {
         ServiceWorkerGlobalScope {
@@ -118,7 +119,7 @@ impl ServiceWorkerGlobalScope {
                receiver: Receiver<ServiceWorkerScriptMsg>,
                timer_event_chan: IpcSender<TimerEvent>,
                timer_event_port: Receiver<()>,
-               swmanager_sender: IpcSender<ServiceWorkerMsg>,
+               swmanager_sender: Sender<TimeoutMessage>,
                scope_url: ServoUrl)
                -> Root<ServiceWorkerGlobalScope> {
         let cx = runtime.cx();
@@ -142,7 +143,7 @@ impl ServiceWorkerGlobalScope {
                             own_sender: Sender<ServiceWorkerScriptMsg>,
                             receiver: Receiver<ServiceWorkerScriptMsg>,
                             devtools_receiver: IpcReceiver<DevtoolScriptControlMsg>,
-                            swmanager_sender: IpcSender<ServiceWorkerMsg>,
+                            swmanager_sender: Sender<TimeoutMessage>,
                             scope_url: ServoUrl) {
         let ScopeThings { script_url,
                           init,
@@ -238,7 +239,7 @@ impl ServiceWorkerGlobalScope {
                 true
             }
             MixedMessage::FromTimeoutThread(_) => {
-                let _ = self.swmanager_sender.send(ServiceWorkerMsg::Timeout(self.scope_url.clone()));
+                let _ = self.swmanager_sender.send(TimeoutMessage { scope: self.scope_url.clone() });
                 false
             }
         }

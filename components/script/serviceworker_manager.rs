@@ -12,7 +12,7 @@ use dom::abstractworker::WorkerScriptMsg;
 use dom::bindings::structuredclone::StructuredCloneData;
 use dom::serviceworkerglobalscope::{ServiceWorkerGlobalScope, ServiceWorkerScriptMsg};
 use dom::serviceworkerregistration::longest_prefix_match;
-use ipc_channel::ipc::{self, IpcSender};
+use ipc_channel::ipc;
 use ipc_channel::router::ROUTER;
 use net_traits::{CustomResponseMediator, CoreResourceMsg};
 use script_traits::{ServiceWorkerMsg, ScopeThings, SWManagerMsg, SWManagerSenders, DOMMessage};
@@ -22,9 +22,15 @@ use std::collections::HashMap;
 use std::sync::mpsc::{channel, Sender, Receiver, RecvError};
 use std::thread;
 
+/// Timeout message sent by active service workers
+pub struct TimeoutMessage {
+    pub scope: ServoUrl,
+}
+
 enum Message {
     FromResource(CustomResponseMediator),
-    FromConstellation(ServiceWorkerMsg)
+    FromConstellation(ServiceWorkerMsg),
+    FromServiceWorker(TimeoutMessage),
 }
 
 pub struct ServiceWorkerManager {
@@ -32,24 +38,28 @@ pub struct ServiceWorkerManager {
     registered_workers: HashMap<ServoUrl, ScopeThings>,
     // map of active service worker descriptors
     active_workers: HashMap<ServoUrl, Sender<ServiceWorkerScriptMsg>>,
-    // own sender to send messages here
-    own_sender: IpcSender<ServiceWorkerMsg>,
     // receiver to receive messages from constellation
     own_port: Receiver<ServiceWorkerMsg>,
     // to receive resource messages
-    resource_receiver: Receiver<CustomResponseMediator>
+    resource_receiver: Receiver<CustomResponseMediator>,
+    // Sender to hand out to service workers, so they can send messages to us.
+    from_sw_sender: Sender<TimeoutMessage>,
+    // Receiver for messages from service workers.
+    from_sw_receiver: Receiver<TimeoutMessage>,
 }
 
 impl ServiceWorkerManager {
-    fn new(own_sender: IpcSender<ServiceWorkerMsg>,
+    fn new(from_sw_sender: Sender<TimeoutMessage>,
+           from_sw_receiver: Receiver<TimeoutMessage>,
            from_constellation_receiver: Receiver<ServiceWorkerMsg>,
            resource_port: Receiver<CustomResponseMediator>) -> ServiceWorkerManager {
         ServiceWorkerManager {
             registered_workers: HashMap::new(),
             active_workers: HashMap::new(),
-            own_sender: own_sender,
             own_port: from_constellation_receiver,
-            resource_receiver: resource_port
+            resource_receiver: resource_port,
+            from_sw_sender,
+            from_sw_receiver,
         }
     }
 
@@ -61,7 +71,9 @@ impl ServiceWorkerManager {
         let _ = sw_senders.resource_sender.send(CoreResourceMsg::NetworkMediator(resource_chan));
         let _ = sw_senders.swmanager_sender.send(SWManagerMsg::OwnSender(own_sender.clone()));
         thread::Builder::new().name("ServiceWorkerManager".to_owned()).spawn(move || {
-            ServiceWorkerManager::new(own_sender,
+            let (from_sw_sender, from_sw_receiver) = channel();
+            ServiceWorkerManager::new(from_sw_sender,
+                                      from_sw_receiver,
                                       from_constellation,
                                       resource_port).handle_message();
         }).expect("Thread spawning failed");
@@ -96,7 +108,7 @@ impl ServiceWorkerManager {
                                                               sender.clone(),
                                                               receiver,
                                                               devtools_receiver,
-                                                              self.own_sender.clone(),
+                                                              self.from_sw_sender.clone(),
                                                               scope_url.clone());
             // We store the activated worker
             self.active_workers.insert(scope_url, sender.clone());
@@ -115,6 +127,9 @@ impl ServiceWorkerManager {
                 },
                 Message::FromResource(msg) => {
                     self.handle_message_from_resource(msg)
+                },
+                Message::FromServiceWorker(msg) => {
+                    self.handle_message_from_service_worker(msg)
                 }
             };
             if !should_continue {
@@ -139,14 +154,6 @@ impl ServiceWorkerManager {
                 }
                 true
             }
-            ServiceWorkerMsg::Timeout(scope) => {
-                if self.active_workers.contains_key(&scope) {
-                    let _ = self.active_workers.remove(&scope);
-                } else {
-                    warn!("ServiceWorker for {:?} is not active", scope);
-                }
-                true
-            },
             ServiceWorkerMsg::ForwardDOMMessage(msg, scope_url) => {
                 if self.active_workers.contains_key(&scope_url) {
                     if let Some(ref sender) = self.active_workers.get(&scope_url) {
@@ -184,13 +191,25 @@ impl ServiceWorkerManager {
         true
     }
 
+    fn handle_message_from_service_worker(&mut self, message: TimeoutMessage) -> bool {
+        let scope = message.scope;
+        if self.active_workers.contains_key(&scope) {
+            let _ = self.active_workers.remove(&scope);
+        } else {
+            warn!("ServiceWorker for {:?} is not active", scope);
+        }
+        true
+    }
+
     #[allow(unsafe_code)]
     fn receive_message(&mut self) -> Result<Message, RecvError> {
         let msg_from_constellation = &self.own_port;
         let msg_from_resource = &self.resource_receiver;
+        let msg_from_sw = &self.from_sw_receiver;
         select! {
             msg = msg_from_constellation.recv() => msg.map(Message::FromConstellation),
-            msg = msg_from_resource.recv() => msg.map(Message::FromResource)
+            msg = msg_from_resource.recv() => msg.map(Message::FromResource),
+            msg = msg_from_sw.recv() => msg.map(Message::FromServiceWorker)
         }
     }
 }

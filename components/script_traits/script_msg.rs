@@ -184,8 +184,6 @@ pub struct SWManagerSenders {
 pub enum ServiceWorkerMsg {
     /// Message to register the service worker
     RegisterServiceWorker(ScopeThings, ServoUrl),
-    /// Timeout message sent by active service workers
-    Timeout(ServoUrl),
     /// Message sent by constellation to forward to a running service worker
     ForwardDOMMessage(DOMMessage, ServoUrl),
     /// Exit the service worker manager
