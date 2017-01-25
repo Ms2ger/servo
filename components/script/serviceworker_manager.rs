@@ -12,10 +12,10 @@ use dom::abstractworker::WorkerScriptMsg;
 use dom::bindings::structuredclone::StructuredCloneData;
 use dom::serviceworkerglobalscope::{ServiceWorkerGlobalScope, ServiceWorkerScriptMsg};
 use dom::serviceworkerregistration::longest_prefix_match;
-use ipc_channel::ipc;
+use ipc_channel::ipc::{self, IpcReceiver};
 use ipc_channel::router::ROUTER;
-use net_traits::{CustomResponseMediator, CoreResourceMsg};
-use script_traits::{ServiceWorkerMsg, ScopeThings, SWManagerMsg, SWManagerSenders, DOMMessage};
+use net_traits::CustomResponseMediator;
+use script_traits::{ServiceWorkerMsg, ScopeThings, DOMMessage};
 use servo_config::prefs::PREFS;
 use servo_url::ServoUrl;
 use std::collections::HashMap;
@@ -63,14 +63,11 @@ impl ServiceWorkerManager {
         }
     }
 
-    pub fn spawn_manager(sw_senders: SWManagerSenders) {
-        let (own_sender, from_constellation_receiver) = ipc::channel().unwrap();
-        let (resource_chan, resource_port) = ipc::channel().unwrap();
-        let from_constellation = ROUTER.route_ipc_receiver_to_new_mpsc_receiver(from_constellation_receiver);
-        let resource_port = ROUTER.route_ipc_receiver_to_new_mpsc_receiver(resource_port);
-        let _ = sw_senders.resource_sender.send(CoreResourceMsg::NetworkMediator(resource_chan));
-        let _ = sw_senders.swmanager_sender.send(SWManagerMsg::OwnSender(own_sender.clone()));
+    pub fn spawn_manager(from_constellation_receiver: IpcReceiver<ServiceWorkerMsg>,
+                         from_resource_receiver: IpcReceiver<CustomResponseMediator>) {
         thread::Builder::new().name("ServiceWorkerManager".to_owned()).spawn(move || {
+            let from_constellation = ROUTER.route_ipc_receiver_to_new_mpsc_receiver(from_constellation_receiver);
+            let resource_port = ROUTER.route_ipc_receiver_to_new_mpsc_receiver(from_resource_receiver);
             let (from_sw_sender, from_sw_receiver) = channel();
             ServiceWorkerManager::new(from_sw_sender,
                                       from_sw_receiver,
