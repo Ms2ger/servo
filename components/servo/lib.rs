@@ -199,7 +199,7 @@ impl<Window> Browser<Window> where Window: WindowMethods + 'static {
                                                                     webrender_api_sender.clone());
 
         // Send the constellation's swmanager sender to service worker manager thread
-        script::init_service_workers(sw_senders);
+        init_service_workers(sw_senders);
 
         if cfg!(feature = "webdriver") {
             if let Some(port) = opts.webdriver_port {
@@ -348,6 +348,14 @@ pub fn set_logger(constellation_chan: IpcSender<ScriptMsg>) {
     }).expect("Failed to set logger.")
 }
 
+fn init_service_workers(sw_senders: SWManagerSenders) {
+    let (from_constellation_sender, from_constellation_receiver) = ipc::channel().unwrap();
+    let (from_resource_sender, from_resource_receiver) = ipc::channel().unwrap();
+    let _ = sw_senders.resource_sender.send(CoreResourceMsg::NetworkMediator(from_resource_sender));
+    let _ = sw_senders.swmanager_sender.send(SWManagerMsg::OwnSender(from_constellation_sender));
+    script::init_service_workers(from_constellation_receiver, from_resource_receiver);
+}
+
 /// Content process entry point.
 pub fn run_content_process(token: String) {
     let (unprivileged_content_sender, unprivileged_content_receiver) =
@@ -369,7 +377,7 @@ pub fn run_content_process(token: String) {
     // send the required channels to the service worker manager
     let sw_senders = unprivileged_content.swmanager_senders();
     script::init();
-    script::init_service_workers(sw_senders);
+    init_service_workers(sw_senders);
 
     unprivileged_content.start_all::<script_layout_interface::message::Msg,
                                      layout_thread::LayoutThread,

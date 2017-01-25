@@ -125,9 +125,9 @@ mod webdriver_handlers;
 
 use dom::bindings::codegen::RegisterBindings;
 use dom::bindings::proxyhandler;
-use ipc_channel::ipc;
-use net_traits::CoreResourceMsg;
-use script_traits::{SWManagerMsg, SWManagerSenders};
+use ipc_channel::ipc::IpcReceiver;
+use net_traits::CustomResponseMediator;
+use script_traits::ServiceWorkerMsg;
 use serviceworker_manager::ServiceWorkerManager;
 
 #[cfg(target_os = "linux")]
@@ -171,11 +171,8 @@ fn perform_platform_specific_initialization() {
 #[cfg(not(target_os = "linux"))]
 fn perform_platform_specific_initialization() {}
 
-pub fn init_service_workers(sw_senders: SWManagerSenders) {
-    let (from_constellation_sender, from_constellation_receiver) = ipc::channel().unwrap();
-    let (from_resource_sender, from_resource_receiver) = ipc::channel().unwrap();
-    let _ = sw_senders.resource_sender.send(CoreResourceMsg::NetworkMediator(from_resource_sender));
-    let _ = sw_senders.swmanager_sender.send(SWManagerMsg::OwnSender(from_constellation_sender));
+pub fn init_service_workers(from_constellation_receiver: IpcReceiver<ServiceWorkerMsg>,
+                            from_resource_receiver: IpcReceiver<CustomResponseMediator>) {
     ServiceWorkerManager::spawn_manager(from_constellation_receiver,
                                         from_resource_receiver);
 }
