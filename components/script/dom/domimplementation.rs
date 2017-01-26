@@ -13,7 +13,7 @@ use dom::bindings::js::{JS, Root};
 use dom::bindings::reflector::{Reflector, reflect_dom_object};
 use dom::bindings::str::DOMString;
 use dom::bindings::xmlname::{namespace_from_domstring, validate_qualified_name};
-use dom::document::{Document, IsHTMLDocument};
+use dom::document::{Document, IsHTMLDocument, NetworkData};
 use dom::document::DocumentSource;
 use dom::documenttype::DocumentType;
 use dom::htmlbodyelement::HTMLBodyElement;
@@ -75,16 +75,20 @@ impl DOMImplementationMethods for DOMImplementation {
             _ => "application/xml"
         };
 
+        let network_data = NetworkData {
+            content_type: Some(content_type),
+            .. NetworkData::new()
+        };
+
         // Step 1.
         let doc = XMLDocument::new(win,
                                    None,
                                    None,
                                    self.document.origin().alias(),
                                    IsHTMLDocument::NonHTMLDocument,
-                                   Some(DOMString::from(content_type)),
-                                   None,
                                    DocumentSource::NotFromParser,
-                                   loader);
+                                   loader,
+                                   Some(network_data));
         // Step 2-3.
         let maybe_elem = if qname.is_empty() {
             None
@@ -127,11 +131,8 @@ impl DOMImplementationMethods for DOMImplementation {
                                 None,
                                 self.document.origin().alias(),
                                 IsHTMLDocument::HTMLDocument,
-                                None,
-                                None,
                                 DocumentSource::NotFromParser,
                                 loader,
-                                None,
                                 None);
 
         {

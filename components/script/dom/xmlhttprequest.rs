@@ -1223,17 +1223,18 @@ impl XMLHttpRequest {
         let content_type = mime_type.map(|mime|{
             DOMString::from(format!("{}", mime))
         });
+        let network_data = NetworkData {
+            content_type,
+            .. NetworkData::new()
+        };
         Document::new(win,
                       None,
                       parsed_url,
                       doc.origin().alias(),
                       is_html_document,
-                      content_type,
-                      None,
                       DocumentSource::FromParser,
                       docloader,
-                      None,
-                      None)
+                      Some(network_data))
     }
 
     fn filter_response_headers(&self) -> Headers {

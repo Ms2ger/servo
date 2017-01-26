@@ -54,6 +54,10 @@ impl DOMParserMethods for DOMParser {
         let url = self.window.get_url();
         let content_type =
             DOMString::from(DOMParserBinding::SupportedTypeValues::strings[ty as usize]);
+        let network_data = NetworkData {
+            content_type: Some(content_type),
+            .. NetworkData::new()
+        };
         let doc = self.window.Document();
         let loader = DocumentLoader::new(&*doc.loader());
         match ty {
@@ -63,12 +67,9 @@ impl DOMParserMethods for DOMParser {
                                              Some(url.clone()),
                                              doc.origin().alias(),
                                              IsHTMLDocument::HTMLDocument,
-                                             Some(content_type),
-                                             None,
                                              DocumentSource::FromParser,
                                              loader,
-                                             None,
-                                             None);
+                                             Some(network_data));
                 ServoParser::parse_html_document(&document, s, url, None);
                 document.set_ready_state(DocumentReadyState::Complete);
                 Ok(document)
@@ -80,12 +81,9 @@ impl DOMParserMethods for DOMParser {
                                              Some(url.clone()),
                                              doc.origin().alias(),
                                              IsHTMLDocument::NonHTMLDocument,
-                                             Some(content_type),
-                                             None,
                                              DocumentSource::NotFromParser,
                                              loader,
-                                             None,
-                                             None);
+                                             Some(network_data));
                 ServoParser::parse_xml_document(&document, s, url, None);
                 Ok(document)
             }

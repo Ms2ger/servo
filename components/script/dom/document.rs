@@ -1880,19 +1880,41 @@ fn url_has_network_scheme(url: &ServoUrl) -> bool {
     }
 }
 
+pub struct NetworkData {
+    pub content_type: Option<DOMString>,
+    pub last_modified: Option<String>,
+    pub referrer: Option<String>,
+    pub referrer_policy: Option<ReferrerPolicy>,
+}
+
+impl NetworkData {
+    pub fn new() -> Self {
+        NetworkData {
+            content_type: None,
+            last_modified: None,
+            referrer: None,
+            referrer_policy: None,
+        }
+    }
+}
+
 impl Document {
     pub fn new_inherited(window: &Window,
                          browsing_context: Option<&BrowsingContext>,
                          url: Option<ServoUrl>,
                          origin: Origin,
                          is_html_document: IsHTMLDocument,
-                         content_type: Option<DOMString>,
-                         last_modified: Option<String>,
                          source: DocumentSource,
                          doc_loader: DocumentLoader,
-                         referrer: Option<String>,
-                         referrer_policy: Option<ReferrerPolicy>)
+                         network_data: Option<NetworkData>)
                          -> Document {
+        let NetworkData {
+            content_type,
+            last_modified,
+            referrer,
+            referrer_policy,
+        } = network_data.unwrap_or_else(NetworkData::new);
+
         let url = url.unwrap_or_else(|| ServoUrl::parse("about:blank").unwrap());
 
         let (ready_state, domcontentloaded_dispatched) = if source == DocumentSource::FromParser {
@@ -1989,11 +2011,8 @@ impl Document {
                          None,
                          doc.origin().alias(),
                          IsHTMLDocument::NonHTMLDocument,
-                         None,
-                         None,
                          DocumentSource::NotFromParser,
                          docloader,
-                         None,
                          None))
     }
 
@@ -2002,24 +2021,18 @@ impl Document {
                url: Option<ServoUrl>,
                origin: Origin,
                doctype: IsHTMLDocument,
-               content_type: Option<DOMString>,
-               last_modified: Option<String>,
                source: DocumentSource,
                doc_loader: DocumentLoader,
-               referrer: Option<String>,
-               referrer_policy: Option<ReferrerPolicy>)
+               network_data: Option<NetworkData>)
                -> Root<Document> {
         let document = reflect_dom_object(box Document::new_inherited(window,
                                                                       browsing_context,
                                                                       url,
                                                                       origin,
                                                                       doctype,
-                                                                      content_type,
-                                                                      last_modified,
                                                                       source,
                                                                       doc_loader,
-                                                                      referrer,
-                                                                      referrer_policy),
+                                                                      network_data),
                                           window,
                                           DocumentBinding::Wrap);
         {
@@ -2087,11 +2100,8 @@ impl Document {
                                         // https://github.com/whatwg/html/issues/2109
                                         Origin::opaque_identifier(),
                                         doctype,
-                                        None,
-                                        None,
                                         DocumentSource::NotFromParser,
                                         DocumentLoader::new(&self.loader()),
-                                        None,
                                         None);
             new_doc.appropriate_template_contents_owner_document.set(Some(&new_doc));
             new_doc
@@ -3342,12 +3352,12 @@ pub fn determine_policy_for_token(token: &str) -> Option<ReferrerPolicy> {
     }
 }
 
-pub struct DocumentProgressHandler {
+struct DocumentProgressHandler {
     addr: Trusted<Document>
 }
 
 impl DocumentProgressHandler {
-     pub fn new(addr: Trusted<Document>) -> DocumentProgressHandler {
+    fn new(addr: Trusted<Document>) -> DocumentProgressHandler {
         DocumentProgressHandler {
             addr: addr
         }

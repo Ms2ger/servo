@@ -1768,17 +1768,20 @@ impl ScriptThread {
                                       .and_then(Headers::get::<ReferrerPolicyHeader>)
                                       .map(ReferrerPolicy::from);
 
+        let network_data = NetworkData {
+            content_type,
+            last_modified,
+            referrer,
+            referrer_policy,
+        };
         let document = Document::new(&window,
                                      Some(&browsing_context),
                                      Some(final_url.clone()),
                                      incomplete.origin,
                                      is_html_document,
-                                     content_type,
-                                     last_modified,
                                      DocumentSource::FromParser,
                                      loader,
-                                     referrer,
-                                     referrer_policy);
+                                     network_data);
         document.set_ready_state(DocumentReadyState::Loading);
 
         if !incomplete.is_frozen {

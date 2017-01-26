@@ -11,7 +11,7 @@ use dom::bindings::js::Root;
 use dom::bindings::reflector::reflect_dom_object;
 use dom::bindings::str::DOMString;
 use dom::browsingcontext::BrowsingContext;
-use dom::document::{Document, DocumentSource, IsHTMLDocument};
+use dom::document::{Document, DocumentSource, IsHTMLDocument, NetworkData};
 use dom::location::Location;
 use dom::node::Node;
 use dom::window::Window;
@@ -31,22 +31,18 @@ impl XMLDocument {
                      url: Option<ServoUrl>,
                      origin: Origin,
                      is_html_document: IsHTMLDocument,
-                     content_type: Option<DOMString>,
-                     last_modified: Option<String>,
                      source: DocumentSource,
-                     doc_loader: DocumentLoader) -> XMLDocument {
+                     doc_loader: DocumentLoader,
+                     network_data: Option<NetworkData>) -> XMLDocument {
         XMLDocument {
             document: Document::new_inherited(window,
                                               browsing_context,
                                               url,
                                               origin,
                                               is_html_document,
-                                              content_type,
-                                              last_modified,
                                               source,
                                               doc_loader,
-                                              None,
-                                              None),
+                                              network_data),
         }
     }
 
@@ -55,10 +51,9 @@ impl XMLDocument {
                url: Option<ServoUrl>,
                origin: Origin,
                doctype: IsHTMLDocument,
-               content_type: Option<DOMString>,
-               last_modified: Option<String>,
                source: DocumentSource,
-               doc_loader: DocumentLoader)
+               doc_loader: DocumentLoader,
+               network_data: Option<NetworkData>)
                -> Root<XMLDocument> {
         let doc = reflect_dom_object(
             box XMLDocument::new_inherited(window,
@@ -66,10 +61,9 @@ impl XMLDocument {
                                            url,
                                            origin,
                                            doctype,
-                                           content_type,
-                                           last_modified,
                                            source,
-                                           doc_loader),
+                                           doc_loader,
+                                           network_data),
             window,
             XMLDocumentBinding::Wrap);
         {
