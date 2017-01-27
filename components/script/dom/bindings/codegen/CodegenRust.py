@@ -1089,13 +1089,15 @@ def getJSToNativeConversionInfo(type, descriptorProvider, failureCode=None,
         typeName = "%s::%s" % (CGDictionary.makeModuleName(type.inner),
                                CGDictionary.makeDictionaryName(type.inner))
         declType = CGGeneric(typeName)
-        template = ("match %s::new(cx, ${val}) {\n"
+        if isMember != "Dictionary":
+            declType = CGTemplatedType("RootedTraceableBox", declType)
+        template = ("match FromJSValConvertible::from_jsval(cx, ${val}, ()) {\n"
                     "    Ok(ConversionResult::Success(dictionary)) => dictionary,\n"
                     "    Ok(ConversionResult::Failure(error)) => {\n"
                     "%s\n"
                     "    }\n"
                     "    _ => { %s },\n"
-                    "}" % (typeName, indent(failOrPropagate, 8), exceptionCode))
+                    "}" % (indent(failOrPropagate, 8), exceptionCode))
 
         return handleOptional(template, declType, handleDefaultNull("%s::empty(cx)" % typeName))
 
@@ -5572,6 +5574,7 @@ def generate_imports(config, cgthings, descriptors, callbacks=None, dictionaries
         'dom::bindings::utils::trace_global',
         'dom::bindings::trace::JSTraceable',
         'dom::bindings::trace::RootedTraceable',
+        'dom::bindings::trace::RootedTraceableBox',
         'dom::bindings::callback::CallSetup',
         'dom::bindings::callback::CallbackContainer',
         'dom::bindings::callback::CallbackInterface',
