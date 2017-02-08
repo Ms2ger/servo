@@ -33,7 +33,7 @@
 //! | union types             | `T`                              |
 
 use dom::bindings::inheritance::Castable;
-use dom::bindings::js::Root;
+use dom::bindings::js::{JS, Root};
 use dom::bindings::num::Finite;
 use dom::bindings::reflector::{DomObject, Reflector};
 use dom::bindings::str::{ByteString, DOMString, USVString};
@@ -112,6 +112,20 @@ impl <T: DomObject + IDLInterface> FromJSValConvertible for Root<T> {
                          _config: Self::Config)
                          -> Result<ConversionResult<Root<T>>, ()> {
         Ok(match root_from_handlevalue(value) {
+            Ok(result) => ConversionResult::Success(result),
+            Err(()) => ConversionResult::Failure("value is not an object".into()),
+        })
+    }
+}
+
+impl <T: DomObject + IDLInterface> FromJSValConvertible for JS<T> {
+    type Config = ();
+
+    unsafe fn from_jsval(_cx: *mut JSContext,
+                         value: HandleValue,
+                         _config: Self::Config)
+                         -> Result<ConversionResult<JS<T>>, ()> {
+        Ok(match js_from_handlevalue(value) {
             Ok(result) => ConversionResult::Success(result),
             Err(()) => ConversionResult::Failure("value is not an object".into()),
         })
@@ -452,6 +466,14 @@ pub fn native_from_handlevalue<T>(v: HandleValue) -> Result<*const T, ()>
     native_from_object(v.get().to_object())
 }
 
+/// Get a `JS<T>` for a DOM object accessible from a `HandleValue`.
+/// Caller is responsible for throwing a JS exception if needed in case of error.
+pub fn js_from_handlevalue<T>(v: HandleValue) -> Result<JS<T>, ()>
+    where T: DomObject + IDLInterface
+{
+    native_from_handlevalue(v).map(|v| unsafe { JS::from_ref(&*v) })
+}
+
 /// Get a `Root<T>` for a DOM object accessible from a `HandleValue`.
 /// Caller is responsible for throwing a JS exception if needed in case of error.
 pub fn root_from_handlevalue<T>(v: HandleValue) -> Result<Root<T>, ()>
@@ -471,6 +493,12 @@ pub fn root_from_handleobject<T>(obj: HandleObject) -> Result<Root<T>, ()>
 }
 
 impl<T: DomObject> ToJSValConvertible for Root<T> {
+    unsafe fn to_jsval(&self, cx: *mut JSContext, rval: MutableHandleValue) {
+        self.reflector().to_jsval(cx, rval);
+    }
+}
+
+impl<T: DomObject> ToJSValConvertible for JS<T> {
     unsafe fn to_jsval(&self, cx: *mut JSContext, rval: MutableHandleValue) {
         self.reflector().to_jsval(cx, rval);
     }

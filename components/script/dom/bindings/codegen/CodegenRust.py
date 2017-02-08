@@ -701,7 +701,7 @@ def getJSToNativeConversionInfo(type, descriptorProvider, failureCode=None,
     if type.isSequence() or type.isMozMap():
         innerInfo = getJSToNativeConversionInfo(innerContainerType(type),
                                                 descriptorProvider,
-                                                isMember=isMember)
+                                                isMember="Collection")
         declType = wrapInNativeContainerType(type, innerInfo.declType)
         config = getConversionConfigForType(type, isEnforceRange, isClamp, treatNullAs)
 
@@ -775,9 +775,9 @@ def getJSToNativeConversionInfo(type, descriptorProvider, failureCode=None,
         if isMember == "Variadic":
             conversionFunction = "native_from_handlevalue"
             descriptorType = descriptor.nativeType
-        if isMember == "Variadic":
-            conversionFunction = "native_from_handlevalue"
-            descriptorType = descriptor.nativeType
+        elif isMember in ("Dictionary", "Union"):
+            conversionFunction = "js_from_handlevalue"
+            descriptorType = "JS<" + descriptor.concreteType + ">"
         elif isArgument:
             descriptorType = descriptor.argumentType
 
@@ -1069,7 +1069,7 @@ def getJSToNativeConversionInfo(type, descriptorProvider, failureCode=None,
     if type.isObject():
         assert not isEnforceRange and not isClamp
 
-        if isMember == "Dictionary":
+        if isMember in ("Dictionary", "Union"):
             declType = CGGeneric("Heap<*mut JSObject>")
         else:
             # TODO: Need to root somehow
@@ -1089,7 +1089,7 @@ def getJSToNativeConversionInfo(type, descriptorProvider, failureCode=None,
         typeName = "%s::%s" % (CGDictionary.makeModuleName(type.inner),
                                CGDictionary.makeDictionaryName(type.inner))
         declType = CGGeneric(typeName)
-        if isMember != "Dictionary":
+        if isMember not in ("Dictionary", "Collection") and dictionary_needs_tracing(type):
             declType = CGTemplatedType("RootedTraceableBox", declType)
         template = ("match FromJSValConvertible::from_jsval(cx, ${val}, ()) {\n"
                     "    Ok(ConversionResult::Success(dictionary)) => dictionary,\n"
@@ -2229,6 +2229,7 @@ def UnionTypes(descriptors, dictionaries, callbacks, typedefs, config):
         'dom::bindings::conversions::ToJSValConvertible',
         'dom::bindings::conversions::ConversionBehavior',
         'dom::bindings::conversions::StringificationBehavior',
+        'dom::bindings::conversions::js_from_handlevalue',
         'dom::bindings::conversions::root_from_handlevalue',
         'dom::bindings::error::throw_not_in_union',
         'dom::bindings::js::JS',
@@ -2240,6 +2241,7 @@ def UnionTypes(descriptors, dictionaries, callbacks, typedefs, config):
         'dom::types::*',
         'js::error::throw_type_error',
         'js::jsapi::HandleValue',
+        'js::jsapi::Heap',
         'js::jsapi::JSContext',
         'js::jsapi::JSObject',
         'js::jsapi::MutableHandleValue',
@@ -4059,14 +4061,15 @@ def getUnionTypeTemplateVars(type, descriptorProvider):
         typeName = builtinNames[type.tag()]
     elif type.isObject():
         name = type.name
-        typeName = "*mut JSObject"
+        typeName = "Heap<*mut JSObject>"
     else:
         raise TypeError("Can't handle %s in unions yet" % type)
 
     info = getJSToNativeConversionInfo(
         type, descriptorProvider, failureCode="return Ok(None);",
         exceptionCode='return Err(());',
-        isDefinitelyObject=True)
+        isDefinitelyObject=True,
+        isMember="Union")
     template = info.template
 
     jsConversion = string.Template(template).substitute({
@@ -4101,6 +4104,7 @@ class CGUnionStruct(CGThing):
             % (self.type, v["name"]) for v in templateVars
         ]
         return ("""\
+#[derive(JSTraceable)]
 pub enum %s {
 %s
 }
@@ -5590,6 +5594,7 @@ def generate_imports(config, cgthings, descriptors, callbacks=None, dictionaries
         'dom::bindings::conversions::StringificationBehavior',
         'dom::bindings::conversions::ToJSValConvertible',
         'dom::bindings::conversions::is_array_like',
+        'dom::bindings::conversions::js_from_handlevalue',
         'dom::bindings::conversions::native_from_handlevalue',
         'dom::bindings::conversions::native_from_object',
         'dom::bindings::conversions::private_from_object',
@@ -6163,6 +6168,21 @@ class CGBindingRoot(CGThing):
         return stripTrailingWhitespace(self.root.define())
 
 
+def dictionary_needs_tracing(t):
+    print(t)
+    assert t.isDictionary()
+    while (t.isType() and t.nullable()) or isinstance(t, IDLWrapperType):
+        t = t.inner
+    if t.parent and dictionary_needs_tracing(t.parent):
+        return True
+
+    for member in t.members:
+        if member.type.isInterface() or member.type.isAny() or member.type.isObject():
+            return True
+
+    return False
+
+
 def argument_type(descriptorProvider, ty, optional=False, defaultValue=None, variadic=False):
     info = getJSToNativeConversionInfo(
         ty, descriptorProvider, isArgument=True)
@@ -6176,7 +6196,7 @@ def argument_type(descriptorProvider, ty, optional=False, defaultValue=None, var
     elif optional and not defaultValue:
         declType = CGWrapper(declType, pre="Option<", post=">")
 
-    if ty.isDictionary():
+    if ty.isDictionary() and not dictionary_needs_tracing(ty):
         declType = CGWrapper(declType, pre="&")
 
     return declType.define()
