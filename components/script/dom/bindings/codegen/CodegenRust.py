@@ -1039,7 +1039,7 @@ def getJSToNativeConversionInfo(type, descriptorProvider, failureCode=None,
         if isMember == "Dictionary":
             # TODO: Need to properly root dictionaries
             # https://github.com/servo/servo/issues/6381
-            declType = CGGeneric("JSVal")
+            declType = CGGeneric("Heap<JSVal>")
 
             if defaultValue is None:
                 default = None
@@ -1066,9 +1066,12 @@ def getJSToNativeConversionInfo(type, descriptorProvider, failureCode=None,
     if type.isObject():
         assert not isEnforceRange and not isClamp
 
-        # TODO: Need to root somehow
-        # https://github.com/servo/servo/issues/6382
-        declType = CGGeneric("*mut JSObject")
+        if isMember == "Dictionary":
+            declType = CGGeneric("Heap<*mut JSObject>")
+        else:
+            # TODO: Need to root somehow
+            # https://github.com/servo/servo/issues/6382
+            declType = CGGeneric("*mut JSObject")
         templateBody = wrapObjectTemplate("${val}.get().to_object()",
                                           "ptr::null_mut()",
                                           isDefinitelyObject, type, failureCode)
@@ -5870,6 +5873,7 @@ class CGDictionary(CGThing):
                        for m in self.memberInfo]
 
         return (string.Template(
+                "#[derive(JSTraceable)]\n"
                 "pub struct ${selfName} {\n" +
                 "${inheritance}" +
                 "\n".join(memberDecls) + "\n" +
