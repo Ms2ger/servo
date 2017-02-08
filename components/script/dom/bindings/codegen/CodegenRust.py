@@ -775,6 +775,9 @@ def getJSToNativeConversionInfo(type, descriptorProvider, failureCode=None,
         if isMember == "Variadic":
             conversionFunction = "native_from_handlevalue"
             descriptorType = descriptor.nativeType
+        if isMember == "Variadic":
+            conversionFunction = "native_from_handlevalue"
+            descriptorType = descriptor.nativeType
         elif isArgument:
             descriptorType = descriptor.argumentType
 
