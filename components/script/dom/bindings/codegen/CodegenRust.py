@@ -2226,6 +2226,7 @@ def UnionTypes(descriptors, dictionaries, callbacks, typedefs, config):
         'dom::bindings::conversions::StringificationBehavior',
         'dom::bindings::conversions::root_from_handlevalue',
         'dom::bindings::error::throw_not_in_union',
+        'dom::bindings::js::JS',
         'dom::bindings::js::Root',
         'dom::bindings::mozmap::MozMap',
         'dom::bindings::str::ByteString',
@@ -4028,7 +4029,7 @@ class CGConstant(CGThing):
 def getUnionTypeTemplateVars(type, descriptorProvider):
     if type.isGeckoInterface():
         name = type.inner.identifier.name
-        typeName = descriptorProvider.getDescriptor(name).returnType
+        typeName = "JS<" + descriptorProvider.getDescriptor(name).concreteType + ">"
     elif type.isEnum():
         name = type.inner.identifier.name
         typeName = name
