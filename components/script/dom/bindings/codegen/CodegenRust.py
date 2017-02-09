@@ -1037,19 +1037,21 @@ def getJSToNativeConversionInfo(type, descriptorProvider, failureCode=None,
     if type.isAny():
         assert not isEnforceRange and not isClamp
 
+        templateBody = "${val}"
         declType = ""
         default = ""
-        if isMember == "Dictionary":
+        if isMember in ("Dictionary", "Union", "Collection"):
             # TODO: Need to properly root dictionaries
             # https://github.com/servo/servo/issues/6381
             declType = CGGeneric("Heap<JSVal>")
+            templateBody = "Heap::new(%s.get())" % templateBody
 
             if defaultValue is None:
                 default = None
             elif isinstance(defaultValue, IDLNullValue):
-                default = "NullValue()"
+                default = "Heap::new(NullValue())"
             elif isinstance(defaultValue, IDLUndefinedValue):
-                default = "UndefinedValue()"
+                default = "Heap::new(UndefinedValue())"
             else:
                 raise TypeError("Can't handle non-null, non-undefined default value here")
         else:
@@ -1064,23 +1066,27 @@ def getJSToNativeConversionInfo(type, descriptorProvider, failureCode=None,
             else:
                 raise TypeError("Can't handle non-null, non-undefined default value here")
 
-        return handleOptional("${val}", declType, default)
+        return handleOptional(templateBody, declType, default)
 
     if type.isObject():
         assert not isEnforceRange and not isClamp
 
+        default = "ptr::null_mut()"
+        templateBody = wrapObjectTemplate("${val}.get().to_object()",
+                                          default,
+                                          isDefinitelyObject, type, failureCode)
+
         if isMember in ("Dictionary", "Union"):
             declType = CGGeneric("Heap<*mut JSObject>")
+            templateBody = "Heap::new(%s)" % templateBody
+            default = "Heap::new(%s)" % default
         else:
             # TODO: Need to root somehow
             # https://github.com/servo/servo/issues/6382
             declType = CGGeneric("*mut JSObject")
-        templateBody = wrapObjectTemplate("${val}.get().to_object()",
-                                          "ptr::null_mut()",
-                                          isDefinitelyObject, type, failureCode)
 
         return handleOptional(templateBody, declType,
-                              handleDefaultNull("ptr::null_mut()"))
+                              handleDefaultNull(default))
 
     if type.isDictionary():
         # There are no nullable dictionaries
@@ -6009,8 +6015,6 @@ class CGDictionary(CGThing):
         default = info.default
         replacements = {"val": "rval.handle()"}
         conversion = string.Template(templateBody).substitute(replacements)
-        if memberType.isAny():
-            conversion = "%s.get()" % conversion
 
         assert (member.defaultValue is None) == (default is None)
         if not member.optional:
