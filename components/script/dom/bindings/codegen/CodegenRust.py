@@ -3154,7 +3154,7 @@ class CGCallGenerator(CGThing):
         args = CGList([CGGeneric(arg) for arg in argsPre], ", ")
         for (a, name) in arguments:
             # XXXjdm Perhaps we should pass all nontrivial types by borrowed pointer
-            if a.type.isDictionary():
+            if a.type.isDictionary() and dictionary_needs_tracing(a.type):
                 name = "&" + name
             args.append(CGGeneric(name))
 
