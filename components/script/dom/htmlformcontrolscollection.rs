@@ -6,7 +6,7 @@ use dom::bindings::codegen::Bindings::HTMLCollectionBinding::HTMLCollectionMetho
 use dom::bindings::codegen::Bindings::HTMLFormControlsCollectionBinding;
 use dom::bindings::codegen::Bindings::HTMLFormControlsCollectionBinding::HTMLFormControlsCollectionMethods;
 use dom::bindings::codegen::UnionTypes::RadioNodeListOrElement;
-use dom::bindings::js::Root;
+use dom::bindings::js::{JS, Root};
 use dom::bindings::reflector::{DomObject, reflect_dom_object};
 use dom::bindings::str::DOMString;
 use dom::element::Element;

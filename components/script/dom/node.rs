@@ -894,7 +894,7 @@ fn first_node_not_in<I>(mut nodes: I, not_in: &[NodeOrString]) -> Option<Root<No
     nodes.find(|node| {
         not_in.iter().all(|n| {
             match *n {
-                NodeOrString::Node(ref n) => n != node,
+                NodeOrString::Node(ref n) => &**n != &**node,
                 _ => true,
             }
         })

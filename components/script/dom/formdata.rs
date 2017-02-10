@@ -8,7 +8,7 @@ use dom::bindings::codegen::Bindings::FormDataBinding::FormDataWrap;
 use dom::bindings::codegen::UnionTypes::FileOrUSVString;
 use dom::bindings::error::Fallible;
 use dom::bindings::iterable::Iterable;
-use dom::bindings::js::Root;
+use dom::bindings::js::{JS, Root};
 use dom::bindings::reflector::{DomObject, Reflector, reflect_dom_object};
 use dom::bindings::str::{DOMString, USVString};
 use dom::blob::{Blob, BlobImpl};
@@ -78,7 +78,7 @@ impl FormDataMethods for FormData {
         let datum = FormDatum {
             ty: DOMString::from("file"),
             name: DOMString::from(name.0.clone()),
-            value: FormDatumValue::File(JS::from_ref(&*self.get_file(blob, filename))),
+            value: FormDatumValue::File(Root::from_ref(&*self.get_file(blob, filename))),
         };
 
         let mut data = self.data.borrow_mut();

@@ -15,7 +15,7 @@ use dom::bindings::reflector::{Reflector, DomObject, MutDomObject, reflect_dom_o
 use dom::bindings::trace::JSTraceable;
 use dom::globalscope::GlobalScope;
 use js::conversions::ToJSValConvertible;
-use js::jsapi::{JSContext, JSObject, MutableHandleValue, MutableHandleObject, HandleValue};
+use js::jsapi::{JSContext, JSObject, MutableHandleValue, MutableHandleObject, HandleValue, Heap};
 use js::jsval::UndefinedValue;
 use std::cell::Cell;
 use std::ptr;
@@ -142,7 +142,7 @@ fn dict_return(cx: *mut JSContext,
                value: HandleValue) -> Fallible<()> {
     let mut dict = unsafe { IterableKeyOrValueResult::empty(cx) };
     dict.done = done;
-    dict.value = value.get();
+    dict.value.set(value.get());
     rooted!(in(cx) let mut dict_value = UndefinedValue());
     unsafe {
         dict.to_jsval(cx, dict_value.handle_mut());
@@ -157,7 +157,7 @@ fn key_and_value_return(cx: *mut JSContext,
                         value: HandleValue) -> Fallible<()> {
     let mut dict = unsafe { IterableKeyAndValueResult::empty(cx) };
     dict.done = false;
-    dict.value = Some(vec![key.get(), value.get()]);
+    dict.value = Some(vec![Heap::new(key.get()), Heap::new(value.get())]);
     rooted!(in(cx) let mut dict_value = UndefinedValue());
     unsafe {
         dict.to_jsval(cx, dict_value.handle_mut());
