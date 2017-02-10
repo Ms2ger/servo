@@ -10,6 +10,7 @@ use dom::bindings::inheritance::Castable;
 use dom::bindings::js::{MutNullableJS, Root, RootedReference};
 use dom::bindings::reflector::reflect_dom_object;
 use dom::bindings::str::DOMString;
+use dom::bindings::trace::RootedTraceableBox;
 use dom::event::{Event, EventBubbles, EventCancelable};
 use dom::storage::Storage;
 use dom::window::Window;
@@ -71,7 +72,8 @@ impl StorageEvent {
 
     pub fn Constructor(global: &Window,
                        type_: DOMString,
-                       init: &StorageEventBinding::StorageEventInit) -> Fallible<Root<StorageEvent>> {
+                       init: RootedTraceableBox<StorageEventBinding::StorageEventInit>)
+                       -> Fallible<Root<StorageEvent>> {
         let key = init.key.clone();
         let oldValue = init.oldValue.clone();
         let newValue = init.newValue.clone();

@@ -10,6 +10,7 @@ use dom::bindings::inheritance::Castable;
 use dom::bindings::js::{JS, Root, RootedReference};
 use dom::bindings::reflector::reflect_dom_object;
 use dom::bindings::str::DOMString;
+use dom::bindings::trace::RootedTraceableBox;
 use dom::bluetoothdevice::BluetoothDevice;
 use dom::event::{Event, EventBubbles, EventCancelable};
 use dom::globalscope::GlobalScope;
@@ -71,7 +72,7 @@ impl BluetoothAdvertisingEvent {
     // https://webbluetoothcg.github.io/web-bluetooth/#dom-bluetoothadvertisingevent-bluetoothadvertisingevent
     pub fn Constructor(window: &Window,
                        type_: DOMString,
-                       init: &BluetoothAdvertisingEventInit)
+                       init: RootedTraceableBox<BluetoothAdvertisingEventInit>)
                        -> Fallible<Root<BluetoothAdvertisingEvent>> {
         let global = window.upcast::<GlobalScope>();
         let device = init.device.r();

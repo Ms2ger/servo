@@ -10,7 +10,7 @@ use dom::bindings::codegen::Bindings::ResponseBinding;
 use dom::bindings::codegen::Bindings::ResponseBinding::{ResponseMethods, ResponseType as DOMResponseType};
 use dom::bindings::codegen::Bindings::XMLHttpRequestBinding::BodyInit;
 use dom::bindings::error::{Error, Fallible};
-use dom::bindings::js::{MutNullableJS, Root};
+use dom::bindings::js::{JS, MutNullableJS, Root};
 use dom::bindings::reflector::{DomObject, Reflector, reflect_dom_object};
 use dom::bindings::str::{ByteString, USVString};
 use dom::globalscope::GlobalScope;
@@ -304,7 +304,7 @@ impl ResponseMethods for Response {
         // Step 2
         let new_response = Response::new(&self.global());
         new_response.Headers().set_guard(self.Headers().get_guard());
-        try!(new_response.Headers().fill(Some(HeadersInit::Headers(self.Headers()))));
+        try!(new_response.Headers().fill(Some(HeadersInit::Headers(JS::from_ref(&*self.Headers())))));
 
         // https://fetch.spec.whatwg.org/#concept-response-clone
         // Instead of storing a net_traits::Response internally, we

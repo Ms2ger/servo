@@ -908,10 +908,10 @@ impl CanvasRenderingContext2DMethods for CanvasRenderingContext2D {
                 StringOrCanvasGradientOrCanvasPattern::String(DOMString::from(result))
             },
             CanvasFillOrStrokeStyle::Gradient(ref gradient) => {
-                StringOrCanvasGradientOrCanvasPattern::CanvasGradient(Root::from_ref(&*gradient))
+                StringOrCanvasGradientOrCanvasPattern::CanvasGradient(JS::from_ref(&*gradient))
             },
             CanvasFillOrStrokeStyle::Pattern(ref pattern) => {
-                StringOrCanvasGradientOrCanvasPattern::CanvasPattern(Root::from_ref(&*pattern))
+                StringOrCanvasGradientOrCanvasPattern::CanvasPattern(JS::from_ref(&*pattern))
             }
         }
     }
@@ -957,10 +957,10 @@ impl CanvasRenderingContext2DMethods for CanvasRenderingContext2D {
                 StringOrCanvasGradientOrCanvasPattern::String(DOMString::from(result))
             },
             CanvasFillOrStrokeStyle::Gradient(ref gradient) => {
-                StringOrCanvasGradientOrCanvasPattern::CanvasGradient(Root::from_ref(&*gradient))
+                StringOrCanvasGradientOrCanvasPattern::CanvasGradient(JS::from_ref(&*gradient))
             },
             CanvasFillOrStrokeStyle::Pattern(ref pattern) => {
-                StringOrCanvasGradientOrCanvasPattern::CanvasPattern(Root::from_ref(&*pattern))
+                StringOrCanvasGradientOrCanvasPattern::CanvasPattern(JS::from_ref(&*pattern))
             }
         }
     }

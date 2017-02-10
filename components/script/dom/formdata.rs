@@ -78,7 +78,7 @@ impl FormDataMethods for FormData {
         let datum = FormDatum {
             ty: DOMString::from("file"),
             name: DOMString::from(name.0.clone()),
-            value: FormDatumValue::File(Root::from_ref(&*self.get_file(blob, filename))),
+            value: FormDatumValue::File(JS::from_ref(&*self.get_file(blob, filename))),
         };
 
         let mut data = self.data.borrow_mut();
@@ -100,7 +100,7 @@ impl FormDataMethods for FormData {
                  .get(&LocalName::from(name.0))
                  .map(|entry| match entry[0].value {
                      FormDatumValue::String(ref s) => FileOrUSVString::USVString(USVString(s.to_string())),
-                     FormDatumValue::File(ref b) => FileOrUSVString::File(Root::from_ref(&*b)),
+                     FormDatumValue::File(ref b) => FileOrUSVString::File(JS::from_ref(&*b)),
                  })
     }
 
@@ -111,7 +111,7 @@ impl FormDataMethods for FormData {
                  .map_or(vec![], |data|
                     data.iter().map(|item| match item.value {
                         FormDatumValue::String(ref s) => FileOrUSVString::USVString(USVString(s.to_string())),
-                        FormDatumValue::File(ref b) => FileOrUSVString::File(Root::from_ref(&*b)),
+                        FormDatumValue::File(ref b) => FileOrUSVString::File(JS::from_ref(&*b)),
                     }).collect()
                  )
     }
@@ -180,7 +180,7 @@ impl Iterable for FormData {
                          .value;
         match *value {
             FormDatumValue::String(ref s) => FileOrUSVString::USVString(USVString(s.to_string())),
-            FormDatumValue::File(ref b) => FileOrUSVString::File(Root::from_ref(&*b)),
+            FormDatumValue::File(ref b) => FileOrUSVString::File(JS::from_ref(&*b)),
         }
     }
 

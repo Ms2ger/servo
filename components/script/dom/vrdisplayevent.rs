@@ -11,6 +11,7 @@ use dom::bindings::inheritance::Castable;
 use dom::bindings::js::{JS, Root};
 use dom::bindings::reflector::{DomObject, reflect_dom_object};
 use dom::bindings::str::DOMString;
+use dom::bindings::trace::RootedTraceableBox;
 use dom::event::Event;
 use dom::globalscope::GlobalScope;
 use dom::vrdisplay::VRDisplay;
@@ -87,7 +88,7 @@ impl VRDisplayEvent {
 
     pub fn Constructor(window: &Window,
                        type_: DOMString,
-                       init: &VRDisplayEventBinding::VRDisplayEventInit)
+                       init: RootedTraceableBox<VRDisplayEventBinding::VRDisplayEventInit>)
                        -> Fallible<Root<VRDisplayEvent>> {
         Ok(VRDisplayEvent::new(&window.global(),
                             Atom::from(type_),

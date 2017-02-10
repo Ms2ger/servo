@@ -17,7 +17,7 @@ use dom::bindings::codegen::Bindings::WindowBinding::WindowMethods;
 use dom::bindings::codegen::UnionTypes::EventOrString;
 use dom::bindings::error::{Error, Fallible, report_pending_exception};
 use dom::bindings::inheritance::Castable;
-use dom::bindings::js::Root;
+use dom::bindings::js::{JS, Root};
 use dom::bindings::reflector::{DomObject, Reflector};
 use dom::bindings::str::DOMString;
 use dom::element::Element;
@@ -173,7 +173,7 @@ impl CompiledEventListener {
                             return;
                         }
 
-                        let _ = handler.Call_(object, EventOrString::Event(Root::from_ref(event)),
+                        let _ = handler.Call_(object, EventOrString::Event(JS::from_ref(event)),
                                               None, None, None, None, exception_handle);
                     }
 

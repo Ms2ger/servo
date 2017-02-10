@@ -11,6 +11,7 @@ use dom::bindings::inheritance::Castable;
 use dom::bindings::js::{Root, RootedReference};
 use dom::bindings::reflector::reflect_dom_object;
 use dom::bindings::str::DOMString;
+use dom::bindings::trace::RootedTraceableBox;
 use dom::event::Event;
 use dom::uievent::UIEvent;
 use dom::window::Window;
@@ -102,7 +103,8 @@ impl KeyboardEvent {
 
     pub fn Constructor(window: &Window,
                        type_: DOMString,
-                       init: &KeyboardEventBinding::KeyboardEventInit) -> Fallible<Root<KeyboardEvent>> {
+                       init: RootedTraceableBox<KeyboardEventBinding::KeyboardEventInit>)
+                       -> Fallible<Root<KeyboardEvent>> {
         let event = KeyboardEvent::new(window,
                                        type_,
                                        init.parent.parent.parent.bubbles,

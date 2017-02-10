@@ -10,6 +10,7 @@ use dom::bindings::inheritance::Castable;
 use dom::bindings::js::{MutNullableJS, Root, RootedReference};
 use dom::bindings::reflector::reflect_dom_object;
 use dom::bindings::str::DOMString;
+use dom::bindings::trace::RootedTraceableBox;
 use dom::event::{EventBubbles, EventCancelable};
 use dom::eventtarget::EventTarget;
 use dom::uievent::UIEvent;
@@ -54,7 +55,8 @@ impl FocusEvent {
 
     pub fn Constructor(window: &Window,
                        type_: DOMString,
-                       init: &FocusEventBinding::FocusEventInit) -> Fallible<Root<FocusEvent>> {
+                       init: RootedTraceableBox<FocusEventBinding::FocusEventInit>)
+                       -> Fallible<Root<FocusEvent>> {
         let bubbles = EventBubbles::from(init.parent.parent.bubbles);
         let cancelable = EventCancelable::from(init.parent.parent.cancelable);
         let event = FocusEvent::new(window,

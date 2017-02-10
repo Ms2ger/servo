@@ -1095,8 +1095,10 @@ def getJSToNativeConversionInfo(type, descriptorProvider, failureCode=None,
         typeName = "%s::%s" % (CGDictionary.makeModuleName(type.inner),
                                CGDictionary.makeDictionaryName(type.inner))
         declType = CGGeneric(typeName)
+        empty = "%s::empty(cx)" % typeName
         if isMember not in ("Dictionary", "Collection") and dictionary_needs_tracing(type):
             declType = CGTemplatedType("RootedTraceableBox", declType)
+            empty = "RootedTraceableBox::new(%s)" % empty
         template = ("match FromJSValConvertible::from_jsval(cx, ${val}, ()) {\n"
                     "    Ok(ConversionResult::Success(dictionary)) => dictionary,\n"
                     "    Ok(ConversionResult::Failure(error)) => {\n"
@@ -1105,7 +1107,7 @@ def getJSToNativeConversionInfo(type, descriptorProvider, failureCode=None,
                     "    _ => { %s },\n"
                     "}" % (indent(failOrPropagate, 8), exceptionCode))
 
-        return handleOptional(template, declType, handleDefaultNull("%s::empty(cx)" % typeName))
+        return handleOptional(template, declType, handleDefaultNull(empty))
 
     if type.isVoid():
         # This one only happens for return values, and its easy: Just
@@ -3154,7 +3156,7 @@ class CGCallGenerator(CGThing):
         args = CGList([CGGeneric(arg) for arg in argsPre], ", ")
         for (a, name) in arguments:
             # XXXjdm Perhaps we should pass all nontrivial types by borrowed pointer
-            if a.type.isDictionary() and dictionary_needs_tracing(a.type):
+            if a.type.isDictionary() and not dictionary_needs_tracing(a.type):
                 name = "&" + name
             args.append(CGGeneric(name))
 

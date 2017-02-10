@@ -11,6 +11,7 @@ use dom::bindings::inheritance::Castable;
 use dom::bindings::js::{MutHeapJSVal, Root};
 use dom::bindings::reflector::reflect_dom_object;
 use dom::bindings::str::DOMString;
+use dom::bindings::trace::RootedTraceableBox;
 use dom::event::{Event, EventBubbles, EventCancelable};
 use dom::globalscope::GlobalScope;
 use js::jsapi::{HandleValue, JSContext};
@@ -72,7 +73,8 @@ impl ErrorEvent {
 
     pub fn Constructor(global: &GlobalScope,
                        type_: DOMString,
-                       init: &ErrorEventBinding::ErrorEventInit) -> Fallible<Root<ErrorEvent>>{
+                       init: RootedTraceableBox<ErrorEventBinding::ErrorEventInit>)
+                       -> Fallible<Root<ErrorEvent>>{
         let msg = match init.message.as_ref() {
             Some(message) => message.clone(),
             None => DOMString::new(),
@@ -93,7 +95,6 @@ impl ErrorEvent {
 
         // Dictionaries need to be rooted
         // https://github.com/servo/servo/issues/6381
-        rooted!(in(global.get_cx()) let error = init.error);
         let event = ErrorEvent::new(
                 global,
                 Atom::from(type_),
@@ -103,7 +104,7 @@ impl ErrorEvent {
                 file_name,
                 line_num,
                 col_num,
-                error.handle());
+                init.error.handle());
         Ok(event)
     }
 

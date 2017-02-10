@@ -10,6 +10,7 @@ use dom::bindings::inheritance::Castable;
 use dom::bindings::js::{MutNullableJS, Root, RootedReference};
 use dom::bindings::reflector::reflect_dom_object;
 use dom::bindings::str::DOMString;
+use dom::bindings::trace::RootedTraceableBox;
 use dom::event::{Event, EventBubbles, EventCancelable};
 use dom::window::Window;
 use servo_atoms::Atom;
@@ -52,7 +53,7 @@ impl UIEvent {
 
     pub fn Constructor(window: &Window,
                        type_: DOMString,
-                       init: &UIEventBinding::UIEventInit) -> Fallible<Root<UIEvent>> {
+                       init: RootedTraceableBox<UIEventBinding::UIEventInit>) -> Fallible<Root<UIEvent>> {
         let bubbles = EventBubbles::from(init.parent.bubbles);
         let cancelable = EventCancelable::from(init.parent.cancelable);
         let event = UIEvent::new(window,

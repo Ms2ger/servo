@@ -1397,7 +1397,7 @@ impl Document {
                                        -> Fallible<Root<Node>> {
         if nodes.len() == 1 {
             Ok(match nodes.pop().unwrap() {
-                NodeOrString::Node(node) => node,
+                NodeOrString::Node(node) => Root::from_ref(&*node),
                 NodeOrString::String(string) => Root::upcast(self.CreateTextNode(string)),
             })
         } else {

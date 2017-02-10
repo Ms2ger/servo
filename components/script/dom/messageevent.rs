@@ -61,10 +61,8 @@ impl MessageEvent {
 
     pub fn Constructor(global: &GlobalScope,
                        type_: DOMString,
-                       init: &MessageEventBinding::MessageEventInit)
+                       init: RootedTraceableBox<MessageEventBinding::MessageEventInit>)
                        -> Fallible<Root<MessageEvent>> {
-        // Dictionaries need to be rooted
-        // https://github.com/servo/servo/issues/6381
         let ev = MessageEvent::new(global,
                                    Atom::from(type_),
                                    init.parent.bubbles,

@@ -10,6 +10,7 @@ use dom::bindings::inheritance::Castable;
 use dom::bindings::js::{MutNullableJS, Root, RootedReference};
 use dom::bindings::reflector::reflect_dom_object;
 use dom::bindings::str::DOMString;
+use dom::bindings::trace::RootedTraceableBox;
 use dom::event::{Event, EventBubbles, EventCancelable};
 use dom::eventtarget::EventTarget;
 use dom::uievent::UIEvent;
@@ -83,7 +84,8 @@ impl MouseEvent {
 
     pub fn Constructor(window: &Window,
                        type_: DOMString,
-                       init: &MouseEventBinding::MouseEventInit) -> Fallible<Root<MouseEvent>> {
+                       init: RootedTraceableBox<MouseEventBinding::MouseEventInit>)
+                       -> Fallible<Root<MouseEvent>> {
         let bubbles = EventBubbles::from(init.parent.parent.parent.bubbles);
         let cancelable = EventCancelable::from(init.parent.parent.parent.cancelable);
         let event = MouseEvent::new(window,
