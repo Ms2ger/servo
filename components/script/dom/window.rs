@@ -907,7 +907,10 @@ impl WindowMethods for Window {
 
     #[allow(unrooted_must_root)]
     // https://fetch.spec.whatwg.org/#fetch-method
-    fn Fetch(&self, input: RequestOrUSVString, init: RootedTraceableBox<RequestInit>) -> Rc<Promise> {
+    fn Fetch(&self,
+             input: RootedTraceableBox<RequestOrUSVString>,
+             init: RootedTraceableBox<RequestInit>)
+             -> Rc<Promise> {
         fetch::Fetch(&self.upcast(), input, init)
     }
 

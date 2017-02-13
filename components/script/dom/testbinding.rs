@@ -660,8 +660,8 @@ impl TestBindingMethods for TestBinding {
     fn PassByteStringMozMap(&self, _: MozMap<ByteString>) {}
     fn PassMozMapOfMozMaps(&self, _: MozMap<MozMap<i32>>) {}
     fn PassMozMapUnion(&self, _: UnionTypes::LongOrByteStringMozMap) {}
-    fn PassMozMapUnion2(&self, _: UnionTypes::TestBindingOrByteStringMozMap) {}
-    fn PassMozMapUnion3(&self, _: UnionTypes::TestBindingOrByteStringSequenceSequenceOrByteStringMozMap) {}
+    fn PassMozMapUnion2(&self, _: RootedTraceableBox<UnionTypes::TestBindingOrByteStringMozMap>) {}
+    fn PassMozMapUnion3(&self, _: RootedTraceableBox<UnionTypes::TestBindingOrByteStringSequenceSequenceOrByteStringMozMap>) {}
     fn ReceiveMozMap(&self) -> MozMap<i32> { MozMap::new() }
     fn ReceiveNullableMozMap(&self) -> Option<MozMap<i32>> { Some(MozMap::new()) }
     fn ReceiveMozMapOfNullableInts(&self) -> MozMap<Option<i32>> { MozMap::new() }

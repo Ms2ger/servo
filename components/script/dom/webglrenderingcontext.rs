@@ -8,13 +8,14 @@ use core::nonzero::NonZero;
 use dom::bindings::codegen::Bindings::WebGLRenderingContextBinding::{self, WebGLContextAttributes};
 use dom::bindings::codegen::Bindings::WebGLRenderingContextBinding::WebGLRenderingContextConstants as constants;
 use dom::bindings::codegen::Bindings::WebGLRenderingContextBinding::WebGLRenderingContextMethods;
-use dom::bindings::codegen::UnionTypes::ImageDataOrHTMLImageElementOrHTMLCanvasElementOrHTMLVideoElement;
+use dom::bindings::codegen::UnionTypes::ImageDataOrHTMLImageElementOrHTMLCanvasElementOrHTMLVideoElement as ImageSource;
 use dom::bindings::conversions::{ConversionResult, FromJSValConvertible, ToJSValConvertible};
 use dom::bindings::error::{Error, Fallible};
 use dom::bindings::inheritance::Castable;
 use dom::bindings::js::{JS, LayoutJS, MutNullableJS, Root};
 use dom::bindings::reflector::{DomObject, Reflector, reflect_dom_object};
 use dom::bindings::str::DOMString;
+use dom::bindings::trace::RootedTraceableBox;
 use dom::event::{Event, EventBubbles, EventCancelable};
 use dom::globalscope::GlobalScope;
 use dom::htmlcanvaselement::HTMLCanvasElement;
@@ -429,7 +430,7 @@ impl WebGLRenderingContext {
     }
 
     fn get_image_pixels(&self,
-                        source: Option<ImageDataOrHTMLImageElementOrHTMLCanvasElementOrHTMLVideoElement>)
+                        source: Option<RootedTraceableBox<ImageSource>>)
                         -> ImagePixelResult {
         let source = match source {
             Some(s) => s,
@@ -442,10 +443,10 @@ impl WebGLRenderingContext {
         // Nontheless, since it's the error case, I'm not totally sure the
         // complexity is worth it.
         let (pixels, size) = match source {
-            ImageDataOrHTMLImageElementOrHTMLCanvasElementOrHTMLVideoElement::ImageData(ref image_data) => {
+            ImageSource::ImageData(ref image_data) => {
                 (image_data.get_data_array(), image_data.get_size())
             },
-            ImageDataOrHTMLImageElementOrHTMLCanvasElementOrHTMLVideoElement::HTMLImageElement(ref image) => {
+            ImageSource::HTMLImageElement(ref image) => {
                 let img_url = match image.get_url() {
                     Some(url) => url,
                     None => return Err(()),
@@ -475,7 +476,7 @@ impl WebGLRenderingContext {
             // TODO(emilio): Getting canvas data is implemented in CanvasRenderingContext2D,
             // but we need to refactor it moving it to `HTMLCanvasElement` and support
             // WebGLContext (probably via GetPixels()).
-            ImageDataOrHTMLImageElementOrHTMLCanvasElementOrHTMLVideoElement::HTMLCanvasElement(ref canvas) => {
+            ImageSource::HTMLCanvasElement(ref canvas) => {
                 if let Some((mut data, size)) = canvas.fetch_all_data() {
                     byte_swap(&mut data);
                     (data, size)
@@ -483,7 +484,7 @@ impl WebGLRenderingContext {
                     return Err(());
                 }
             },
-            ImageDataOrHTMLImageElementOrHTMLCanvasElementOrHTMLVideoElement::HTMLVideoElement(_)
+            ImageSource::HTMLVideoElement(_)
                 => unimplemented!(),
         };
 
@@ -2831,7 +2832,7 @@ impl WebGLRenderingContextMethods for WebGLRenderingContext {
                    internal_format: u32,
                    format: u32,
                    data_type: u32,
-                   source: Option<ImageDataOrHTMLImageElementOrHTMLCanvasElementOrHTMLVideoElement>) -> Fallible<()> {
+                   source: Option<RootedTraceableBox<ImageSource>>) -> Fallible<()> {
         // Get pixels from image source
         let (pixels, size) = match self.get_image_pixels(source) {
             Ok((pixels, size)) => (pixels, size),
@@ -2941,7 +2942,7 @@ impl WebGLRenderingContextMethods for WebGLRenderingContext {
                       yoffset: i32,
                       format: u32,
                       data_type: u32,
-                      source: Option<ImageDataOrHTMLImageElementOrHTMLCanvasElementOrHTMLVideoElement>)
+                      source: Option<RootedTraceableBox<ImageSource>>)
                       -> Fallible<()> {
         let (pixels, size) = match self.get_image_pixels(source) {
             Ok((pixels, size)) => (pixels, size),

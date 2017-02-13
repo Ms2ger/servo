@@ -720,6 +720,9 @@ def getJSToNativeConversionInfo(type, descriptorProvider, failureCode=None,
 
     if type.isUnion():
         declType = CGGeneric(union_native_type(type))
+        if isMember not in ("Dictionary", "Collection", "Variadic") and union_needs_tracing(type):
+            declType = CGWrapper(declType, pre="RootedTraceableBox<", post=">")
+            
         if type.nullable():
             declType = CGWrapper(declType, pre="Option<", post=" >")
 
@@ -6174,7 +6177,21 @@ class CGBindingRoot(CGThing):
         return stripTrailingWhitespace(self.root.define())
 
 
+def union_needs_tracing(t):
+    print(type(t))
+    assert t.isUnion()
+    while (t.isType() and t.nullable()) or isinstance(t, IDLWrapperType):
+        t = t.inner
+
+    for member in t.flatMemberTypes:
+        if member.isInterface() or member.isAny() or member.isObject():
+            return True
+
+    return False
+
+
 def dictionary_needs_tracing(t):
+    print(type(t))
     assert t.isDictionary()
     while (t.isType() and t.nullable()) or isinstance(t, IDLWrapperType):
         t = t.inner
