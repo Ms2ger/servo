@@ -214,7 +214,7 @@ class Descriptor(DescriptorProvider):
         else:
             self.returnType = "Root<%s>" % typeName
             self.argumentType = "&%s" % typeName
-            self.nativeType = "*const %s" % typeName
+            self.nativeType = "&%s" % typeName
             if self.interface.isIteratorInterface():
                 pathDefault = 'dom::bindings::iterable::IterableIterator'
             else:

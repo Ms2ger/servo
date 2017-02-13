@@ -1258,7 +1258,7 @@ class CGArgumentConverter(CGThing):
             arg = "arg%d" % index
             if argument.type.isGeckoInterface():
                 init = "rooted_vec!(let mut %s)" % arg
-                innerConverter.append(CGGeneric("%s.push(JS::from_ref(&*slot));" % arg))
+                innerConverter.append(CGGeneric("%s.push(JS::from_ref(slot));" % arg))
             else:
                 init = "let mut %s = vec![]" % arg
                 innerConverter.append(CGGeneric("%s.push(slot);" % arg))
@@ -6154,7 +6154,7 @@ class CGBindingRoot(CGThing):
 
 def argument_type(descriptorProvider, ty, optional=False, defaultValue=None, variadic=False):
     info = getJSToNativeConversionInfo(
-        ty, descriptorProvider, isArgument=True)
+        ty, descriptorProvider, isArgument=True, isMember="Variadic" if variadic else False)
     declType = info.declType
 
     if variadic:
