@@ -442,10 +442,10 @@ impl WebGLRenderingContext {
         // Nontheless, since it's the error case, I'm not totally sure the
         // complexity is worth it.
         let (pixels, size) = match source {
-            ImageDataOrHTMLImageElementOrHTMLCanvasElementOrHTMLVideoElement::ImageData(image_data) => {
+            ImageDataOrHTMLImageElementOrHTMLCanvasElementOrHTMLVideoElement::ImageData(ref image_data) => {
                 (image_data.get_data_array(), image_data.get_size())
             },
-            ImageDataOrHTMLImageElementOrHTMLCanvasElementOrHTMLVideoElement::HTMLImageElement(image) => {
+            ImageDataOrHTMLImageElementOrHTMLCanvasElementOrHTMLVideoElement::HTMLImageElement(ref image) => {
                 let img_url = match image.get_url() {
                     Some(url) => url,
                     None => return Err(()),
@@ -475,7 +475,7 @@ impl WebGLRenderingContext {
             // TODO(emilio): Getting canvas data is implemented in CanvasRenderingContext2D,
             // but we need to refactor it moving it to `HTMLCanvasElement` and support
             // WebGLContext (probably via GetPixels()).
-            ImageDataOrHTMLImageElementOrHTMLCanvasElementOrHTMLVideoElement::HTMLCanvasElement(canvas) => {
+            ImageDataOrHTMLImageElementOrHTMLCanvasElementOrHTMLVideoElement::HTMLCanvasElement(ref canvas) => {
                 if let Some((mut data, size)) = canvas.fetch_all_data() {
                     byte_swap(&mut data);
                     (data, size)
@@ -483,7 +483,7 @@ impl WebGLRenderingContext {
                     return Err(());
                 }
             },
-            ImageDataOrHTMLImageElementOrHTMLCanvasElementOrHTMLVideoElement::HTMLVideoElement(_rooted_video)
+            ImageDataOrHTMLImageElementOrHTMLCanvasElementOrHTMLVideoElement::HTMLVideoElement(_)
                 => unimplemented!(),
         };
 

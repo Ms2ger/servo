@@ -1397,15 +1397,15 @@ impl Document {
                                        -> Fallible<Root<Node>> {
         if nodes.len() == 1 {
             Ok(match nodes.pop().unwrap() {
-                NodeOrString::Node(node) => Root::from_ref(&*node),
+                NodeOrString::Node(ref node) => Root::from_ref(&**node),
                 NodeOrString::String(string) => Root::upcast(self.CreateTextNode(string)),
             })
         } else {
             let fragment = Root::upcast::<Node>(self.CreateDocumentFragment());
             for node in nodes {
                 match node {
-                    NodeOrString::Node(node) => {
-                        try!(fragment.AppendChild(&node));
+                    NodeOrString::Node(ref node) => {
+                        try!(fragment.AppendChild(node));
                     },
                     NodeOrString::String(string) => {
                         let node = Root::upcast::<Node>(self.CreateTextNode(string));

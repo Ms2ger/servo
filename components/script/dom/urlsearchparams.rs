@@ -47,12 +47,12 @@ impl URLSearchParams {
         // Step 1.
         let query = URLSearchParams::new(global, None);
         match init {
-            Some(USVStringOrURLSearchParams::USVString(init)) => {
+            Some(USVStringOrURLSearchParams::USVString(ref init)) => {
                 // Step 2.
                 *query.list.borrow_mut() = form_urlencoded::parse(init.0.as_bytes())
                     .into_owned().collect();
             },
-            Some(USVStringOrURLSearchParams::URLSearchParams(init)) => {
+            Some(USVStringOrURLSearchParams::URLSearchParams(ref init)) => {
                 // Step 3.
                 *query.list.borrow_mut() = init.list.borrow().clone();
             },

@@ -181,6 +181,7 @@ pub mod codegen {
         include!(concat!(env!("OUT_DIR"), "/RegisterBindings.rs"));
     }
     #[allow(non_camel_case_types, unused_imports, unused_variables)]
+    #[allow(unrooted_must_root)] //XXX
     pub mod UnionTypes {
         include!(concat!(env!("OUT_DIR"), "/UnionTypes.rs"));
     }

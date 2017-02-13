@@ -227,12 +227,12 @@ impl CanvasRenderingContext2D {
                        image: HTMLImageElementOrHTMLCanvasElementOrCanvasRenderingContext2D)
                            -> bool {
         match image {
-            HTMLImageElementOrHTMLCanvasElementOrCanvasRenderingContext2D::HTMLCanvasElement(canvas) => {
+            HTMLImageElementOrHTMLCanvasElementOrCanvasRenderingContext2D::HTMLCanvasElement(ref canvas) => {
                 canvas.origin_is_clean()
             }
-            HTMLImageElementOrHTMLCanvasElementOrCanvasRenderingContext2D::CanvasRenderingContext2D(image) =>
+            HTMLImageElementOrHTMLCanvasElementOrCanvasRenderingContext2D::CanvasRenderingContext2D(ref image) =>
                 image.origin_is_clean(),
-            HTMLImageElementOrHTMLCanvasElementOrCanvasRenderingContext2D::HTMLImageElement(image) =>
+            HTMLImageElementOrHTMLCanvasElementOrCanvasRenderingContext2D::HTMLImageElement(ref image) =>
                 match image.get_url() {
                     None => true,
                     Some(url) => {
@@ -928,16 +928,16 @@ impl CanvasRenderingContext2DMethods for CanvasRenderingContext2D {
                         .unwrap();
                 }
             },
-            StringOrCanvasGradientOrCanvasPattern::CanvasGradient(gradient) => {
+            StringOrCanvasGradientOrCanvasPattern::CanvasGradient(ref gradient) => {
                 self.state.borrow_mut().stroke_style =
-                    CanvasFillOrStrokeStyle::Gradient(JS::from_ref(&*gradient));
+                    CanvasFillOrStrokeStyle::Gradient(JS::from_ref(&**gradient));
                 let msg = CanvasMsg::Canvas2d(
                     Canvas2dMsg::SetStrokeStyle(gradient.to_fill_or_stroke_style()));
                 self.ipc_renderer.send(msg).unwrap();
             },
-            StringOrCanvasGradientOrCanvasPattern::CanvasPattern(pattern) => {
+            StringOrCanvasGradientOrCanvasPattern::CanvasPattern(ref pattern) => {
                 self.state.borrow_mut().stroke_style =
-                    CanvasFillOrStrokeStyle::Pattern(JS::from_ref(&*pattern));
+                    CanvasFillOrStrokeStyle::Pattern(JS::from_ref(&**pattern));
                 let msg = CanvasMsg::Canvas2d(
                     Canvas2dMsg::SetStrokeStyle(pattern.to_fill_or_stroke_style()));
                 self.ipc_renderer.send(msg).unwrap();
@@ -977,16 +977,16 @@ impl CanvasRenderingContext2DMethods for CanvasRenderingContext2D {
                         .unwrap()
                 }
             }
-            StringOrCanvasGradientOrCanvasPattern::CanvasGradient(gradient) => {
+            StringOrCanvasGradientOrCanvasPattern::CanvasGradient(ref gradient) => {
                 self.state.borrow_mut().fill_style =
-                    CanvasFillOrStrokeStyle::Gradient(JS::from_ref(&*gradient));
+                    CanvasFillOrStrokeStyle::Gradient(JS::from_ref(&**gradient));
                 let msg = CanvasMsg::Canvas2d(
                     Canvas2dMsg::SetFillStyle(gradient.to_fill_or_stroke_style()));
                 self.ipc_renderer.send(msg).unwrap();
             }
-            StringOrCanvasGradientOrCanvasPattern::CanvasPattern(pattern) => {
+            StringOrCanvasGradientOrCanvasPattern::CanvasPattern(ref pattern) => {
                 self.state.borrow_mut().fill_style =
-                    CanvasFillOrStrokeStyle::Pattern(JS::from_ref(&*pattern));
+                    CanvasFillOrStrokeStyle::Pattern(JS::from_ref(&**pattern));
                 let msg = CanvasMsg::Canvas2d(
                     Canvas2dMsg::SetFillStyle(pattern.to_fill_or_stroke_style()));
                 self.ipc_renderer.send(msg).unwrap();

@@ -6175,7 +6175,6 @@ class CGBindingRoot(CGThing):
 
 
 def dictionary_needs_tracing(t):
-    print(t)
     assert t.isDictionary()
     while (t.isType() and t.nullable()) or isinstance(t, IDLWrapperType):
         t = t.inner

@@ -158,7 +158,7 @@ impl HTMLOptionsCollectionMethods for HTMLOptionsCollection {
         // Step 4
         let reference_node = before.and_then(|before| {
             match before {
-                HTMLElementOrLong::HTMLElement(element) => {
+                HTMLElementOrLong::HTMLElement(ref element) => {
                     Some(Root::from_ref(element.upcast::<Node>()))
                 },
                 HTMLElementOrLong::Long(index) => {

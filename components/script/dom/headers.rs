@@ -169,7 +169,7 @@ impl Headers {
     pub fn fill(&self, filler: Option<HeadersInit>) -> ErrorResult {
         match filler {
             // Step 1
-            Some(HeadersInit::Headers(h)) => {
+            Some(HeadersInit::Headers(ref h)) => {
                 for header in h.header_list.borrow().iter() {
                     try!(self.Append(
                         ByteString::new(Vec::from(header.name())),

@@ -121,6 +121,7 @@ impl <T: DomObject + IDLInterface> FromJSValConvertible for Root<T> {
 impl <T: DomObject + IDLInterface> FromJSValConvertible for JS<T> {
     type Config = ();
 
+    #[allow(unrooted_must_root)]
     unsafe fn from_jsval(_cx: *mut JSContext,
                          value: HandleValue,
                          _config: Self::Config)
@@ -468,6 +469,7 @@ pub fn native_from_handlevalue<T>(v: HandleValue) -> Result<*const T, ()>
 
 /// Get a `JS<T>` for a DOM object accessible from a `HandleValue`.
 /// Caller is responsible for throwing a JS exception if needed in case of error.
+#[allow(unrooted_must_root)]
 pub fn js_from_handlevalue<T>(v: HandleValue) -> Result<JS<T>, ()>
     where T: DomObject + IDLInterface
 {
