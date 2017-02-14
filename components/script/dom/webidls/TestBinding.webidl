@@ -255,6 +255,8 @@ interface TestBinding {
   void passSequence(sequence<long> seq);
   void passStringSequence(sequence<DOMString> seq);
   void passInterfaceSequence(sequence<Blob> seq);
+  void passAnySequence(sequence<any> seq);
+  void passObjectSequence(sequence<object> seq);
 
   void passNullableBoolean(boolean? arg);
   void passNullableByte(byte? arg);

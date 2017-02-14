@@ -446,6 +446,10 @@ impl TestBindingMethods for TestBinding {
     fn PassSequence(&self, _: Vec<i32>) {}
     fn PassStringSequence(&self, _: Vec<DOMString>) {}
     fn PassInterfaceSequence(&self, _: Vec<Root<Blob>>) {}
+    #[allow(unsafe_code)]
+    unsafe fn PassAnySequence(&self, _: *mut JSContext, _: Vec<HandleValue>) {}
+    #[allow(unsafe_code)]
+    unsafe fn PassObjectSequence(&self, _: *mut JSContext, _: Vec<*mut JSObject>) {}
 
     fn PassNullableBoolean(&self, _: Option<bool>) {}
     fn PassNullableByte(&self, _: Option<i8>) {}
