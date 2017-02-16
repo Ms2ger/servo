@@ -438,6 +438,8 @@ impl TestBindingMethods for TestBinding {
     fn PassUnion9(&self, _: RootedTraceableBox<UnionTypes::TestDictionaryOrLong>) {}
     #[allow(unsafe_code)]
     unsafe fn PassUnion10(&self, _: *mut JSContext, _: RootedTraceableBox<UnionTypes::StringOrObject>) {}
+    #[allow(unsafe_code)]
+    unsafe fn PassUnion11(&self, _: *mut JSContext, _: RootedTraceableBox<UnionTypes::StringOrObjectSequence>) {}
     fn PassUnionWithTypedef(&self, _: DocumentOrTestTypedef) {}
     fn PassUnionWithTypedef2(&self, _: LongSequenceOrTestTypedef) {}
     #[allow(unsafe_code)]
