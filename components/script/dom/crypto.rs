@@ -9,9 +9,11 @@ use dom::bindings::codegen::Bindings::CryptoBinding::CryptoMethods;
 use dom::bindings::error::{Error, Fallible};
 use dom::bindings::js::Root;
 use dom::bindings::reflector::{Reflector, reflect_dom_object};
+use dom::bindings::trace::RootedTraceableBox;
 use dom::globalscope::GlobalScope;
 use js::jsapi::{JSContext, JSObject};
 use js::jsapi::{JS_GetArrayBufferViewType, Type};
+use js::typedarray::ArrayBufferView;
 use servo_rand::{ServoRng, Rng};
 
 unsafe_no_jsmanaged_fields!(ServoRng);
@@ -41,11 +43,11 @@ impl CryptoMethods for Crypto {
     #[allow(unsafe_code)]
     // https://dvcs.w3.org/hg/webcrypto-api/raw-file/tip/spec/Overview.html#Crypto-method-getRandomValues
     unsafe fn GetRandomValues(&self,
-                       _cx: *mut JSContext,
+                       cx: *mut JSContext,
                        input: *mut JSObject)
                        -> Fallible<NonZero<*mut JSObject>> {
         assert!(!input.is_null());
-        typedarray!(in(_cx) let mut array_buffer_view: ArrayBufferView = input);
+        let mut array_buffer_view = RootedTraceableBox::new(ArrayBufferView::from(cx, input));
         let mut data = match array_buffer_view.as_mut() {
             Ok(x) => x.as_mut_slice(),
             Err(_) => {

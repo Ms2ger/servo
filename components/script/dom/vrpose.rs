@@ -7,6 +7,7 @@ use dom::bindings::codegen::Bindings::VRPoseBinding;
 use dom::bindings::codegen::Bindings::VRPoseBinding::VRPoseMethods;
 use dom::bindings::js::Root;
 use dom::bindings::reflector::{DomObject, Reflector, reflect_dom_object};
+use dom::bindings::trace::RootedTraceableBox;
 use dom::globalscope::GlobalScope;
 use js::jsapi::{Heap, JSContext, JSObject};
 use js::typedarray::{Float32Array, CreateWith};
@@ -33,8 +34,8 @@ unsafe fn update_or_create_typed_array(cx: *mut JSContext,
             if dst.get().is_null() {
                 let _ = Float32Array::create(cx, CreateWith::Slice(data), dst.handle_mut());
             } else {
-                typedarray!(in(cx) let array: Float32Array = dst.get());
-                if let Ok(mut array) = array {
+                let array = RootedTraceableBox::new(Float32Array::from(cx, dst.get()));
+                if let Ok(mut array) = *array {
                     array.update(data);
                 }
             }
