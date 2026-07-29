@@ -155,6 +155,7 @@ impl AttrMethods<crate::DomTypeHolder> for Attr {
     /// <https://dom.spec.whatwg.org/#dom-attr-prefix>
     fn GetPrefix(&self) -> Option<DOMString> {
         // FIXME(ajeffrey): convert directly from LocalName to DOMString
+        println!("Attr::GetPrefix → {:?}", self.prefix());
         self.prefix().map(|p| DOMString::from(&**p))
     }
 

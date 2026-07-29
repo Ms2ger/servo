@@ -1875,23 +1875,30 @@ impl Element {
 
     // https://dom.spec.whatwg.org/#locate-a-namespace-prefix
     pub(crate) fn lookup_prefix(&self, namespace: Namespace) -> Option<DOMString> {
+        println!("  lookup_prefix");
         for node in self
             .upcast::<Node>()
             .inclusive_ancestors(ShadowIncluding::No)
         {
+            println!("  inclusive ancestor {node:?}");
             let element = node.downcast::<Element>()?;
             // Step 1.
             if *element.namespace() == namespace &&
                 let Some(prefix) = element.GetPrefix()
             {
+                println!("    => in namespace");
                 return Some(prefix);
             }
 
             // Step 2.
             for attr in element.attrs.borrow().iter() {
+                println!("    => checking attribute {:?} with prefix={:?}", attr.summarize(), attr.prefix());
+                println!("      => attr.prefix() == Some(&namespace_prefix!(\"xmlns\")): {:?}", attr.prefix() == Some(&namespace_prefix!("xmlns")));
+                println!("      => **attr.value() == *namespace: {:?}", **attr.value() == *namespace);
                 if attr.prefix() == Some(&namespace_prefix!("xmlns")) &&
                     **attr.value() == *namespace
                 {
+                    println!("      => found");
                     return Some(DOMString::from(&**attr.local_name()));
                 }
             }
@@ -1978,6 +1985,7 @@ impl Element {
             },
             value,
         };
+        println!("~ push_new_attribute => {data:?}");
         let attr_ref = AttrRef::Raw(&data);
         self.will_mutate_attr(attr_ref);
         // Step 1: Append to attribute list (push clone, keep original on stack).
@@ -2146,6 +2154,7 @@ impl Element {
         qname: QualName,
         value: DOMString,
     ) {
+        println!("-- set_attribute_from_parser({qname:?}, {value:?})");
         // Don't set if the attribute already exists, so we can handle add_attrs_if_missing
         if self
             .attrs
@@ -2153,6 +2162,7 @@ impl Element {
             .iter()
             .any(|a| *a.local_name() == qname.local && *a.namespace() == qname.ns)
         {
+            println!("--   => skipping, duplicate");
             return;
         }
 
@@ -2163,6 +2173,7 @@ impl Element {
                 LocalName::from(name)
             },
         };
+        println!("--   => name={name:?}");
         let value = self.parse_attribute(&qname.ns, &qname.local, value);
         self.push_new_attribute(
             cx,
