@@ -2156,7 +2156,13 @@ impl Element {
             return;
         }
 
-        let name = qname.local.clone();
+        let name = match qname.prefix {
+            None => qname.local.clone(),
+            Some(ref prefix) => {
+                let name = format!("{}:{}", &**prefix, &*qname.local);
+                LocalName::from(name)
+            },
+        };
         let value = self.parse_attribute(&qname.ns, &qname.local, value);
         self.push_new_attribute(
             cx,
@@ -2164,7 +2170,7 @@ impl Element {
             value,
             name,
             qname.ns,
-            None, // TODO: pass prefix from `qname`.
+            qname.prefix,
             AttributeMutationReason::ByParser,
         );
     }
