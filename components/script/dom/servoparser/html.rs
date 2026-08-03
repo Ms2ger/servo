@@ -129,6 +129,10 @@ impl Tokenizer {
 
 /// <https://html.spec.whatwg.org/multipage/#html-fragment-serialisation-algorithm>
 fn start_element<S: Serializer>(element: &Element, serializer: &mut S) -> io::Result<()> {
+    // TODO:
+    //   If current node is an element in the HTML namespace, the MathML namespace, or the SVG
+    //   namespace, then let tagname be current node's local name. Otherwise, let tagname be current
+    //   node's qualified name.
     let name = QualName::new(
         None,
         element.namespace().clone(),
@@ -148,6 +152,10 @@ fn start_element<S: Serializer>(element: &Element, serializer: &mut S) -> io::Re
     }
 
     // Collect all the "normal" attributes
+    // TODO:
+    //   An attribute's serialized name for the purposes of the previous paragraph must be
+    //   determined as follows:
+    //   ... prefixes ...
     attributes.extend(element.attrs().borrow().iter().map(|attr| {
         let qname = QualName::new(None, attr.namespace().clone(), attr.local_name().clone());
         let value = attr.value().clone();

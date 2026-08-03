@@ -27,6 +27,12 @@ function serialize(node) {
 }
 
 test(function() {
+  var root = document.createElement('div');
+  assert_equals(serialize(root), '<div xmlns="http://www.w3.org/1999/xhtml"></div>');
+}, 'Check if document fragment serializes reduced.');
+
+
+test(function() {
   var root = createXmlDoc().documentElement;
   assert_equals(serialize(root), '<root><child1>value1</child1></root>');
 }, 'check XMLSerializer.serializeToString method could parsing xmldoc to string');
