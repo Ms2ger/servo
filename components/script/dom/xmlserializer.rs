@@ -13,7 +13,7 @@ use crate::dom::bindings::error::{Error, Fallible};
 use crate::dom::bindings::root::{Dom, DomRoot};
 use crate::dom::bindings::str::DOMString;
 use crate::dom::node::Node;
-use crate::dom::servoparser::html::HtmlSerialize;
+use crate::dom::servoparser::xml::XmlSerialize;
 use crate::dom::window::Window;
 
 #[dom_struct]
@@ -59,7 +59,7 @@ impl XMLSerializerMethods<crate::DomTypeHolder> for XMLSerializer {
         let mut writer = vec![];
         match serialize(
             &mut writer,
-            &HtmlSerialize::new(root),
+            &XmlSerialize::new(root),
             SerializeOpts {
                 traversal_scope: TraversalScope::IncludeNode,
             },

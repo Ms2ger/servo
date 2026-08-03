@@ -74,3 +74,265 @@ impl Tokenizer {
         self.inner.sink.sink.current_line.get() as u32
     }
 }
+
+/// <https://html.spec.whatwg.org/multipage/#html-fragment-serialisation-algorithm>
+fn start_element<S: Serializer>(element: &Element, serializer: &mut S) -> io::Result<()> {
+    let name = QualName::new(
+        None,
+        element.namespace().clone(),
+        element.local_name().clone(),
+    );
+
+    let mut attributes = vec![];
+
+    // The "is" value of an element is treated as if it was an attribute and it is serialized before all
+    // other attributes. If the element already has an "is" attribute then the "is" value is ignored.
+    if !element.has_attribute(&LocalName::from("is")) &&
+        let Some(is_value) = element.get_is()
+    {
+        let qualified_name = QualName::new(None, ns!(), LocalName::from("is"));
+
+        attributes.push((qualified_name, AttrValue::String(is_value.to_string())));
+    }
+
+    // Collect all the "normal" attributes
+    attributes.extend(element.attrs().borrow().iter().map(|attr| {
+        let qname = QualName::new(None, attr.namespace().clone(), attr.local_name().clone());
+        let value = attr.value().clone();
+        (qname, value)
+    }));
+
+    let attr_refs = attributes.iter().map(|(qname, value)| {
+        let ar: AttrRef = (qname, &**value);
+        ar
+    });
+    serializer.start_elem(name, attr_refs)?;
+    Ok(())
+}
+
+enum SerializationCommand {
+    OpenElement(DomRoot<Element>),
+    CloseElement(QualName),
+    SerializeNonelement(DomRoot<Node>),
+    SerializeShadowRoot(DomRoot<ShadowRoot>),
+}
+
+struct SerializationIterator {
+    stack: Vec<SerializationCommand>,
+
+    /// Whether or not shadow roots should be serialized
+    serialize_shadow_roots: bool,
+
+    /// List of shadow root objects that should be serialized
+    shadow_roots: Vec<DomRoot<ShadowRoot>>,
+}
+
+impl SerializationIterator {
+    fn new(
+        cx: &mut js::context::JSContext,
+        node: &Node,
+        skip_first: bool,
+        serialize_shadow_roots: bool,
+        shadow_roots: Vec<DomRoot<ShadowRoot>>,
+    ) -> SerializationIterator {
+        let mut ret = SerializationIterator {
+            stack: vec![],
+            serialize_shadow_roots,
+            shadow_roots,
+        };
+        if skip_first || node.is::<DocumentFragment>() || node.is::<Document>() {
+            ret.handle_node_contents(cx, node);
+        } else {
+            ret.push_node(node);
+        }
+        ret
+    }
+
+    fn handle_node_contents(&mut self, cx: &mut js::context::JSContext, node: &Node) {
+        if node.downcast::<Element>().is_some_and(Element::is_void) {
+            return;
+        }
+
+        if let Some(template_element) = node.downcast::<HTMLTemplateElement>() {
+            for child in template_element.Content(cx).upcast::<Node>().rev_children() {
+                self.push_node(&child);
+            }
+        } else {
+            for child in node.rev_children() {
+                self.push_node(&child);
+            }
+        }
+
+        if let Some(shadow_root) = node.downcast::<Element>().and_then(Element::shadow_root) {
+            let should_be_serialized = (self.serialize_shadow_roots && shadow_root.Serializable()) ||
+                self.shadow_roots.contains(&shadow_root);
+            if !shadow_root.is_user_agent_widget() && should_be_serialized {
+                self.stack
+                    .push(SerializationCommand::SerializeShadowRoot(shadow_root));
+            }
+        }
+    }
+
+    fn push_node(&mut self, node: &Node) {
+        let Some(element) = node.downcast::<Element>() else {
+            self.stack.push(SerializationCommand::SerializeNonelement(
+                DomRoot::from_ref(node),
+            ));
+            return;
+        };
+
+        self.stack
+            .push(SerializationCommand::OpenElement(DomRoot::from_ref(
+                element,
+            )));
+    }
+}
+
+impl Iterator for SerializationIterator {
+    type Item = SerializationCommand;
+
+    #[expect(unsafe_code)]
+    fn next(&mut self) -> Option<SerializationCommand> {
+        // TODO: https://github.com/servo/servo/issues/42839
+        let mut cx = unsafe { temp_cx() };
+        let cx = &mut cx;
+        let res = self.stack.pop()?;
+
+        match &res {
+            SerializationCommand::OpenElement(element) => {
+                let name = QualName::new(
+                    None,
+                    element.namespace().clone(),
+                    element.local_name().clone(),
+                );
+                self.stack.push(SerializationCommand::CloseElement(name));
+                self.handle_node_contents(cx, element.upcast());
+            },
+            SerializationCommand::SerializeShadowRoot(shadow_root) => {
+                self.stack
+                    .push(SerializationCommand::CloseElement(QualName::new(
+                        None,
+                        ns!(),
+                        local_name!("template"),
+                    )));
+                self.handle_node_contents(cx, shadow_root.upcast());
+            },
+            _ => {},
+        }
+
+        Some(res)
+    }
+}
+
+/// <https://html.spec.whatwg.org/multipage/#html-fragment-serialisation-algorithm>
+pub(crate) fn serialize_html_fragment<S: Serializer>(
+    cx: &mut js::context::JSContext,
+    node: &Node,
+    serializer: &mut S,
+    traversal_scope: TraversalScope,
+    serialize_shadow_roots: bool,
+    shadow_roots: Vec<DomRoot<ShadowRoot>>,
+) -> io::Result<()> {
+    let iter = SerializationIterator::new(
+        cx,
+        node,
+        traversal_scope != IncludeNode,
+        serialize_shadow_roots,
+        shadow_roots,
+    );
+
+    for cmd in iter {
+        match cmd {
+            SerializationCommand::OpenElement(n) => {
+                start_element(&n, serializer)?;
+            },
+            SerializationCommand::CloseElement(name) => {
+                serializer.end_elem(name)?;
+            },
+            SerializationCommand::SerializeNonelement(n) => match n.type_id() {
+                NodeTypeId::DocumentType => {
+                    let doctype = n.downcast::<DocumentType>().unwrap();
+                    serializer.write_doctype(&doctype.name().str())?;
+                },
+
+                NodeTypeId::CharacterData(CharacterDataTypeId::Text(_)) => {
+                    let cdata = n.downcast::<CharacterData>().unwrap();
+                    serializer.write_text(&cdata.data())?;
+                },
+
+                NodeTypeId::CharacterData(CharacterDataTypeId::Comment) => {
+                    let cdata = n.downcast::<CharacterData>().unwrap();
+                    serializer.write_comment(&cdata.data())?;
+                },
+
+                NodeTypeId::CharacterData(CharacterDataTypeId::ProcessingInstruction) => {
+                    let pi = n.downcast::<ProcessingInstruction>().unwrap();
+                    let data = pi.upcast::<CharacterData>().data();
+                    serializer.write_processing_instruction(&pi.target().str(), &data)?;
+                },
+
+                NodeTypeId::DocumentFragment(_) | NodeTypeId::Attr => {},
+
+                NodeTypeId::Document(_) => panic!("Can't serialize Document node itself"),
+                NodeTypeId::Element(_) => panic!("Element shouldn't appear here"),
+            },
+            SerializationCommand::SerializeShadowRoot(shadow_root) => {
+                // Shadow roots are serialized as template elements with a fixed set of
+                // attributes. Because these template elements don't actually exist in the DOM
+                // we have to make up a vector of attributes ourselves.
+                let mut attributes = vec![];
+                let mut push_attribute = |name, value| {
+                    let qualified_name = QualName::new(None, ns!(), LocalName::from(name));
+                    attributes.push((qualified_name, value))
+                };
+
+                let mode = if shadow_root.Mode() == ShadowRootMode::Open {
+                    "open"
+                } else {
+                    "closed"
+                };
+                push_attribute("shadowrootmode", mode);
+
+                if shadow_root.DelegatesFocus() {
+                    push_attribute("shadowrootdelegatesfocus", "");
+                }
+
+                if shadow_root.Serializable() {
+                    push_attribute("shadowrootserializable", "");
+                }
+
+                if shadow_root.Clonable() {
+                    push_attribute("shadowrootclonable", "");
+                }
+
+                let name = QualName::new(None, ns!(), local_name!("template"));
+                serializer.start_elem(name, attributes.iter().map(|(a, b)| (a, *b)))?;
+            },
+        }
+    }
+
+    Ok(())
+}
+
+pub(crate) struct XmlSerialize<'a> {
+    node: &'a Node,
+}
+
+impl<'a> XmlSerialize<'a> {
+    pub(crate) fn new(node: &'a Node) -> XmlSerialize<'a> {
+        XmlSerialize { node }
+    }
+}
+
+impl Serialize for XmlSerialize<'_> {
+    #[expect(unsafe_code)]
+    fn serialize<S>(&self, serializer: &mut S, traversal_scope: TraversalScope) -> io::Result<()>
+    where
+        S: Serializer,
+    {
+        // TODO: https://github.com/servo/servo/issues/42839
+        let mut cx = unsafe { temp_cx() };
+        let cx = &mut cx;
+        serialize_html_fragment(cx, self.node, serializer, traversal_scope, false, vec![])
+    }
+}
