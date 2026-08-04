@@ -11,10 +11,10 @@ use markup5ever::TokenizerResult;
 use script_bindings::trace::CustomTraceable;
 use servo_url::ServoUrl;
 use xml5ever::buffer_queue::BufferQueue;
-use xml5ever::serialize::{TraversalScope, TraversalScope::IncludeNode, XmlSerializer};
+use xml5ever::serialize::{NamespacePrefixMap, TraversalScope, TraversalScope::IncludeNode, XmlSerializer};
 use xml5ever::tokenizer::XmlTokenizer;
 use xml5ever::tree_builder::XmlTreeBuilder;
-use markup5ever::{QualName, local_name, ns};
+use markup5ever::{QualName, local_name, ns, Namespace};
 use markup5ever::serialize::{AttrRef, Serialize, Serializer};
 use crate::dom::documentfragment::DocumentFragment;
 use crate::dom::html::htmltemplateelement::HTMLTemplateElement;
@@ -23,6 +23,7 @@ use script_bindings::codegen::GenericBindings::NodeBinding::NodeMethods;
 use crate::dom::processinginstruction::ProcessingInstruction;
 
 use crate::dom::Element;
+use crate::dom::attr::Attr;
 use crate::dom::bindings::inheritance::{Castable, CharacterDataTypeId, NodeTypeId};
 use crate::dom::characterdata::CharacterData;
 use crate::dom::documenttype::DocumentType;
@@ -89,40 +90,47 @@ impl Tokenizer {
     }
 }
 
-fn start_element<Wr: Write>(element: &Element, serializer: &mut XmlSerializer<Wr>, has_children: bool) -> io::Result<()> {
-    // TODO: would be nice to have a getter on Element for this
-    let name = QualName::new(
-        element.prefix().clone(),
-        element.namespace().clone(),
-        element.local_name().clone(),
-    );
+// fn get_name_and_attributes(element: &Element) -> (QualName, Vec<(QualName, String)>) {
+//     // TODO: would be nice to have a getter on Element for this
+//     let name = QualName::new(
+//         element.prefix().clone(),
+//         element.namespace().clone(),
+//         element.local_name().clone(),
+//     );
 
-    let attributes: Vec<_> = element.attrs().borrow().iter().map(|attr| {
-        let qname = QualName::new(attr.prefix().cloned(), attr.namespace().clone(), attr.local_name().clone());
-        let value = attr.value().clone();
-        (qname, value)
-    }).collect();
+//     let attributes: Vec<_> = element.attrs().borrow().iter().map(|attr| {
+//         let qname = QualName::new(attr.prefix().cloned(), attr.namespace().clone(), attr.local_name().clone());
+//         let value = attr.value().clone();
+//         (qname, value)
+//     }).collect();
+//     (name, attributes)
+// }
 
-    let attr_refs = attributes.iter().map(|(qname, value)| {
-        let ar: AttrRef = (qname, &**value);
-        ar
-    });
-    if has_children {
-        serializer.start_elem(name, attr_refs)?;
-    } else {
-        serializer.write_empty_elem(name, attr_refs)?;
-    }
-    Ok(())
-}
+// fn start_element<Wr: Write>(
+//     element: &Element,
+//     serializer: &mut XmlSerializer<Wr>,
+//     has_children: bool
+// ) -> io::Result<(String, Option<Namespace>, NamespacePrefixMap)> {
+//     with_name_and_attributes(element, |name, attr_refs| {
+//         if has_children {
+//             serializer.start_elem(name, attr_refs)?;
+//         } else {
+//             serializer.write_empty_elem(name, attr_refs)?;
+//         }
+//         Ok(())
+//     })
+// }
 
 enum SerializationCommand {
-    OpenElement(DomRoot<Element>),
-    CloseElement,
-    SerializeEmptyElement(DomRoot<Element>),
-    SerializeNonelement(DomRoot<Node>),
-    //SerializeShadowRoot(DomRoot<ShadowRoot>),
+    SerializeNode {
+        node: DomRoot<Node>,
+        namespace: Option<Namespace>,
+        prefix_map: NamespacePrefixMap,
+    },
+    CloseElement(String),
 }
 
+/*
 struct SerializationIterator {
     stack: Vec<SerializationCommand>,
 
@@ -212,24 +220,13 @@ impl Iterator for SerializationIterator {
             SerializationCommand::SerializeEmptyElement(_element) => {
                 // start_element will write the end tag / self-close the start tag
             },
-            /*
-            SerializationCommand::SerializeShadowRoot(shadow_root) => {
-                self.stack
-                    .push(SerializationCommand::CloseElement(QualName::new(
-                        None,
-                        ns!(),
-                        local_name!("template"),
-                    )));
-                self.handle_node_contents(cx, shadow_root.upcast());
-            },
-            */
             _ => {},
         }
 
         Some(res)
     }
 }
-
+*/
 fn serialize_xml_fragment<Wr: Write>(
     cx: &mut js::context::JSContext,
     node: &Node,
@@ -238,114 +235,119 @@ fn serialize_xml_fragment<Wr: Write>(
     // serialize_shadow_roots: bool,
     // shadow_roots: Vec<DomRoot<ShadowRoot>>,
 ) -> io::Result<()> {
-    let iter = SerializationIterator::new(
-        cx,
-        node,
-        traversal_scope != IncludeNode,
-        // serialize_shadow_roots,
-        // shadow_roots,
-    );
-
-    for cmd in iter {
-        match cmd {
-            SerializationCommand::OpenElement(n) => {
-                start_element(&n, serializer, true)?;
-            },
-            SerializationCommand::CloseElement => {
-                serializer.end_elem()?;
-            },
-            SerializationCommand::SerializeEmptyElement(element) => {
-                start_element(&element, serializer, false)?;
-            },
-            SerializationCommand::SerializeNonelement(n) => match n.type_id() {
-                NodeTypeId::DocumentType => {
-                    let doctype = n.downcast::<DocumentType>().unwrap();
-                    serializer.write_doctype(&doctype.name().str())?;
-                },
-
-                NodeTypeId::CharacterData(CharacterDataTypeId::Text(_)) => {
-                    let cdata = n.downcast::<CharacterData>().unwrap();
-                    serializer.write_text(&cdata.data())?;
-                },
-
-                NodeTypeId::CharacterData(CharacterDataTypeId::Comment) => {
-                    let cdata = n.downcast::<CharacterData>().unwrap();
-                    serializer.write_comment(&cdata.data())?;
-                },
-
-                NodeTypeId::CharacterData(CharacterDataTypeId::ProcessingInstruction) => {
-                    let pi = n.downcast::<ProcessingInstruction>().unwrap();
-                    let data = pi.upcast::<CharacterData>().data();
-                    serializer.write_processing_instruction(&pi.target().str(), &data)?;
-                },
-
-                NodeTypeId::DocumentFragment(_) | NodeTypeId::Attr => {},
-
-                NodeTypeId::Document(_) => panic!("Can't serialize Document node itself"),
-                NodeTypeId::Element(_) => panic!("Element shouldn't appear here"),
-            },
-            /*
-            SerializationCommand::SerializeShadowRoot(shadow_root) => {
-                // Shadow roots are serialized as template elements with a fixed set of
-                // attributes. Because these template elements don't actually exist in the DOM
-                // we have to make up a vector of attributes ourselves.
-                let mut attributes = vec![];
-                let mut push_attribute = |name, value| {
-                    let qualified_name = QualName::new(None, ns!(), LocalName::from(name));
-                    attributes.push((qualified_name, value))
-                };
-
-                let mode = if shadow_root.Mode() == ShadowRootMode::Open {
-                    "open"
-                } else {
-                    "closed"
-                };
-                push_attribute("shadowrootmode", mode);
-
-                if shadow_root.DelegatesFocus() {
-                    push_attribute("shadowrootdelegatesfocus", "");
-                }
-
-                if shadow_root.Serializable() {
-                    push_attribute("shadowrootserializable", "");
-                }
-
-                if shadow_root.Clonable() {
-                    push_attribute("shadowrootclonable", "");
-                }
-
-                let name = QualName::new(None, ns!(), local_name!("template"));
-                serializer.start_elem(name, attributes.iter().map(|(a, b)| (a, *b)))?;
-            },
-            */
+    debug_assert!(!node.is::<Attr>(), "Should have handled Attr in caller");
+    let mut stack = Vec::new();
+    fn push_node(
+        stack: &mut Vec<SerializationCommand>,
+        node: &Node,
+        namespace: Option<Namespace>,
+        prefix_map: NamespacePrefixMap
+    ) {
+        stack.push(SerializationCommand::SerializeNode {
+            node: DomRoot::from_ref(node),
+            namespace,
+            prefix_map,
+        });
+    }
+    fn push_children(
+        stack: &mut Vec<SerializationCommand>,
+        cx: &mut js::context::JSContext,
+        node: &Node,
+        namespace: Option<Namespace>,
+        prefix_map: NamespacePrefixMap,
+    ) {
+        if let Some(template_element) = node.downcast::<HTMLTemplateElement>() {
+            for child in template_element.Content(cx).upcast::<Node>().rev_children() {
+                push_node(stack, &child, namespace.clone(), prefix_map.clone());
+            }
+        } else {
+            for child in node.rev_children() {
+                push_node(stack, &child, namespace.clone(), prefix_map.clone());
+            }
         }
+    }
+
+    let namespace: Option<Namespace> = None;
+    let prefix_map = NamespacePrefixMap::new();
+    if traversal_scope != IncludeNode || node.is::<DocumentFragment>() || node.is::<Document>() {
+        push_children(&mut stack, cx, &node, namespace, prefix_map);
+    } else {
+        push_node(&mut stack, &node, namespace, prefix_map);
+    }
+
+    while let Some(command) = stack.pop() {
+        match command {
+            SerializationCommand::SerializeNode { node: n, namespace, prefix_map } => {
+                match n.type_id() {
+                    NodeTypeId::Element(_) => {
+                        let has_children = n.HasChildNodes();
+                        let element = n.downcast::<Element>().unwrap();
+                        // TODO: would be nice to have a getter on Element for this
+                        let name = QualName::new(
+                            element.prefix().clone(),
+                            element.namespace().clone(),
+                            element.local_name().clone(),
+                        );
+
+                        let attributes: Vec<_> = element.attrs().borrow().iter().map(|attr| {
+                            let qname = QualName::new(attr.prefix().cloned(), attr.namespace().clone(), attr.local_name().clone());
+                            let value = attr.value().clone();
+                            (qname, value)
+                        }).collect();
+                        let attr_refs = attributes.iter().map(|(qname, value)| {
+                            let ar: AttrRef = (qname, &**value);
+                            ar
+                        });
+                        if has_children {
+                            let (qualified_name, inherit_ns, inherit_prefix_map) = serializer.start_elem(name, attr_refs, namespace, &prefix_map)?;
+                            stack.push(SerializationCommand::CloseElement(qualified_name.clone()));
+                            push_children(&mut stack, cx, &node, inherit_ns, inherit_prefix_map);
+                        } else {
+                            serializer.write_empty_elem(name, attr_refs, namespace, &prefix_map)?;
+                        }
+                    },
+
+                    NodeTypeId::DocumentType => {
+                        let doctype = n.downcast::<DocumentType>().unwrap();
+                        serializer.write_doctype(&doctype.name().str())?;
+                    },
+
+                    NodeTypeId::CharacterData(CharacterDataTypeId::Text(_)) => {
+                        let cdata = n.downcast::<CharacterData>().unwrap();
+                        serializer.write_text(&cdata.data())?;
+                    },
+
+                    NodeTypeId::CharacterData(CharacterDataTypeId::Comment) => {
+                        let cdata = n.downcast::<CharacterData>().unwrap();
+                        serializer.write_comment(&cdata.data())?;
+                    },
+
+                    NodeTypeId::CharacterData(CharacterDataTypeId::ProcessingInstruction) => {
+                        let pi = n.downcast::<ProcessingInstruction>().unwrap();
+                        let data = pi.upcast::<CharacterData>().data();
+                        serializer.write_processing_instruction(&pi.target().str(), &data)?;
+                    },
+
+                    NodeTypeId::Attr => panic!("Should not encounter Attr while serializing"),
+                    NodeTypeId::DocumentFragment(_) => panic!("Should not encounter DocumentFragment while serializing"),
+                    NodeTypeId::Document(_) => panic!("Should not encounter Document while serializing"),
+                }
+            }
+            SerializationCommand::CloseElement(qualified_name) => {
+                serializer.end_elem(qualified_name)?;
+            }
+        }
+
     }
 
     Ok(())
 }
 
-// pub(crate) struct XmlSerialize<'a> {
-//     node: &'a Node,
-// }
-
-// impl<'a> XmlSerialize<'a> {
-//     pub(crate) fn new(node: &'a Node) -> XmlSerialize<'a> {
-//         XmlSerialize { node }
-//     }
-// }
-
-// impl /*Serialize for*/ XmlSerialize<'_> {
-//     #[expect(unsafe_code)]
-//     fn serialize<Wr: Write>(&self, serializer: &mut XmlSerializer<Wr>, traversal_scope: TraversalScope) -> io::Result<()>
-//     {
-//         // TODO: https://github.com/servo/servo/issues/42839
-//         let mut cx = unsafe { temp_cx() };
-//         let cx = &mut cx;
-//         serialize_xml_fragment(cx, self.node, serializer, traversal_scope)
-//     }
-// }
-
+#[expect(unsafe_code)]
 pub fn serialize_xml(root: &Node, traversal_scope: TraversalScope) -> io::Result<DOMString> {
+    if root.is::<Attr>() {
+        return Ok(DOMString::new());
+    }
     let mut writer = vec![];
     let mut ser = XmlSerializer::new(&mut writer);
     {

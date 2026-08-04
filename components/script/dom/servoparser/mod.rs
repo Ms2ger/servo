@@ -1752,7 +1752,7 @@ impl TreeSink for Sink {
         flags: ElementFlags,
     ) -> Dom<Node> {
         // TODO: https://github.com/servo/servo/issues/42839
-        println!("create_element({attrs:?})");
+        // println!("create_element({attrs:?})");
         let mut cx = unsafe { temp_cx() };
         let cx = &mut cx;
         let attrs = attrs

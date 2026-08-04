@@ -4250,25 +4250,25 @@ impl NodeMethods<crate::DomTypeHolder> for Node {
 
     /// <https://dom.spec.whatwg.org/#dom-node-lookupprefix>
     fn LookupPrefix(&self, namespace: Option<DOMString>) -> Option<DOMString> {
-        println!("=================================================================");
-        println!("LookupPrefix");
+        // println!("=================================================================");
+        // println!("LookupPrefix");
         let namespace = namespace_from_domstring(namespace);
-        println!("namespace={namespace}");
+        // println!("namespace={namespace}");
 
         // Step 1.
         if namespace == ns!() {
-            println!("Is null");
+            // println!("Is null");
             return None;
         }
 
         // Step 2.
         match self.type_id() {
             NodeTypeId::Element(..) => {
-                println!("element");
+                // println!("element");
                 self.downcast::<Element>().unwrap().lookup_prefix(namespace)
             },
             NodeTypeId::Document(_) => {
-                println!("document");
+                // println!("document");
                 self
                 .downcast::<Document>()
                 .unwrap()
@@ -4276,15 +4276,15 @@ impl NodeMethods<crate::DomTypeHolder> for Node {
                 .and_then(|element| element.lookup_prefix(namespace))
             }
             NodeTypeId::DocumentType => {
-                println!("doctype");
+                // println!("doctype");
                 None
             }
             NodeTypeId::DocumentFragment(_) => {
-                println!("fragment");
+                // println!("fragment");
                 None
             }
             NodeTypeId::Attr => {
-                println!("attr");
+                // println!("attr");
                 self
                 .downcast::<Attr>()
                 .unwrap()
@@ -4292,7 +4292,7 @@ impl NodeMethods<crate::DomTypeHolder> for Node {
                 .and_then(|element| element.lookup_prefix(namespace))
             },
             ty => {
-                println!("{ty:?}");
+                // println!("{ty:?}");
                 self
                 .GetParentElement()
                 .and_then(|element| element.lookup_prefix(namespace))

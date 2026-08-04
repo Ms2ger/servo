@@ -57,6 +57,7 @@ impl XMLSerializerMethods<crate::DomTypeHolder> for XMLSerializer {
 
     /// <https://w3c.github.io/DOM-Parsing/#the-xmlserializer-interface>
     fn SerializeToString(&self, root: &Node) -> Fallible<DOMString> {
+        println!("SerializeToString({root:?})");
         let result = serialize_xml(root, TraversalScope::IncludeNode);
         result.map_err(|_| Error::Type(
             c"root must be a Node or an Attr object".to_owned(),
