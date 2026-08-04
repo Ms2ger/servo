@@ -5,20 +5,34 @@
 #![cfg_attr(crown, expect(crown::unrooted_must_root))]
 
 use std::cell::Cell;
+use std::io::{self, Write};
 
 use markup5ever::TokenizerResult;
 use script_bindings::trace::CustomTraceable;
 use servo_url::ServoUrl;
 use xml5ever::buffer_queue::BufferQueue;
+use xml5ever::serialize::{TraversalScope, TraversalScope::IncludeNode, XmlSerializer};
 use xml5ever::tokenizer::XmlTokenizer;
 use xml5ever::tree_builder::XmlTreeBuilder;
+use markup5ever::{QualName, local_name, ns};
+use markup5ever::serialize::{AttrRef, Serialize, Serializer};
+use crate::dom::documentfragment::DocumentFragment;
+use crate::dom::html::htmltemplateelement::HTMLTemplateElement;
+use crate::dom::bindings::codegen::Bindings::HTMLTemplateElementBinding::HTMLTemplateElementMethods;
+use script_bindings::codegen::GenericBindings::NodeBinding::NodeMethods;
+use crate::dom::processinginstruction::ProcessingInstruction;
 
-use crate::dom::bindings::inheritance::Castable;
+use crate::dom::Element;
+use crate::dom::bindings::inheritance::{Castable, CharacterDataTypeId, NodeTypeId};
+use crate::dom::characterdata::CharacterData;
+use crate::dom::documenttype::DocumentType;
 use crate::dom::bindings::root::{Dom, DomRoot};
+use crate::dom::bindings::str::DOMString;
 use crate::dom::document::Document;
 use crate::dom::html::htmlscriptelement::HTMLScriptElement;
 use crate::dom::node::Node;
 use crate::dom::servoparser::{ParsingAlgorithm, Sink};
+use script_bindings::script_runtime::temp_cx;
 
 #[derive(JSTraceable, MallocSizeOf)]
 #[cfg_attr(crown, crown::unrooted_must_root_lint::must_root)]
@@ -75,15 +89,16 @@ impl Tokenizer {
     }
 }
 
-fn start_element<S: Serializer>(element: &Element, serializer: &mut S, has_children: bool) -> io::Result<()> {
+fn start_element<Wr: Write>(element: &Element, serializer: &mut XmlSerializer<Wr>, has_children: bool) -> io::Result<()> {
+    // TODO: would be nice to have a getter on Element for this
     let name = QualName::new(
-        None,
+        element.prefix().clone(),
         element.namespace().clone(),
         element.local_name().clone(),
     );
 
     let attributes: Vec<_> = element.attrs().borrow().iter().map(|attr| {
-        let qname = QualName::new(None, attr.namespace().clone(), attr.local_name().clone());
+        let qname = QualName::new(attr.prefix().cloned(), attr.namespace().clone(), attr.local_name().clone());
         let value = attr.value().clone();
         (qname, value)
     }).collect();
@@ -102,7 +117,7 @@ fn start_element<S: Serializer>(element: &Element, serializer: &mut S, has_child
 
 enum SerializationCommand {
     OpenElement(DomRoot<Element>),
-    CloseElement(QualName),
+    CloseElement,
     SerializeEmptyElement(DomRoot<Element>),
     SerializeNonelement(DomRoot<Node>),
     //SerializeShadowRoot(DomRoot<ShadowRoot>),
@@ -111,11 +126,11 @@ enum SerializationCommand {
 struct SerializationIterator {
     stack: Vec<SerializationCommand>,
 
-    /// Whether or not shadow roots should be serialized
-    serialize_shadow_roots: bool,
+    // /// Whether or not shadow roots should be serialized
+    // serialize_shadow_roots: bool,
 
-    /// List of shadow root objects that should be serialized
-    shadow_roots: Vec<DomRoot<ShadowRoot>>,
+    // /// List of shadow root objects that should be serialized
+    // shadow_roots: Vec<DomRoot<ShadowRoot>>,
 }
 
 impl SerializationIterator {
@@ -123,13 +138,13 @@ impl SerializationIterator {
         cx: &mut js::context::JSContext,
         node: &Node,
         skip_first: bool,
-        serialize_shadow_roots: bool,
-        shadow_roots: Vec<DomRoot<ShadowRoot>>,
+        // serialize_shadow_roots: bool,
+        // shadow_roots: Vec<DomRoot<ShadowRoot>>,
     ) -> SerializationIterator {
         let mut ret = SerializationIterator {
             stack: vec![],
-            serialize_shadow_roots,
-            shadow_roots,
+            // serialize_shadow_roots,
+            // shadow_roots,
         };
         if skip_first || node.is::<DocumentFragment>() || node.is::<Document>() {
             ret.handle_node_contents(cx, node);
@@ -139,7 +154,7 @@ impl SerializationIterator {
         ret
     }
 
-    fn handle_node_contents(&mut self, cx: &mut js::context::JSContext, node: &Node, has_children: bool) {
+    fn handle_node_contents(&mut self, cx: &mut js::context::JSContext, node: &Node) {
         if let Some(template_element) = node.downcast::<HTMLTemplateElement>() {
             for child in template_element.Content(cx).upcast::<Node>().rev_children() {
                 self.push_node(&child);
@@ -192,7 +207,7 @@ impl Iterator for SerializationIterator {
         match &res {
             SerializationCommand::OpenElement(element) => {
                 self.stack.push(SerializationCommand::CloseElement);
-                self.handle_node_contents(cx, element.upcast(), true);
+                self.handle_node_contents(cx, element.upcast());
             },
             SerializationCommand::SerializeEmptyElement(_element) => {
                 // start_element will write the end tag / self-close the start tag
@@ -215,20 +230,20 @@ impl Iterator for SerializationIterator {
     }
 }
 
-fn serialize_xml_fragment<S: Serializer>(
+fn serialize_xml_fragment<Wr: Write>(
     cx: &mut js::context::JSContext,
     node: &Node,
-    serializer: &mut S,
+    serializer: &mut XmlSerializer<Wr>,
     traversal_scope: TraversalScope,
-    serialize_shadow_roots: bool,
-    shadow_roots: Vec<DomRoot<ShadowRoot>>,
+    // serialize_shadow_roots: bool,
+    // shadow_roots: Vec<DomRoot<ShadowRoot>>,
 ) -> io::Result<()> {
     let iter = SerializationIterator::new(
         cx,
         node,
         traversal_scope != IncludeNode,
-        serialize_shadow_roots,
-        shadow_roots,
+        // serialize_shadow_roots,
+        // shadow_roots,
     );
 
     for cmd in iter {
@@ -236,11 +251,11 @@ fn serialize_xml_fragment<S: Serializer>(
             SerializationCommand::OpenElement(n) => {
                 start_element(&n, serializer, true)?;
             },
-            SerializationCommand::CloseElement(name) => {
-                serializer.end_elem(name)?;
+            SerializationCommand::CloseElement => {
+                serializer.end_elem()?;
             },
             SerializationCommand::SerializeEmptyElement(element) => {
-                start_element(&n, serializer, false)?;
+                start_element(&element, serializer, false)?;
             },
             SerializationCommand::SerializeNonelement(n) => match n.type_id() {
                 NodeTypeId::DocumentType => {
@@ -309,25 +324,35 @@ fn serialize_xml_fragment<S: Serializer>(
     Ok(())
 }
 
-pub(crate) struct XmlSerialize<'a> {
-    node: &'a Node,
-}
+// pub(crate) struct XmlSerialize<'a> {
+//     node: &'a Node,
+// }
 
-impl<'a> XmlSerialize<'a> {
-    pub(crate) fn new(node: &'a Node) -> XmlSerialize<'a> {
-        XmlSerialize { node }
-    }
-}
+// impl<'a> XmlSerialize<'a> {
+//     pub(crate) fn new(node: &'a Node) -> XmlSerialize<'a> {
+//         XmlSerialize { node }
+//     }
+// }
 
-impl Serialize for XmlSerialize<'_> {
-    #[expect(unsafe_code)]
-    fn serialize<S>(&self, serializer: &mut S, traversal_scope: TraversalScope) -> io::Result<()>
-    where
-        S: Serializer,
+// impl /*Serialize for*/ XmlSerialize<'_> {
+//     #[expect(unsafe_code)]
+//     fn serialize<Wr: Write>(&self, serializer: &mut XmlSerializer<Wr>, traversal_scope: TraversalScope) -> io::Result<()>
+//     {
+//         // TODO: https://github.com/servo/servo/issues/42839
+//         let mut cx = unsafe { temp_cx() };
+//         let cx = &mut cx;
+//         serialize_xml_fragment(cx, self.node, serializer, traversal_scope)
+//     }
+// }
+
+pub fn serialize_xml(root: &Node, traversal_scope: TraversalScope) -> io::Result<DOMString> {
+    let mut writer = vec![];
+    let mut ser = XmlSerializer::new(&mut writer);
     {
         // TODO: https://github.com/servo/servo/issues/42839
         let mut cx = unsafe { temp_cx() };
         let cx = &mut cx;
-        serialize_xml_fragment(cx, self.node, serializer, traversal_scope, false, vec![])
+        serialize_xml_fragment(cx, root, &mut ser, traversal_scope)?;
     }
+    Ok(DOMString::from(String::from_utf8(writer).unwrap()))
 }
