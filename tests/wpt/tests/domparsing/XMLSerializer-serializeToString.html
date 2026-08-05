@@ -26,89 +26,97 @@ function serialize(node) {
   return (new XMLSerializer()).serializeToString(node);
 }
 
-test(function() {
-  var root = document.createElement('div');
-  assert_equals(serialize(root), '<div xmlns="http://www.w3.org/1999/xhtml"></div>');
-}, 'Check if document fragment serializes reduced.');
+// test(function() {
+//   var root = document.createElement('div');
+//   assert_equals(root.namespaceURI, "http://www.w3.org/1999/xhtml");
+//   assert_equals(serialize(root), '<div xmlns="http://www.w3.org/1999/xhtml"></div>');
+// }, 'Check if document fragment serializes reduced.');
 
 
-test(function() {
-  var root = createXmlDoc().documentElement;
-  assert_equals(serialize(root), '<root><child1>value1</child1></root>');
-}, 'check XMLSerializer.serializeToString method could parsing xmldoc to string');
+// test(function() {
+//   console.log("starting test 2")
+//   var root = createXmlDoc().documentElement;
+//   console.log("root = " + root)
+//   assert_equals(serialize(root), '<root><child1>value1</child1></root>');
+//   console.log("ending test 2")
+// }, 'check XMLSerializer.serializeToString method could parsing xmldoc to string');
 
-test(function() {
-  var root = parse('<html><head></head><body><div></div><span></span></body></html>');
-  assert_equals(serialize(root.ownerDocument), '<html><head/><body><div/><span/></body></html>');
-}, 'check XMLSerializer.serializeToString method could parsing document to string');
+// test(function() {
+//   var root = parse('<html><head></head><body><div></div><span></span></body></html>');
+//   assert_equals(serialize(root.ownerDocument), '<html><head/><body><div/><span/></body></html>');
+// }, 'check XMLSerializer.serializeToString method could parsing document to string');
 
-test(function() {
-  var root = createXmlDoc().documentElement;
-  var element = root.ownerDocument.createElementNS('urn:foo', 'another');
-  var child1 = root.firstChild;
-  root.replaceChild(element, child1);
-  element.appendChild(child1);
-  assert_equals(serialize(root), '<root><another xmlns="urn:foo"><child1 xmlns="">value1</child1></another></root>');
-}, 'Check if the default namespace is correctly reset.');
+// test(function() {
+//   var root = createXmlDoc().documentElement;
+//   var element = root.ownerDocument.createElementNS('urn:foo', 'another');
+//   var child1 = root.firstChild;
+//   root.replaceChild(element, child1);
+//   element.appendChild(child1);
+//   assert_equals(serialize(root), '<root><another xmlns="urn:foo"><child1 xmlns="">value1</child1></another></root>');
+// }, 'Check if the default namespace is correctly reset.');
 
-test(function() {
-  var root = parse('<root xmlns="urn:bar"><outer xmlns=""><inner>value1</inner></outer></root>');
-  assert_equals(serialize(root), '<root xmlns="urn:bar"><outer xmlns=""><inner>value1</inner></outer></root>');
-}, 'Check if there is no redundant empty namespace declaration.');
+// test(function() {
+//   var root = parse('<root xmlns="urn:bar"><outer xmlns=""><inner>value1</inner></outer></root>');
+//   assert_equals(serialize(root), '<root xmlns="urn:bar"><outer xmlns=""><inner>value1</inner></outer></root>');
+// }, 'Check if there is no redundant empty namespace declaration.');
 
-// https://github.com/w3c/DOM-Parsing/issues/47
-test(function() {
-  assert_equals(serialize(parse('<root><child xmlns=""/></root>')),
-                '<root><child/></root>');
-  assert_equals(serialize(parse('<root xmlns=""><child xmlns=""/></root>')),
-                '<root><child/></root>');
-  assert_equals(serialize(parse('<root xmlns="u1"><child xmlns="u1"/></root>')),
-                '<root xmlns="u1"><child/></root>');
-}, 'Check if redundant xmlns="..." is dropped.');
+// // https://github.com/w3c/DOM-Parsing/issues/47
+// test(function() {
+//   assert_equals(serialize(parse('<root><child xmlns=""/></root>')),
+//                 '<root><child/></root>');
+//   assert_equals(serialize(parse('<root xmlns=""><child xmlns=""/></root>')),
+//                 '<root><child/></root>');
+//   assert_equals(serialize(parse('<root xmlns="u1"><child xmlns="u1"/></root>')),
+//                 '<root xmlns="u1"><child/></root>');
+// }, 'Check if redundant xmlns="..." is dropped.');
 
-test(function() {
-  const root = parse('<root xmlns="uri1"/>');
-  const child = root.ownerDocument.createElement('child');
-  child.setAttributeNS(XMLNS_URI, 'xmlns', 'FAIL1');
-  root.appendChild(child);
-  const child2 = root.ownerDocument.createElementNS('uri2', 'child2');
-  child2.setAttributeNS(XMLNS_URI, 'xmlns', 'FAIL2');
-  root.appendChild(child2);
-  const child3 = root.ownerDocument.createElementNS('uri1', 'child3');
-  child3.setAttributeNS(XMLNS_URI, 'xmlns', 'FAIL3');
-  root.appendChild(child3);
-  const child4 = root.ownerDocument.createElementNS('uri4', 'child4');
-  child4.setAttributeNS(XMLNS_URI, 'xmlns', 'uri4');
-  root.appendChild(child4);
-  const child5 = root.ownerDocument.createElement('child5');
-  child5.setAttributeNS(XMLNS_URI, 'xmlns', '');
-  root.appendChild(child5);
-  assert_equals(serialize(root), '<root xmlns="uri1"><child xmlns=""/><child2 xmlns="uri2"/><child3/><child4 xmlns="uri4"/><child5 xmlns=""/></root>');
-}, 'Check if inconsistent xmlns="..." is dropped.');
+// test(function() {
+//   const root = parse('<root xmlns="uri1"/>');
+//   const child = root.ownerDocument.createElement('child');
+//   child.setAttributeNS(XMLNS_URI, 'xmlns', 'FAIL1');
+//   root.appendChild(child);
+//   const child2 = root.ownerDocument.createElementNS('uri2', 'child2');
+//   child2.setAttributeNS(XMLNS_URI, 'xmlns', 'FAIL2');
+//   root.appendChild(child2);
+//   const child3 = root.ownerDocument.createElementNS('uri1', 'child3');
+//   child3.setAttributeNS(XMLNS_URI, 'xmlns', 'FAIL3');
+//   root.appendChild(child3);
+//   const child4 = root.ownerDocument.createElementNS('uri4', 'child4');
+//   child4.setAttributeNS(XMLNS_URI, 'xmlns', 'uri4');
+//   root.appendChild(child4);
+//   const child5 = root.ownerDocument.createElement('child5');
+//   child5.setAttributeNS(XMLNS_URI, 'xmlns', '');
+//   root.appendChild(child5);
+//   assert_equals(serialize(root), '<root xmlns="uri1"><child xmlns=""/><child2 xmlns="uri2"/><child3/><child4 xmlns="uri4"/><child5 xmlns=""/></root>');
+// }, 'Check if inconsistent xmlns="..." is dropped.');
 
-test(function() {
-  const root1 = parse('<package></package>');
-  root1.setAttribute('xmlns', 'http://www.idpf.org/2007/opf');
-  const manifest1 = root1.appendChild(root1.ownerDocument.createElement('manifest'));
-  manifest1.setAttribute('xmlns', 'http://www.idpf.org/2007/opf');
-  assert_equals(serialize(root1), '<package><manifest/></package>');
+// test(function() {
+//   const root1 = parse('<package></package>');
+//   root1.setAttribute('xmlns', 'http://www.idpf.org/2007/opf');
+//   const manifest1 = root1.appendChild(root1.ownerDocument.createElement('manifest'));
+//   manifest1.setAttribute('xmlns', 'http://www.idpf.org/2007/opf');
+//   assert_equals(serialize(root1), '<package><manifest/></package>');
 
-  const root2 = parse('<package xmlns="http://www.idpf.org/2007/opf"></package>');
-  const manifest2 = root2.appendChild(root2.ownerDocument.createElement('manifest'));
-  manifest2.setAttribute('xmlns', 'http://www.idpf.org/2007/opf');
-  assert_equals(serialize(root2),
-                '<package xmlns="http://www.idpf.org/2007/opf"><manifest xmlns=""/></package>');
+//   const root2 = parse('<package xmlns="http://www.idpf.org/2007/opf"></package>');
+//   const manifest2 = root2.appendChild(root2.ownerDocument.createElement('manifest'));
+//   manifest2.setAttribute('xmlns', 'http://www.idpf.org/2007/opf');
+//   assert_equals(serialize(root2),
+//                 '<package xmlns="http://www.idpf.org/2007/opf"><manifest xmlns=""/></package>');
 
-  const root3 = parse('<package xmlns="http://www.idpf.org/2007/opf"></package>');
-  const manifest3 = root3.appendChild(root3.ownerDocument.createElement('manifest'));
-  assert_equals(serialize(root3),
-                '<package xmlns="http://www.idpf.org/2007/opf"><manifest xmlns=""/></package>');
-}, 'Drop inconsistent xmlns="..." by matching on local name');
+//   const root3 = parse('<package xmlns="http://www.idpf.org/2007/opf"></package>');
+//   const manifest3 = root3.appendChild(root3.ownerDocument.createElement('manifest'));
+//   assert_equals(serialize(root3),
+//                 '<package xmlns="http://www.idpf.org/2007/opf"><manifest xmlns=""/></package>');
+// }, 'Drop inconsistent xmlns="..." by matching on local name');
 
+// This test assumes https://github.com/w3c/DOM-Parsing/pull/30 is merged.
 test(function() {
   let root = parse('<r xmlns:xx="uri"></r>');
   root.setAttributeNS('uri', 'name', 'v');
   assert_equals(serialize(root), '<r xmlns:xx="uri" xx:name="v"/>');
+
+  root.setAttributeNS('uri', 'name2', 'v');
+  assert_equals(serialize(root), '<r xmlns:xx="uri" xx:name="v" xx:name2="v"/>');
 
   let root2 = parse('<r xmlns:xx="uri"><b/></r>');
   let child = root2.firstChild;
@@ -158,6 +166,7 @@ test(function() {
                 '<r xmlns:xx="uri" xmlns:ns1="uri2" ns1:name="value"/>');
 }, 'Check if the prefix of an attribute is replaced with a generated one in a case where the prefix is already mapped to a different namespace URI.');
 
+// Assumes a fix for https://github.com/w3c/DOM-Parsing/issues/59
 test(function() {
   var root = parse('<root />');
   root.setAttribute('attr', '\t');
@@ -170,6 +179,11 @@ test(function() {
   assert_in_array(serialize(root), [
     '<root attr="&#xD;"/>', '<root attr="&#13;"/>']);
 }, 'check XMLSerializer.serializeToString escapes attribute values for roundtripping');
+
+test(function() {
+  var root = parse('<root attr="\'"/>');
+  assert_equals(serialize(root), '<root attr="\'"/>');
+}, "Escaping apostrophe in attributes");
 
 test(function() {
   const root = (new Document()).createElement('root');

@@ -121,10 +121,11 @@ impl Tokenizer {
 //     })
 // }
 
+#[derive(Debug)]
 enum SerializationCommand {
     SerializeNode {
         node: DomRoot<Node>,
-        namespace: Option<Namespace>,
+        namespace: Namespace,
         prefix_map: NamespacePrefixMap,
     },
     CloseElement(String),
@@ -236,11 +237,12 @@ fn serialize_xml_fragment<Wr: Write>(
     // shadow_roots: Vec<DomRoot<ShadowRoot>>,
 ) -> io::Result<()> {
     debug_assert!(!node.is::<Attr>(), "Should have handled Attr in caller");
+    println!("serialize_xml_fragment({node:?})");
     let mut stack = Vec::new();
     fn push_node(
         stack: &mut Vec<SerializationCommand>,
         node: &Node,
-        namespace: Option<Namespace>,
+        namespace: Namespace,
         prefix_map: NamespacePrefixMap
     ) {
         stack.push(SerializationCommand::SerializeNode {
@@ -253,7 +255,7 @@ fn serialize_xml_fragment<Wr: Write>(
         stack: &mut Vec<SerializationCommand>,
         cx: &mut js::context::JSContext,
         node: &Node,
-        namespace: Option<Namespace>,
+        namespace: Namespace,
         prefix_map: NamespacePrefixMap,
     ) {
         if let Some(template_element) = node.downcast::<HTMLTemplateElement>() {
@@ -267,7 +269,7 @@ fn serialize_xml_fragment<Wr: Write>(
         }
     }
 
-    let namespace: Option<Namespace> = None;
+    let namespace = ns!();
     let prefix_map = NamespacePrefixMap::new();
     if traversal_scope != IncludeNode || node.is::<DocumentFragment>() || node.is::<Document>() {
         push_children(&mut stack, cx, &node, namespace, prefix_map);
@@ -276,6 +278,7 @@ fn serialize_xml_fragment<Wr: Write>(
     }
 
     while let Some(command) = stack.pop() {
+        println!("  - loop: {command:?}");
         match command {
             SerializationCommand::SerializeNode { node: n, namespace, prefix_map } => {
                 match n.type_id() {
@@ -301,7 +304,7 @@ fn serialize_xml_fragment<Wr: Write>(
                         if has_children {
                             let (qualified_name, inherit_ns, inherit_prefix_map) = serializer.start_elem(name, attr_refs, namespace, &prefix_map)?;
                             stack.push(SerializationCommand::CloseElement(qualified_name.clone()));
-                            push_children(&mut stack, cx, &node, inherit_ns, inherit_prefix_map);
+                            push_children(&mut stack, cx, &n, inherit_ns, inherit_prefix_map);
                         } else {
                             serializer.write_empty_elem(name, attr_refs, namespace, &prefix_map)?;
                         }
